@@ -10,3 +10,4 @@ https://ishichan0819.github.io/
   - [指先から電荷まで](https://ishichan0819.github.io/computer-basics/yubisaki-kara-denka.html) — 5つの実験
   - [内部をのぞく](https://ishichan0819.github.io/computer-basics/naibu-wo-nozoku.html) — キーボードを打つと内部の回路を電気が走り、モニターに文字が出るアクティビティ
 - [Visible Light: 光で文字を送る](https://ishichan0819.github.io/visible-light/) — LEDの点滅で文字を送って復号する、可視光通信(Li-Fi)のアクティビティ
+- [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ

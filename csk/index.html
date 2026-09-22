@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CSK と DCSK — 色で文字を送る</title>
+<meta name="description" content="RGB-LEDの色でデータを送るCSK(Color Shift Keying)と、複数のLEDのON/OFFの個数で色を作るDCSK(Digital CSK)を、同じ受信側で比べる可視光通信のアクティビティ。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --r:#FF4D5E;--g:#4DE07A;--b:#4D8CFF;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1040px;margin:0 auto;padding:28px 18px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:42em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim);text-align:right}
+.link{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:12px;align-items:stretch}
+@media (max-width:799px){.link{grid-template-columns:1fr}}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.95rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:8px 0 2px}
+.lab b{color:var(--silk);font-weight:400}
+input[type=text]{width:100%;font:inherit;font-family:var(--dot);font-size:1.05rem;padding:7px 10px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk)}
+input[type=range]{width:100%;accent-color:var(--led)}
+select{font:inherit;font-family:var(--dot);padding:6px 8px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk)}
+.btn{font:inherit;font-weight:700;min-height:40px;padding:4px 16px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn:disabled{opacity:.4;cursor:default}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px 14px;margin-top:12px;align-items:end}
+.ctl .row{display:flex;gap:8px;align-items:center}
+
+/* 送信: CSK */
+.ledbig{width:96px;height:96px;border-radius:50%;margin:6px auto 4px;border:3px solid #333;box-shadow:0 0 24px 8px rgba(255,255,255,.08);transition:background .05s,box-shadow .05s;position:relative}
+.ledbig::after{content:"";position:absolute;left:20px;top:16px;width:26px;height:16px;border-radius:50%;background:rgba(255,255,255,.3)}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:4px 8px;align-items:center;font-family:var(--dot);font-size:.85rem;margin-top:6px}
+.bars .bar{height:10px;border-radius:5px;background:var(--edge);overflow:hidden}
+.bars .bar i{display:block;height:100%;width:0;transition:width .06s}
+.bars .n{min-width:3.2em;text-align:right;color:var(--silk-dim)}
+.bars .r i{background:var(--r)}.bars .g i{background:var(--g)}.bars .b i{background:var(--b)}
+.bars .thr{grid-column:2;height:0;border-top:1px dashed var(--silk-dim);opacity:.5}
+
+/* 送信: DCSK */
+.array{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
+.mod{background:#151D2E;border:1.5px solid var(--edge);border-radius:8px;padding:8px 4px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.mod .m{font-family:var(--dot);font-size:.65rem;color:var(--silk-dim)}
+.chip{width:26px;height:26px;border-radius:50%;border:2px solid #333;background:#1E2230;cursor:pointer;padding:0;transition:box-shadow .05s,background .05s}
+.chip.r.on{background:var(--r);border-color:#FF8A94;box-shadow:0 0 12px 3px rgba(255,77,94,.7)}
+.chip.g.on{background:var(--g);border-color:#9AF0B4;box-shadow:0 0 12px 3px rgba(77,224,122,.7)}
+.chip.b.on{background:var(--b);border-color:#9DBCFF;box-shadow:0 0 12px 3px rgba(77,140,255,.7)}
+.chip:disabled{cursor:default}
+.mix{height:22px;border-radius:6px;margin-top:4px;border:1.5px solid var(--edge);transition:background .05s}
+.warn{font-size:.78rem;color:var(--bad);min-height:1.3em;margin-top:2px}
+
+/* 三角形 */
+.tri svg{display:block;width:100%;height:auto;touch-action:none}
+.tri .out{fill:#0D1320;stroke:var(--edge);stroke-width:2}
+.tri text{font-family:var(--dot);fill:var(--silk-dim);font-size:11px;text-anchor:middle;pointer-events:none}
+.tri .pt circle{stroke:#0D1320;stroke-width:1.5}
+.tri .pt text{font-size:9px;fill:var(--silk)}
+.tri .pt.hit circle{stroke:var(--ok);stroke-width:3}
+.tri .pt.miss circle{stroke:var(--bad);stroke-width:3}
+.tri .txm{fill:none;stroke:#fff;stroke-width:2}
+.tri .rxm{fill:var(--wave);stroke:#0D1320;stroke-width:1.5}
+.tri .trail{fill:var(--wave);opacity:.35}
+.tri .hint{font-size:10px;fill:var(--silk-dim)}
+.tri .dev{stroke:var(--bad);stroke-width:2;fill:none;marker-end:url(#arr)}
+
+/* 受信 */
+.pd{display:flex;gap:6px;justify-content:center;margin:2px 0 6px}
+.pd div{width:34px;height:34px;border-radius:8px;border:2px solid var(--edge);display:grid;place-items:center;font-family:var(--dot);font-size:.8rem}
+.pd .r{color:var(--r)}.pd .g{color:var(--g)}.pd .b{color:var(--b)}
+.dec{font-family:var(--dot);font-size:.85rem;color:var(--silk-dim);min-height:2.8em;line-height:1.4;margin-top:4px}
+.dec b{color:var(--led);font-weight:400;font-size:1.05rem}
+.dec .ng{color:var(--bad)}.dec .okc{color:var(--ok)}
+.screen{margin-top:8px;background:#0D1320;border:1.5px solid var(--edge);border-radius:8px;padding:8px 10px;min-height:2.9em;font-family:var(--dot);font-size:1.35rem;line-height:1.4;word-break:break-all;white-space:pre-wrap}
+.screen .x{color:var(--bad);text-decoration:underline dotted}
+.screen .c{display:inline-block;width:.55em;height:1.1em;vertical-align:-.15em;background:var(--wave);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.stat{font-size:.82rem;color:var(--silk-dim);margin-top:6px;min-height:1.4em}
+.stat b{color:var(--silk);font-weight:400}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim);min-height:1.5em}
+.note.hi{color:var(--led)}
+
+/* 比較 */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:799px){.cmp{grid-template-columns:1fr}}
+.cmp .big{font-family:var(--dot);font-size:1.6rem;text-align:center;margin-top:4px}
+.cmp .big.ng{color:var(--bad)}.cmp .big.okc{color:var(--ok)}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px}
+@media (prefers-reduced-motion:reduce){.screen .c{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../visible-light/">光で文字を送る(OOK)</a></p>
+<h1>色で文字を送る</h1>
+<p class="lede">前のページでは光の「ON/OFF」でビットを送りました。ここでは光の<b>「色」</b>で送ります。RGBの3色LEDの混ぜ方を変えれば、明るさを変えずに(=ちらつかず)1回の発光で2〜3ビット運べます。これが <b>CSK (Color Shift Keying)</b>。そしてCSKの弱点を、LEDを「点けるか消すか」だけで直したのが <b>DCSK (Digital CSK)</b> です。</p>
+
+<h2>① CSK: 3色の強さの比で色を作る</h2>
+<p class="lede">1個のRGB-LEDの R・G・B それぞれの明るさをアナログに調節して、決められた「信号点」の色を出します。受信側は色フィルタ付きの3つの受光素子で R・G・B の強さを測り、いちばん近い信号点を選びます。送信していないときは三角形をクリックして好きな色を試せます。</p>
+<div class="panel" id="csk"></div>
+
+<h2>② DCSK: 点灯するLEDの「個数」で色を作る</h2>
+<p class="lede">RGB-LEDを4個並べ、それぞれは<b>全点灯か消灯だけ</b>。赤を1個・緑を1個・青を2個点ければ (R,G,B)=(1,1,2)、つまり比 1:1:2 の色になります。常に4個点いているので明るさは一定。アナログ調節をしないので、LEDの非線形性の影響を受けません。送信していないときはLEDチップをクリックして自分で色を作れます。</p>
+<div class="panel" id="dcsk"></div>
+
+<h2>③ 比べる: LEDの非線形性で信号点はどれだけずれるか</h2>
+<p class="lede">LEDは「電流を半分にすれば光も半分」とはなりません。この非線形性を強くしていくと、CSKの信号点(実際に出る色)は理想からずれて隣の点と混ざり、DCSKはずれません。</p>
+<div class="panel">
+  <div class="ctl" style="margin-top:0"><label class="lab" style="margin:0">LEDの非線形性: <b id="cnlv">0.6</b><input type="range" id="cnl" min="0" max="1.5" step="0.05" value="0.6"></label></div>
+  <div class="cmp" style="margin-top:10px">
+    <div class="side"><div class="h"><span>CSK (アナログ強度)</span><span>丸=理想の信号点 / 赤矢印=実際に出る色</span></div><div class="tri" id="ctri1"></div><div class="big" id="cdev1"></div></div>
+    <div class="side"><div class="h"><span>DCSK (ON/OFF×4個)</span><span>丸=理想の信号点 = 実際に出る色</span></div><div class="tri" id="ctri2"></div><div class="big" id="cdev2"></div></div>
+  </div>
+  <div class="note">ずれは「理想の信号点から実際に出た色までの距離」を、信号点どうしの最小距離に対する割合で表示。50%を超えると隣の点との中間を越え、ノイズがなくても誤って復号されます。</div>
+</div>
+
+<p class="after">見えたこと
+<ul>
+  <li><b>色は情報になる</b>。8色使えば1回の発光で3ビット。明るさの合計を一定にできるので、照明としてちらつかない (IEEE 802.15.7 の CSK)。</li>
+  <li><b>受信は「いちばん近い点を選ぶ」</b>。ノイズで受信点が散らばっても、信号点どうしが離れていれば正しく戻る。近いと化ける。</li>
+  <li><b>CSKの弱点はアナログ調節</b>。LEDの明るさは電流に比例しないので、狙った比の色が出ず、信号点がずれる。</li>
+  <li><b>DCSKはON/OFFだけ</b>。点灯する個数で比を作るので、LEDの非線形性に関係なく正確な信号点が出せる。代わりにLEDが4個必要で、LED1個あたりで運べる情報は減る。</li>
+  <li><b>発展</b>: DCSKで「どの位置のLEDを点けるか」にも情報を載せる空間変調 (SDCSK) を組み合わせると、同じ4個のLEDでさらに3ビット上乗せできる。</li>
+</ul>
+</p>
+<p class="ref">本ページの信号点配置は説明用に簡略化しています(RGB強度比の三角形上で最小距離が最大になる点を選択)。</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+var N=4; /* DCSK の RGB-LED 個数 */
+var CONST={
+  4:[[4,0,0],[0,4,0],[0,0,4],[2,1,1]],
+  8:[[4,0,0],[0,4,0],[0,0,4],[0,2,2],[2,0,2],[2,2,0],[1,1,2],[1,2,1]]
+};
+function bitsOf(i,k){var s=i.toString(2);while(s.length<k)s='0'+s;return s}
+function ideal(c){return [c[0]/N,c[1]/N,c[2]/N]}
+function f(d,gam){return Math.pow(Math.max(0,d),1+gam)} /* LED非線形性: 出力 = 駆動^(1+γ) */
+function css(v){var m=Math.max(v[0],v[1],v[2],1e-6),s=Math.min(1,(v[0]+v[1]+v[2]));var k=255*(0.35+0.65*s)/m;return 'rgb('+Math.round(v[0]*k)+','+Math.round(v[1]*k)+','+Math.round(v[2]*k)+')'}
+function gauss(){var u=1-Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(6.2832*v)}
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])}
+function nearest(y,pts){var bi=0,bd=1e9;pts.forEach(function(p,i){var d=dist(y,ideal(p));if(d<bd){bd=d;bi=i}});return bi}
+function med(pts){var m=1e9;for(var i=0;i<pts.length;i++)for(var j=i+1;j<pts.length;j++)m=Math.min(m,dist(ideal(pts[i]),ideal(pts[j])));return m}
+
+/* ---- 三角形 (RGB強度比の単体) ---- */
+var VR=[22,236],VG=[150,20],VB=[278,236];
+function xy(v){var s=v[0]+v[1]+v[2];if(s<=0)return [150,164];var r=v[0]/s,g=v[1]/s,b=v[2]/s;return [r*VR[0]+g*VG[0]+b*VB[0],r*VR[1]+g*VG[1]+b*VB[1]]}
+function bary(x,y){ /* 画面座標 → (r,g,b) 比 */
+  var d=(VG[1]-VB[1])*(VR[0]-VB[0])+(VB[0]-VG[0])*(VR[1]-VB[1]);
+  var r=((VG[1]-VB[1])*(x-VB[0])+(VB[0]-VG[0])*(y-VB[1]))/d,g=((VB[1]-VR[1])*(x-VB[0])+(VR[0]-VB[0])*(y-VB[1]))/d,b=1-r-g;
+  r=Math.max(0,r);g=Math.max(0,g);b=Math.max(0,b);var s=r+g+b;return [r/s,g/s,b/s];
+}
+function Tri(host,opts){
+  opts=opts||{};
+  host.innerHTML='<svg viewBox="0 0 300 256"><defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="#FF6B7A"/></marker></defs>'+
+    '<polygon class="out" points="'+VR+' '+VG+' '+VB+'"/><text x="'+(VR[0]+8)+'" y="'+(VR[1]+14)+'">R</text><text x="'+VG[0]+'" y="'+(VG[1]-7)+'">G</text><text x="'+(VB[0]-8)+'" y="'+(VB[1]+14)+'">B</text>'+
+    '<g class="devs"></g><g class="pts"></g><g class="trail"></g><circle class="txm" r="8" style="display:none"/><circle class="rxm" r="5" style="display:none"/>'+
+    (opts.hint?'<text class="hint" x="150" y="252">'+opts.hint+'</text>':'')+'</svg>';
+  var svg=host.firstChild,pts=svg.querySelector('.pts'),devs=svg.querySelector('.devs'),trail=svg.querySelector('.trail'),txm=svg.querySelector('.txm'),rxm=svg.querySelector('.rxm');
+  var T={svg:svg,
+    setPoints:function(list,k){pts.innerHTML='';list.forEach(function(c,i){var p=xy(c),g=document.createElementNS('http://www.w3.org/2000/svg','g');g.setAttribute('class','pt');
+      g.innerHTML='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="9" fill="'+css(ideal(c))+'"/><text x="'+p[0]+'" y="'+(p[1]+3.5)+'">'+bitsOf(i,k)+'</text>';pts.appendChild(g)})},
+    mark:function(i,cls){[].forEach.call(pts.children,function(g,j){g.setAttribute('class','pt'+(j===i?' '+cls:''))})},
+    tx:function(v){if(!v){txm.style.display='none';return}var p=xy(v);txm.style.display='';txm.setAttribute('cx',p[0]);txm.setAttribute('cy',p[1])},
+    rx:function(v){if(!v){rxm.style.display='none';return}var p=xy(v);rxm.style.display='';rxm.setAttribute('cx',p[0]);rxm.setAttribute('cy',p[1]);
+      var c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r',3);trail.appendChild(c);while(trail.children.length>40)trail.firstChild.remove()},
+    clearTrail:function(){trail.innerHTML=''},
+    devArrows:function(pairs){devs.innerHTML='';pairs.forEach(function(pr){var a=xy(pr[0]),b=xy(pr[1]);if(Math.hypot(a[0]-b[0],a[1]-b[1])<2)return;var l=document.createElementNS('http://www.w3.org/2000/svg','line');l.setAttribute('class','dev');l.setAttribute('x1',a[0]);l.setAttribute('y1',a[1]);l.setAttribute('x2',b[0]);l.setAttribute('y2',b[1]);devs.appendChild(l)})},
+    onPick:function(fn){function ev(e){var r=svg.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*300,y=(e.clientY-r.top)/r.height*256;fn(bary(x,y))}
+      var down=false;svg.addEventListener('pointerdown',function(e){down=true;svg.setPointerCapture(e.pointerId);ev(e);e.preventDefault()});
+      svg.addEventListener('pointermove',function(e){if(down)ev(e)});svg.addEventListener('pointerup',function(){down=false});svg.addEventListener('pointercancel',function(){down=false})}
+  };
+  return T;
+}
+
+/* ---- 送受信リンク (CSK / DCSK 共通) ---- */
+function Link(root,scheme){
+  var isD=scheme==='dcsk',id=scheme;
+  root.innerHTML=
+   '<div class="ph"><span class="t">'+(isD?'RGB-LED ×4 (ON/OFF) → 3つの受光素子':'RGB-LED ×1 (アナログ) → 3つの受光素子')+'</span><span class="s"><span class="ksym">3</span> bit / シンボル</span></div>'+
+   '<div class="link">'+
+    '<div class="side"><div class="h"><span>送信側</span><span class="txst">待機</span></div>'+
+     (isD?'<div class="array"></div><div class="mix"></div><div class="warn"></div><div class="lab">点灯数 (R,G,B) = <b class="cnt">(0,0,0)</b></div>':
+          '<div class="ledbig"></div><div class="bars"><span>R</span><div class="bar r"><i></i></div><span class="n">0.00</span><span>G</span><div class="bar g"><i></i></div><span class="n">0.00</span><span>B</span><div class="bar b"><i></i></div><span class="n">0.00</span></div><div class="lab">駆動 (R,G,B) 比 → 実際の光 <b class="act"></b></div>')+
+    '</div>'+
+    '<div class="side tri"><div class="h"><span>信号点 (RGB強度比)</span><span>白丸=送った点 / 水色=受けた点</span></div><div class="tri-host"></div></div>'+
+    '<div class="side"><div class="h"><span>受信側</span><span class="rxst">--</span></div>'+
+     '<div class="pd"><div class="r">R</div><div class="g">G</div><div class="b">B</div></div>'+
+     '<div class="bars"><span>R</span><div class="bar r"><i></i></div><span class="n">0.00</span><span>G</span><div class="bar g"><i></i></div><span class="n">0.00</span><span>B</span><div class="bar b"><i></i></div><span class="n">0.00</span></div>'+
+     '<div class="dec">いちばん近い信号点を選ぶ</div><div class="screen"><span class="c"></span></div><div class="stat"></div></div>'+
+   '</div>'+
+   '<div class="ctl">'+
+    '<label class="lab">送るメッセージ (半角英数)<input type="text" class="msg" value="'+(isD?'DCSK':'CSK!')+'" maxlength="20" autocomplete="off" spellcheck="false"></label>'+
+    '<label class="lab">信号点の数 <select class="msel"><option value="4">4 (2ビット)</option><option value="8" selected>8 (3ビット)</option></select></label>'+
+    '<label class="lab">速さ: <b class="spv">2</b> シンボル/秒<input type="range" class="sp" min="1" max="20" value="2"></label>'+
+    '<label class="lab">受信ノイズ: <b class="nzv">0.05</b><input type="range" class="nz" min="0" max="0.3" step="0.01" value="0.05"></label>'+
+    '<label class="lab">LEDの非線形性: <b class="nlv">0</b>'+(isD?' <span style="color:var(--ok)">(DCSKには効かない)</span>':'')+'<input type="range" class="nl" min="0" max="1.5" step="0.05" value="0"></label>'+
+    '<div class="row"><button class="btn pri send" type="button">▶ 送信</button><button class="btn stop" type="button" disabled>■ 停止</button></div>'+
+   '</div><div class="note"></div>';
+  var $=function(s){return root.querySelector(s)},$$=function(s){return root.querySelectorAll(s)};
+  var tri=Tri($('.tri-host'),{hint:isD?'':'送信していないときは、ここをクリック/ドラッグで色を作れる'});
+  var txBars=isD?null:$$('.side:first-child .bar i'),txNums=isD?null:$$('.side:first-child .n'),rxSide=$$('.side')[2];
+  var rxBars=rxSide.querySelectorAll('.bar i'),rxNums=rxSide.querySelectorAll('.n'),pdBoxes=rxSide.querySelectorAll('.pd div');
+  var screen=$('.screen'),cur=screen.querySelector('.c'),dec=$('.dec'),stat=$('.stat'),note=$('.note');
+  var S={M:8,pts:CONST[8],k:3,run:false,chips:[],gam:0,nz:0.05};
+  var chipEls=[];
+  if(isD){
+    var arr=$('.array');for(var m=0;m<N;m++){var d=document.createElement('div');d.className='mod';d.innerHTML='<span class="m">LED '+(m+1)+'</span>';['r','g','b'].forEach(function(c){var b=document.createElement('button');b.type='button';b.className='chip '+c;b.title=c.toUpperCase();b.dataset.m=m;b.dataset.c=c;b.addEventListener('click',function(){if(S.run)return;this.classList.toggle('on');explore()});d.appendChild(b);chipEls.push(b)});arr.appendChild(d)}
+  }
+  function setM(M){S.M=M;S.pts=CONST[M];S.k=Math.log2(M);tri.setPoints(S.pts,S.k);$('.ksym').textContent=S.k}
+  setM(8);
+  function counts(){var c=[0,0,0];chipEls.forEach(function(b){if(b.classList.contains('on'))c['rgb'.indexOf(b.dataset.c)]++});return c}
+  function setChips(c){var on=[];for(var i=0;i<c[0];i++)on.push('r');for(i=0;i<c[1];i++)on.push('g');for(i=0;i<c[2];i++)on.push('b');
+    chipEls.forEach(function(b){b.classList.remove('on')});on.forEach(function(col,m){if(m<N)chipEls[m*3+'rgb'.indexOf(col)].classList.add('on')})}
+  /* 送信: 駆動ベクトル → 実際の光 */
+  function emit(drive){
+    var out;
+    if(isD){out=[drive[0]*f(1,S.gam),drive[1]*f(1,S.gam),drive[2]*f(1,S.gam)];$('.mix').style.background=css(out);$('.cnt').textContent='('+Math.round(drive[0]*N)+','+Math.round(drive[1]*N)+','+Math.round(drive[2]*N)+')';
+      var tot=Math.round((drive[0]+drive[1]+drive[2])*N);$('.warn').textContent=tot===N?'':'点灯 '+tot+'/'+N+' 個: 明るさが変わる (照明としてちらつく)'}
+    else{out=[f(drive[0],S.gam),f(drive[1],S.gam),f(drive[2],S.gam)];$('.ledbig').style.background=css(out);$('.ledbig').style.boxShadow='0 0 28px 10px '+css(out).replace('rgb(','rgba(').replace(')',',.45)');
+      for(var i=0;i<3;i++){txBars[i].style.width=(drive[i]*100)+'%';txNums[i].textContent=drive[i].toFixed(2)}
+      $('.act').textContent='('+out.map(function(v){return v.toFixed(2)}).join(', ')+')'}
+    return out;
+  }
+  function receive(out){var y=[0,1,2].map(function(i){return out[i]+gauss()*S.nz});
+    for(var i=0;i<3;i++){var v=Math.max(0,Math.min(1.2,y[i]));rxBars[i].style.width=Math.min(100,v/1.2*100)+'%';rxNums[i].textContent=y[i].toFixed(2);pdBoxes[i].style.background='rgba('+(i===0?'255,77,94':i===1?'77,224,122':'77,140,255')+','+(Math.max(0,Math.min(1,v))*0.8)+')'}
+    return y}
+  /* 探索モード */
+  function explore(v){
+    if(S.run)return;
+    var drive=isD?counts().map(function(c){return c/N}):v;if(!drive)return;
+    var out=emit(drive),y=receive(out),i=nearest(y,S.pts);
+    tri.tx(out);tri.rx(y);tri.mark(i,'hit');
+    dec.innerHTML='受信 ('+y.map(function(t){return t.toFixed(2)}).join(', ')+')<br>→ いちばん近い信号点 <b>'+bitsOf(i,S.k)+'</b>';
+    $('.rxst').textContent='復号';
+  }
+  var lastPick=[1/3,1/3,1/3];
+  if(isD){setChips([1,1,2]);explore()}else{tri.onPick(function(v){lastPick=v;explore(v)});explore(lastPick)}
+  /* 送信ループ */
+  var R={};
+  function start(){
+    var text=$('.msg').value.replace(/[^\x20-\x7E]/g,'?');if(!text){$('.msg').focus();return}
+    var bits='';for(var i=0;i<text.length;i++)bits+=bitsOf(text.charCodeAt(i),8);
+    while(bits.length%S.k)bits+='0';
+    R={text:text,bits:bits,syms:[],i:-1,rxbits:'',errs:0,dur:1000/(+$('.sp').value)};
+    for(i=0;i<bits.length;i+=S.k)R.syms.push(parseInt(bits.substr(i,S.k),2));
+    S.run=true;R.t0=performance.now();while(cur.previousSibling)cur.previousSibling.remove();stat.textContent='';tri.clearTrail();
+    $('.send').disabled=true;$('.stop').disabled=false;$('.msg').disabled=true;$('.msel').disabled=true;$('.sp').disabled=true;chipEls.forEach(function(b){b.disabled=true});
+    $('.txst').textContent='送信中';note.className='note'+(S.gam>=0.6&&!isD?' hi':'');
+    note.textContent=isD?'4個のうちどれを点けるかが変わるだけで、明るさの合計はいつも4個ぶん。非線形性を上げても信号点は動きません。':
+      (S.gam>=0.6?'非線形性が強いので、送った色(白丸)が信号点からずれています。ノイズが小さくても隣の点に化けることがあります。':'白丸(送った色)の周りに水色(受けた色)が散らばります。ノイズを上げると散らばりが広がり、隣の信号点に化けます。');
+    setTimeout(loop,25);
+  }
+  function loop(){
+    if(!S.run)return;
+    var idx=Math.floor((performance.now()-R.t0)/R.dur);
+    if(idx>=R.syms.length){finish();return}
+    if(idx!==R.i){R.i=idx;symbol(idx)}
+    setTimeout(loop,25);
+  }
+  function symbol(idx){
+    var s=R.syms[idx],c=S.pts[s],drive=ideal(c);
+    if(isD)setChips(c);
+    var out=emit(drive),y=receive(out),got=nearest(y,S.pts),ok=got===s;
+    tri.tx(out);tri.rx(y);tri.mark(got,ok?'hit':'miss');
+    R.rxbits+=bitsOf(got,S.k);if(!ok)R.errs++;
+    dec.innerHTML='送信 <b>'+bitsOf(s,S.k)+'</b> → 受信 ('+y.map(function(t){return t.toFixed(2)}).join(', ')+')<br>→ 判定 <b>'+bitsOf(got,S.k)+'</b> <span class="'+(ok?'okc':'ng')+'">'+(ok?'○':'× 化けた')+'</span>';
+    $('.rxst').textContent='シンボル '+(idx+1)+'/'+R.syms.length;
+    /* 8ビットたまったら文字 */
+    var nchars=Math.floor(R.rxbits.length/8),shown=screen.childNodes.length-1;
+    for(var i=shown;i<nchars&&i<R.text.length;i++){var code=parseInt(R.rxbits.substr(i*8,8),2),sp=document.createElement('span');
+      sp.textContent=(code>=32&&code<127)?String.fromCharCode(code):'▯';if(code!==R.text.charCodeAt(i)){sp.className='x';sp.title='ビット化け'}screen.insertBefore(sp,cur)}
+    stat.innerHTML='シンボル誤り: <b>'+R.errs+'</b> / '+(idx+1)+(R.errs?'  <span style="color:var(--bad)">('+(R.errs/(idx+1)*100).toFixed(0)+'%)</span>':'');
+  }
+  function finish(){S.run=false;$('.send').disabled=false;$('.stop').disabled=true;$('.msg').disabled=false;$('.msel').disabled=false;$('.sp').disabled=false;chipEls.forEach(function(b){b.disabled=false});$('.txst').textContent='送信完了';
+    if(R.errs===0)note.textContent='全シンボル正解。ノイズや非線形性を上げて、どこで化け始めるか試してください。'}
+  $('.send').addEventListener('click',start);$('.stop').addEventListener('click',function(){finish();$('.txst').textContent='停止'});
+  $('.msg').addEventListener('keydown',function(e){if(e.key==='Enter')start()});
+  $('.msel').addEventListener('change',function(){setM(+this.value);explore(isD?null:[1/3,1/3,1/3])});
+  $('.sp').addEventListener('input',function(){$('.spv').textContent=this.value});
+  $('.nz').addEventListener('input',function(){S.nz=+this.value;$('.nzv').textContent=(+this.value).toFixed(2)});
+  $('.nl').addEventListener('input',function(){S.gam=+this.value;$('.nlv').textContent=(+this.value).toFixed(2);if(!S.run)explore(isD?null:lastPick)});
+}
+Link(document.getElementById('csk'),'csk');
+Link(document.getElementById('dcsk'),'dcsk');
+
+/* ---- ③ 比較 ---- */
+var t1=Tri(document.getElementById('ctri1')),t2=Tri(document.getElementById('ctri2'));
+var pts8=CONST[8],m8=med(pts8);
+t1.setPoints(pts8,3);t2.setPoints(pts8,3);
+function cmp(){
+  var gam=+document.getElementById('cnl').value;document.getElementById('cnlv').textContent=gam.toFixed(2);
+  var pairs1=[],pairs2=[],dv1=0,dv2=0,bad1=0;
+  pts8.forEach(function(c){var id=ideal(c),a=[f(id[0],gam),f(id[1],gam),f(id[2],gam)],b=[id[0]*f(1,gam),id[1]*f(1,gam),id[2]*f(1,gam)];
+    pairs1.push([id,a]);pairs2.push([id,b]);var d1=dist(id,a),d2=dist(id,b);dv1+=d1;dv2+=d2;if(nearest(a,pts8)!==pts8.indexOf(c))bad1++});
+  t1.devArrows(pairs1);t2.devArrows(pairs2);
+  var p1=dv1/8/m8*100,p2=dv2/8/m8*100;
+  var e1=document.getElementById('cdev1'),e2=document.getElementById('cdev2');
+  e1.textContent='平均ずれ '+p1.toFixed(0)+'%'+(bad1?' / '+bad1+'点が誤復号':'');e1.className='big '+(bad1?'ng':p1>25?'':'okc');
+  e2.textContent='平均ずれ '+p2.toFixed(0)+'%';e2.className='big okc';
+}
+document.getElementById('cnl').addEventListener('input',cmp);cmp();
+})();
+</script>
+</body>
+</html>
