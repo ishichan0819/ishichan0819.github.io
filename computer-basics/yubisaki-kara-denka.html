@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>指先から電荷まで</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#E8EEE9; --ink:#12281F; --muted:#4B6358; --rule:#BFCDC4;
+  --board:#0F4F3E; --board-deep:#0A3A2E;
+  --trace:#E8BE4E; --trace-off:#2E7560;
+  --silk:#F1F5EE; --silk-dim:#A9C4B8; --bad:#FF7B7B;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#07120E; --ink:#E4EDE6; --muted:#9DB3A8; --rule:#1E3A30;
+    --board:#0D4435; --board-deep:#082E24;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#07120E; --ink:#E4EDE6; --muted:#9DB3A8; --rule:#1E3A30;
+  --board:#0D4435; --board-deep:#082E24;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.85}
+main{max-width:640px;margin:0 auto;padding:36px 18px 72px}
+
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2.3rem,10vw,3.6rem);line-height:1.15;margin:0 0 .45em;letter-spacing:.02em}
+.lede{margin:0 0 8px;color:var(--muted);max-width:34em}
+section{margin-top:56px}
+h2{font-family:var(--dot);font-weight:400;font-size:1.55rem;line-height:1.3;margin:0 0 .5em}
+h2 .no{display:block;font-size:.95rem;color:var(--muted)}
+p{margin:0 0 1em}
+.after{margin-top:16px;padding-left:14px;border-left:3px solid var(--trace)}
+.note{color:var(--muted);font-size:.875rem;border-top:1px solid var(--rule);margin-top:64px;padding-top:20px}
+
+/* 基板 */
+.board{
+  position:relative;color:var(--silk);border-radius:14px;padding:30px 16px 16px;
+  background:
+    radial-gradient(circle at 14px 14px,var(--page) 0 4px,var(--trace) 4px 6px,transparent 6.5px),
+    radial-gradient(circle at calc(100% - 14px) 14px,var(--page) 0 4px,var(--trace) 4px 6px,transparent 6.5px),
+    var(--board);
+}
+.board svg{display:block;width:100%;height:auto}
+.silk{font-family:var(--dot);font-size:.8rem;color:var(--silk-dim)}
+
+.btn{
+  font:inherit;font-weight:700;min-height:44px;padding:6px 16px;border-radius:8px;cursor:pointer;
+  background:transparent;color:var(--silk);border:1.5px solid var(--silk);
+}
+.btn:active,.btn[aria-pressed="true"]{background:var(--trace);border-color:var(--trace);color:var(--board-deep)}
+:focus-visible{outline:3px solid var(--trace);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ctl{margin-top:14px}
+.ctl label{display:flex;justify-content:space-between;gap:12px;font-size:.9rem}
+.ctl output{font-family:var(--dot);color:var(--trace)}
+input[type=range]{width:100%;accent-color:var(--trace);height:32px;margin:0}
+
+/* 実験1 */
+.path{list-style:none;margin:0;padding:0;counter-reset:st}
+.stage{counter-increment:st;position:relative;padding:0 0 14px 30px;border-left:3px solid var(--trace-off);margin-left:9px}
+.stage:last-child{padding-bottom:4px}
+.stage::before{
+  content:counter(st);position:absolute;left:-12px;top:0;width:21px;height:21px;border-radius:50%;
+  background:var(--board-deep);border:2px solid var(--trace-off);color:var(--silk-dim);
+  font-family:var(--dot);font-size:.75rem;line-height:17px;text-align:center;
+}
+.stage.done{border-left-color:var(--trace)}
+.stage.on::before,.stage.done::before{border-color:var(--trace);color:var(--trace)}
+.stage.on::before{background:var(--trace);color:var(--board-deep)}
+.stage-name{font-weight:700;font-size:.9rem;line-height:21px;margin-bottom:6px}
+.stage.on .stage-name{color:var(--trace)}
+.stage-body{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:30px}
+
+#sw{width:120px;flex:none}
+#sw line,#sw circle{stroke:var(--silk-dim);stroke-width:3;stroke-linecap:round;fill:var(--silk-dim)}
+#sw .arm{transform-origin:45px 24px;transform:rotate(-30deg);transition:transform .07s}
+#sw.closed .arm,#sw.held .arm{transform:none}
+#sw.closed line,#sw.closed circle,#sw.held line,#sw.held circle{stroke:var(--trace);fill:var(--trace)}
+
+.bits{display:flex;gap:3px}
+.bit{width:22px;height:24px;border:1.5px solid var(--silk-dim);border-radius:3px;font-family:var(--dot);font-size:.85rem;line-height:21px;text-align:center;color:var(--silk-dim)}
+.bit.hi{background:var(--trace);border-color:var(--trace);color:var(--board-deep)}
+.code{font-family:var(--dot);font-size:.9rem;min-width:5.5em}
+
+#wave{max-width:300px}
+#wave polyline{fill:none;stroke:var(--trace);stroke-width:2.5;stroke-linejoin:round}
+#wave text{font-family:var(--dot);font-size:10px;fill:var(--silk-dim);text-anchor:middle}
+#wave .base{stroke:var(--trace-off);stroke-width:1;stroke-dasharray:3 4}
+
+.lamp{width:18px;height:18px;border-radius:50%;border:2px solid var(--silk-dim);flex:none}
+.lamp.hi{background:var(--trace);border-color:var(--trace);box-shadow:0 0 12px var(--trace)}
+
+.ram{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;width:100%;max-width:300px}
+.byte{display:flex;align-items:center;gap:2px}
+.byte .cell{width:11px;height:15px;border:1px solid var(--silk-dim);border-radius:2px}
+.byte .cell.hi{background:var(--trace);border-color:var(--trace)}
+.byte.writing .cell{border-color:var(--silk)}
+.byte .ch{font-family:var(--dot);margin-left:5px;width:1em;color:var(--trace)}
+
+.screen{font-family:var(--dot);font-size:1.5rem;line-height:1.3;background:var(--board-deep);border-radius:6px;padding:4px 12px;min-width:9.5em;min-height:1.9em;letter-spacing:.1em;color:var(--silk)}
+.screen::after{content:"▌";color:var(--trace);margin-left:2px}
+
+.dock{
+  position:sticky;bottom:0;z-index:2;margin:14px -16px -16px;padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px));
+  background:var(--board-deep);border-radius:0 0 14px 14px;border-top:2px solid var(--trace-off);
+}
+.say{font-size:.875rem;line-height:1.55;min-height:3.1em;margin:0 6px 8px;color:var(--silk)}
+.kb{display:grid;gap:5px}
+.kb div{display:flex;justify-content:center;gap:4px}
+.key{
+  flex:1 1 0;max-width:42px;height:42px;padding:0;border-radius:6px;cursor:pointer;
+  font-family:var(--dot);font-size:1rem;color:var(--board-deep);background:var(--silk);
+  border:0;border-bottom:4px solid var(--silk-dim);touch-action:manipulation;
+}
+.key:active{transform:translateY(3px);border-bottom-width:1px;background:var(--trace)}
+
+/* 実験2 */
+#chain .w{stroke:var(--trace-off);stroke-width:3;stroke-linecap:round;fill:none}
+#chain .w.hi{stroke:var(--trace)}
+#chain .rail{stroke:var(--trace);stroke-width:4;stroke-linecap:round}
+#chain .gnd{stroke:var(--silk-dim);stroke-width:4;stroke-linecap:round}
+#chain .arm{transition:transform .06s}
+#chain .arm.open{transform:rotate(-32deg)}
+#chain .arm.flow{stroke:var(--silk);stroke-width:5}
+#chain .node{fill:var(--board-deep);stroke:var(--trace-off);stroke-width:3}
+#chain .node.hi{fill:var(--trace);stroke:var(--trace)}
+#chain text{font-family:var(--dot);font-size:11px;fill:var(--silk-dim)}
+.meter{height:14px;border-radius:7px;background:var(--board-deep);overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;width:0;background:var(--trace);border-radius:7px}
+.meter i.hot{background:var(--bad)}
+
+/* 実験3 */
+#adder .w{stroke:var(--trace-off);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+#adder .hi .w,#adder .w.hi{stroke:var(--trace)}
+#adder .j{fill:var(--trace-off)}
+#adder .hi .j{fill:var(--trace)}
+#adder rect{fill:var(--board-deep);stroke:var(--silk);stroke-width:2}
+#adder text{font-family:var(--dot);fill:var(--silk);text-anchor:middle}
+#adder .cap{font-size:10px;fill:var(--silk-dim)}
+#adder .out{fill:var(--board-deep);stroke:var(--trace-off);stroke-width:3}
+#adder .hi .out{fill:var(--trace);stroke:var(--trace)}
+.sum{font-family:var(--dot);font-size:1.15rem;margin:12px 0 0;color:var(--silk)}
+.sum b{color:var(--trace);font-weight:400}
+
+/* 実験4 */
+#scope{display:block;width:100%;height:262px}
+.err{font-family:var(--dot);margin:8px 0 0}
+.err.bad{color:var(--bad)}
+
+/* 実験5 */
+.readout{font-family:var(--dot);font-size:1.9rem;letter-spacing:.18em;background:var(--board-deep);border-radius:6px;padding:4px 12px;margin:0 0 14px;display:flex;gap:.1em;min-height:1.9em}
+.readout span.bad{color:var(--bad)}
+.caps{display:grid;gap:7px}
+.caprow{display:flex;align-items:center;gap:4px;padding:2px;border-radius:5px}
+.caprow.sweep{background:var(--trace-off)}
+.cap{position:relative;flex:1 1 0;max-width:30px;height:34px;border:1.5px solid var(--silk-dim);border-top:0;border-radius:0 0 4px 4px;overflow:hidden}
+.cap i{position:absolute;left:0;right:0;bottom:0;background:var(--trace)}
+.cap::after{content:"";position:absolute;left:0;right:0;top:50%;border-top:1.5px dashed var(--silk)}
+.caprow .ch{font-family:var(--dot);font-size:1.2rem;width:1.4em;text-align:center;color:var(--trace)}
+.caprow .ch.bad{color:var(--bad)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>指先から<br>電荷まで</h1>
+    <p class="lede">キーを押してから、メモリの中の電荷が変わるまで。コンピュータの底で起きていることを、5つの実験で確かめます。</p>
+  </header>
+
+  <section aria-labelledby="h-ex1">
+    <h2 id="h-ex1"><span class="no">実験1</span>指からメモリまで</h2>
+    <p>下のキーを押してください(パソコンなら実物のキーボードでも動きます)。1回の打鍵が、6つの段階を経てメモリの電荷に変わります。</p>
+    <div class="board">
+      <ol class="path" id="path">
+        <li class="stage"><div class="stage-name">キーのスイッチ</div>
+          <div class="stage-body">
+            <svg id="sw" viewBox="0 0 120 36" aria-hidden="true"><line x1="6" y1="24" x2="45" y2="24"/><line class="arm" x1="45" y1="24" x2="77" y2="24"/><line x1="77" y1="24" x2="114" y2="24"/><circle cx="45" cy="24" r="3"/><circle cx="77" cy="24" r="3"/></svg>
+            <span class="silk">指の力 → 電気</span>
+          </div></li>
+        <li class="stage"><div class="stage-name">キーボード内のマイコン</div>
+          <div class="stage-body"><span class="code" id="code">―</span><div class="bits" id="bits"></div></div></li>
+        <li class="stage"><div class="stage-name">ケーブルの信号線(電圧の上げ下げ)</div>
+          <div class="stage-body"><svg id="wave" viewBox="0 0 260 58" aria-hidden="true"><line class="base" x1="8" y1="40" x2="252" y2="40"/><polyline id="wavel" points=""/><g id="wavet"></g></svg></div></li>
+        <li class="stage"><div class="stage-name">CPUへの割り込み</div>
+          <div class="stage-body"><span class="lamp" id="irq"></span><span class="silk">「入力が来た。いまの作業を中断せよ」</span></div></li>
+        <li class="stage"><div class="stage-name">メモリ(DRAM)のコンデンサ</div>
+          <div class="stage-body"><div class="ram" id="ram"></div></div></li>
+        <li class="stage"><div class="stage-name">画面</div>
+          <div class="stage-body"><div class="screen" id="screen"></div></div></li>
+      </ol>
+      <div class="dock">
+        <p class="say" id="say" aria-live="polite">キーを押すと、信号が1から6へ順に進みます。</p>
+        <div class="kb" id="kb"></div>
+      </div>
+    </div>
+    <p class="after">あなたがしたのは、接点を閉じることだけです。文字コードへの変換も、メモリへの書き込みも、その先はすべてスイッチの連鎖が自動で行いました。メモリの金色のマスが「電荷あり=1」です。</p>
+  </section>
+
+  <section aria-labelledby="h-ex2">
+    <h2 id="h-ex2"><span class="no">実験2</span>指は引き金、電気は電源から</h2>
+    <p>トランジスタは「電圧で開閉するスイッチ」です。ここでは6個を直列につなぎました。入力を切り替えると、各段が電源かグラウンドのどちらかにつなぎ替わり、変化が次々に伝わります。</p>
+    <div class="board">
+      <svg id="chain" viewBox="0 0 340 210" role="img" aria-label="6段のスイッチの連鎖"></svg>
+      <div class="row ctl"><button class="btn" id="flip" type="button">入力を切り替える</button><span class="silk" id="flipn">指で切り替えた回数 0</span></div>
+      <div class="ctl"><label for="hz">クロック(自動で切り替え)<output id="hzo">止</output></label>
+        <input id="hz" type="range" min="0" max="8" step="1" value="0"></div>
+      <div class="ctl"><label>スイッチの切り替え<output id="rate">毎秒 0 回</output></label>
+        <label style="margin-top:8px">発熱</label><div class="meter"><i id="heat"></i></div></div>
+    </div>
+    <p class="after">各段の出力を充電する電気は、上の電源の線から来ています。入力は「どちらにつなぐか」を決めているだけです。クロックを上げると充放電の回数が増え、そのぶん熱になります。実物のCPUはこれを毎秒数十億回、数十億個のスイッチで行っています。</p>
+  </section>
+
+  <section aria-labelledby="h-ex3">
+    <h2 id="h-ex3"><span class="no">実験3</span>スイッチを組むと計算になる</h2>
+    <p>AとBを切り替えて、1桁の2進数を足してみてください。回路は電圧の高低に反応しているだけですが、結果は足し算になっています。</p>
+    <div class="board">
+      <svg id="adder" viewBox="0 0 340 200" role="img" aria-label="1ビットの足し算回路">
+        <g id="gA"><path class="w" d="M38 45H170M110 45V135H170"/><circle class="j" cx="110" cy="45" r="4.5"/></g>
+        <g id="gB"><path class="w" d="M38 165H170M80 165V75H170"/><circle class="j" cx="80" cy="165" r="4.5"/></g>
+        <rect x="170" y="30" width="78" height="60" rx="8"/><text x="209" y="58" font-size="15">XOR</text><text class="cap" x="209" y="76">片方だけ1なら1</text>
+        <rect x="170" y="120" width="78" height="60" rx="8"/><text x="209" y="148" font-size="15">AND</text><text class="cap" x="209" y="166">両方1なら1</text>
+        <g id="gS"><path class="w" d="M248 60H292"/><circle class="out" cx="304" cy="60" r="11"/></g>
+        <g id="gC"><path class="w" d="M248 150H292"/><circle class="out" cx="304" cy="150" r="11"/></g>
+        <text class="cap" x="304" y="88">和</text><text class="cap" x="304" y="178">繰り上がり</text>
+        <text x="22" y="50" font-size="15">A</text><text x="22" y="170" font-size="15">B</text>
+      </svg>
+      <div class="row ctl">
+        <button class="btn" id="btnA" type="button" aria-pressed="false">A = 0</button>
+        <button class="btn" id="btnB" type="button" aria-pressed="false">B = 0</button>
+      </div>
+      <p class="sum" id="sum"></p>
+    </div>
+    <p class="after">XORやANDの箱は、それぞれ実験2のようなトランジスタ数個でできています。この回路を桁数ぶん並べれば多桁の足し算になり、足し算を組み合わせれば掛け算や比較になります。ソフトウェアの命令は、こうした回路のどれに信号を通すかを選ぶビット列です。</p>
+  </section>
+
+  <section aria-labelledby="h-ex4">
+    <h2 id="h-ex4"><span class="no">実験4</span>0と1は約束事</h2>
+    <p>配線を伝わる実際の電圧はなめらかで、ノイズも乗ります。受け取り側は「しきい値より上なら1、下なら0」と読み、きれいな波形に整え直します。ノイズを増やして、どこで読み違いが出るか試してください。</p>
+    <div class="board">
+      <canvas id="scope" role="img" aria-label="送った信号、配線上の電圧、整え直した信号の3つの波形"></canvas>
+      <p class="err" id="err"></p>
+      <div class="ctl"><label for="noise">ノイズの強さ<output id="noiseo"></output></label><input id="noise" type="range" min="0" max="100" value="12"></div>
+      <div class="ctl"><label for="th">しきい値<output id="tho"></output></label><input id="th" type="range" min="10" max="90" value="50"></div>
+    </div>
+    <p class="after">ノイズがそこそこあっても、整え直した信号は送った信号と完全に一致します。段を通るたびに汚れがリセットされるので、何十億段つないでも誤差がたまりません。これがデジタルの強みです。</p>
+  </section>
+
+  <section aria-labelledby="h-ex5">
+    <h2 id="h-ex5"><span class="no">実験5</span>メモリは放っておくと忘れる</h2>
+    <p>DRAMは小さなコンデンサに電荷をためて1を表しますが、電荷は少しずつ漏れます。リフレッシュを切って、文字が壊れていく様子を見てください。点線が「半分=1と読める限界」です。</p>
+    <div class="board">
+      <div class="readout" id="readout" aria-live="off"></div>
+      <div class="caps" id="caps"></div>
+      <div class="row ctl">
+        <button class="btn" id="refresh" type="button" aria-pressed="true">リフレッシュ 入</button>
+        <button class="btn" id="rewrite" type="button">HELLO! を書き直す</button>
+      </div>
+    </div>
+    <p class="after">リフレッシュは、各行を読んで「半分より上なら満タンに、下なら空に」書き直す作業です。一度0に落ちたビットは、リフレッシュを再開しても戻りません。実物では数十ミリ秒ごとに行われていて、ここでは見えるように何百倍も遅くしています。</p>
+  </section>
+
+  <p class="note">わかりやすさのために単純化しています。実際のUSBは2本の線の電圧差で信号を送り、データはパケットにまとめられます。実際のキーボードは文字コードではなくキー番号を送り、文字への変換はOSが行います。</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var NS='http://www.w3.org/2000/svg';
+function svg(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- 実験1 ---------- */
+var stages=[].slice.call(document.querySelectorAll('#path .stage'));
+var sw=$('#sw'),bitsEl=$('#bits'),codeEl=$('#code'),wavel=$('#wavel'),wavet=$('#wavet'),irq=$('#irq'),ram=$('#ram'),screenEl=$('#screen'),say=$('#say');
+var bitCells=[],bytes=[],count=0,queue=[],running=false;
+for(var i=0;i<8;i++){var b=document.createElement('span');b.className='bit';b.textContent='0';bitsEl.appendChild(b);bitCells.push(b)}
+for(var r=0;r<8;r++){var row=document.createElement('div');row.className='byte';var cells=[];
+  for(var c=0;c<8;c++){var ce=document.createElement('span');ce.className='cell';row.appendChild(ce);cells.push(ce)}
+  var ch=document.createElement('span');ch.className='ch';row.appendChild(ch);ram.appendChild(row);bytes.push({row:row,cells:cells,ch:ch})}
+function setStage(n){stages.forEach(function(s,i){s.classList.toggle('on',i===n);s.classList.toggle('done',n>=0&&i<n)})}
+function clearRam(){bytes.forEach(function(b){b.cells.forEach(function(c){c.classList.remove('hi')});b.ch.textContent=''});screenEl.textContent='';count=0}
+function drawWave(bits,n){var pts=[],x=10,w=30,hi=10,lo=40;wavet.textContent='';
+  for(var i=0;i<n;i++){var y=bits[i]?hi:lo;pts.push(x+','+y,(x+w)+','+y);svg('text',{x:x+w/2,y:55},wavet).textContent=bits[i];x+=w}
+  wavel.setAttribute('points',pts.join(' '))}
+async function typeKey(ch,f){
+  var code=ch.charCodeAt(0),bits=code.toString(2).padStart(8,'0').split('').map(Number);
+  if(count>=8){clearRam();}
+  setStage(0);sw.classList.add('closed');say.textContent='「'+ch+'」の下で接点が閉じ、回路がつながって電流が流れました。指の動きが電気に変わった瞬間です。';await sleep(520*f);
+  sw.classList.remove('closed');
+  setStage(1);codeEl.textContent=ch+' = '+code+'番';bitCells.forEach(function(b,i){b.textContent=bits[i];b.classList.toggle('hi',!!bits[i])});
+  say.textContent='マイコンが「どのキーか」を検出し、番号を8個の0と1(8ビット)にしました。';await sleep(620*f);
+  setStage(2);say.textContent='8ビットを、信号線の電圧の「高い・低い」として1つずつ送り出します。';
+  for(var i=1;i<=8;i++){drawWave(bits,i);await sleep(95*f)}
+  await sleep(160*f);
+  setStage(3);irq.classList.add('hi');say.textContent='受信した回路が、CPUにつながる1本の線の電圧を上げます。CPUは作業を中断し、OSの入力処理を実行します。';await sleep(620*f);
+  irq.classList.remove('hi');
+  setStage(4);var B=bytes[count];B.row.classList.add('writing');say.textContent='OSが文字をメモリに書き込みます。1のビットのコンデンサにだけ電荷がたまります。';
+  for(var j=0;j<8;j++){B.cells[j].classList.toggle('hi',!!bits[j]);await sleep(60*f)}
+  B.ch.textContent=ch;B.row.classList.remove('writing');await sleep(160*f);
+  setStage(5);screenEl.textContent+=ch;say.textContent='アプリがメモリを読み、画面用のメモリを書き換えます。その電圧が画素の光になって「'+ch+'」が見えます。';await sleep(560*f);
+  count++;
+}
+async function pump(){running=true;
+  while(queue.length){var ch=queue.shift();await typeKey(ch,queue.length?0.22:(reduce?0.6:1))}
+  running=false;setStage(6);
+  say.textContent=count>=8?'メモリの8バイトがいっぱいです。次のキーで最初から書き直します。':'6段階が完了。もう一度押すと、次の番地に書き込まれます。'}
+function press(ch){if(queue.length>12)return;queue.push(ch);if(!running)pump()}
+var kb=$('#kb');['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'].forEach(function(line){var d=document.createElement('div');
+  line.split('').forEach(function(ch){var k=document.createElement('button');k.type='button';k.className='key';k.textContent=ch;k.setAttribute('aria-label',ch+'キー');
+    k.addEventListener('pointerdown',function(){sw.classList.add('held')});
+    ['pointerup','pointerleave','pointercancel'].forEach(function(ev){k.addEventListener(ev,function(){sw.classList.remove('held')})});
+    k.addEventListener('click',function(){press(ch)});d.appendChild(k)});kb.appendChild(d)});
+document.addEventListener('keydown',function(e){if(e.metaKey||e.ctrlKey||e.altKey||e.repeat)return;
+  var t=e.target&&e.target.tagName;if(t==='INPUT')return;
+  var k=(e.key||'').toUpperCase();if(/^[A-Z0-9]$/.test(k))press(k)});
+
+/* ---------- 実験2 ---------- */
+var chain=$('#chain'),N=6,input=0,out=[],st=[],dirty=true,flips=0,userFlips=0;
+var inNode,clockHz=0,clockAcc=0,tickAcc=0,heat=0,rate=0;
+(function build(){
+  svg('line',{class:'rail',x1:10,y1:24,x2:330,y2:24},chain);
+  svg('line',{class:'gnd',x1:10,y1:186,x2:330,y2:186},chain);
+  svg('text',{x:10,y:14},chain).textContent='電源 +';
+  svg('text',{x:10,y:203},chain).textContent='グラウンド 0';
+  svg('text',{x:6,y:90},chain).textContent='入力';
+  svg('text',{x:313,y:90},chain).textContent='出力';
+  for(var i=0;i<N;i++){var cx=64+i*48,px=i?cx-48:20,s={};
+    s.gw=svg('path',{class:'w',d:'M'+px+' 105H'+(cx-15)},chain);
+    s.gb=svg('line',{class:'w',x1:cx-15,y1:60,x2:cx-15,y2:150},chain);
+    svg('line',{class:'w hi',x1:cx,y1:24,x2:cx,y2:56},chain);
+    s.ua=svg('line',{class:'w arm',x1:cx,y1:56,x2:cx,y2:88},chain);s.ua.style.transformOrigin=cx+'px 56px';
+    s.u2=svg('line',{class:'w',x1:cx,y1:88,x2:cx,y2:122},chain);
+    s.da=svg('line',{class:'w arm',x1:cx,y1:122,x2:cx,y2:154},chain);s.da.style.transformOrigin=cx+'px 122px';
+    svg('line',{class:'w',x1:cx,y1:154,x2:cx,y2:186},chain);
+    st.push(s);out.push(i%2?0:1)}
+  inNode=svg('circle',{class:'node',cx:20,cy:105,r:7},chain);
+  st.forEach(function(s,i){s.node=svg('circle',{class:'node',cx:64+i*48,cy:105,r:i===N-1?8:5.5},chain)});
+})();
+function renderChain(){inNode.classList.toggle('hi',!!input);
+  st.forEach(function(s,i){var inH=i?out[i-1]:input,o=out[i];
+    s.gw.classList.toggle('hi',!!inH);s.gb.classList.toggle('hi',!!inH);
+    s.ua.classList.toggle('open',!!inH);s.da.classList.toggle('open',!inH);
+    s.ua.classList.toggle('hi',!!o&&!inH);s.u2.classList.toggle('hi',!!o);s.node.classList.toggle('hi',!!o)})}
+function flash(i,rising){var a=rising?st[i].ua:st[i].da;a.classList.add('flow');setTimeout(function(){a.classList.remove('flow')},110)}
+$('#flip').addEventListener('click',function(){input^=1;userFlips++;dirty=true;$('#flipn').textContent='指で切り替えた回数 '+userFlips});
+$('#hz').addEventListener('input',function(){clockHz=+this.value;$('#hzo').textContent=clockHz?('毎秒 '+clockHz+' 回'):'止'});
+function stepChain(dt){
+  if(clockHz>0){clockAcc+=dt;var half=1/(2*clockHz);if(clockAcc>=half){clockAcc%=half;input^=1;dirty=true}}
+  tickAcc+=dt;var f=0;
+  while(tickAcc>=0.045){tickAcc-=0.045;var prev=out.slice();
+    for(var i=0;i<N;i++){var inH=i?prev[i-1]:input,nv=inH?0:1;if(nv!==out[i]){out[i]=nv;f++;flash(i,nv===1);dirty=true}}}
+  heat=(heat+f)*Math.exp(-1.2*dt);
+  rate+=(f/dt-rate)*(1-Math.exp(-dt/0.5));
+  if(dirty){renderChain();dirty=false}
+  var h=Math.min(1,heat/85),bar=$('#heat');bar.style.width=(h*100).toFixed(1)+'%';bar.classList.toggle('hot',h>0.7);
+  $('#rate').textContent='毎秒 '+Math.round(rate)+' 回'}
+
+/* ---------- 実験3 ---------- */
+var A=0,Bv=0;
+function renderAdder(){var S=A^Bv,C=A&Bv;
+  $('#gA').classList.toggle('hi',!!A);$('#gB').classList.toggle('hi',!!Bv);$('#gS').classList.toggle('hi',!!S);$('#gC').classList.toggle('hi',!!C);
+  var a=$('#btnA'),b=$('#btnB');a.textContent='A = '+A;a.setAttribute('aria-pressed',A?'true':'false');b.textContent='B = '+Bv;b.setAttribute('aria-pressed',Bv?'true':'false');
+  $('#sum').innerHTML=A+' + '+Bv+' = <b>'+(A+Bv)+'</b>　2進数で <b>'+C+''+S+'</b>(繰り上がり '+C+'、和 '+S+')'}
+$('#btnA').addEventListener('click',function(){A^=1;renderAdder()});
+$('#btnB').addEventListener('click',function(){Bv^=1;renderAdder()});
+renderAdder();
+
+/* ---------- 実験4 ---------- */
+var cv=$('#scope'),ctx=cv.getContext('2d'),SENT=[0,1,0,0,0,0,0,1,1,0,1,1],SPB=16,noiseT=0;
+var css=getComputedStyle(document.documentElement);
+function col(n,d){var v=css.getPropertyValue(n).trim();return v||d}
+var C_TR=col('--trace','#E8BE4E'),C_SILK=col('--silk','#F1F5EE'),C_DIM=col('--silk-dim','#A9C4B8'),C_BAD=col('--bad','#FF7B7B'),C_OFF=col('--trace-off','#2E7560');
+function gauss(){var u=1-Math.random(),v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function drawScope(){
+  var dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W)return;
+  if(cv.width!==Math.round(W*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  var sigma=(+$('#noise').value/100)*0.6,th=+$('#th').value/100;
+  $('#noiseo').textContent=$('#noise').value+'%';$('#tho').textContent=Math.round(th*100)+'%';
+  var n=SENT.length,x0=6,bw=(W-12)/n,v=SENT[0],samp=[],got=[];
+  for(var i=0;i<n;i++)for(var s=0;s<SPB;s++){v+=(SENT[i]-v)*0.45;var y=v+sigma*gauss();samp.push(y);if(s===10)got.push(y>th?1:0)}
+  ctx.font='12px "Zen Kaku Gothic New",sans-serif';ctx.lineJoin='round';
+  function lane(label,top,h,bits,marks){ctx.fillStyle=C_DIM;ctx.fillText(label,x0,top-8);
+    ctx.lineWidth=2.5;
+    for(var i=0;i<bits.length;i++){var bad=marks&&bits[i]!==SENT[i];ctx.strokeStyle=bad?C_BAD:C_TR;ctx.beginPath();
+      var y=top+(bits[i]?0:h),xa=x0+i*bw,py=i?top+(bits[i-1]?0:h):y;ctx.moveTo(xa,py);ctx.lineTo(xa,y);ctx.lineTo(xa+bw,y);ctx.stroke();
+      ctx.fillStyle=bad?C_BAD:C_SILK;ctx.textAlign='center';ctx.fillText(bits[i],xa+bw/2,top+h+15);ctx.textAlign='left'}}
+  lane('送った信号',26,22,SENT,false);
+  var top=100,h=70;ctx.fillStyle=C_DIM;ctx.fillText('配線を伝わる実際の電圧',x0,top-22);
+  function Y(val){return Math.max(top-18,Math.min(top+h+18,top+h-val*h))}
+  ctx.strokeStyle=C_SILK;ctx.setLineDash([5,5]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x0,Y(th));ctx.lineTo(W-6,Y(th));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle=C_TR;ctx.lineWidth=1.6;ctx.beginPath();
+  for(var k=0;k<samp.length;k++){var x=x0+(k+0.5)*bw/SPB;if(k)ctx.lineTo(x,Y(samp[k]));else ctx.moveTo(x,Y(samp[k]))}ctx.stroke();
+  for(var i2=0;i2<n;i2++){var k2=i2*SPB+10;ctx.fillStyle=got[i2]!==SENT[i2]?C_BAD:C_SILK;ctx.beginPath();ctx.arc(x0+(k2+0.5)*bw/SPB,Y(samp[k2]),3.2,0,7);ctx.fill()}
+  lane('受け取り側が整え直した信号',218,22,got,true);
+  var e=0;for(var q=0;q<n;q++)if(got[q]!==SENT[q])e++;
+  var el=$('#err');el.textContent=e?('読み違い '+e+' / '+n+' ビット。赤いところでデータが化けました。'):('読み違い 0 / '+n+' ビット。完全に復元できています。');el.classList.toggle('bad',e>0)}
+$('#noise').addEventListener('input',drawScope);$('#th').addEventListener('input',drawScope);
+window.addEventListener('resize',drawScope);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawScope);
+
+/* ---------- 実験5 ---------- */
+var WORD='HELLO!',capsEl=$('#caps'),readout=$('#readout'),mem=[],refreshOn=true,sinceRefresh=0,sweeping=false,paintAcc=0;
+WORD.split('').forEach(function(chr){var rowEl=document.createElement('div');rowEl.className='caprow';var cellsR=[];
+  for(var i=0;i<8;i++){var cap=document.createElement('span');cap.className='cap';var lv=document.createElement('i');cap.appendChild(lv);rowEl.appendChild(cap);cellsR.push({lv:lv,q:0,tau:1})}
+  var chEl=document.createElement('span');chEl.className='ch';rowEl.appendChild(chEl);capsEl.appendChild(rowEl);
+  var sp=document.createElement('span');readout.appendChild(sp);
+  mem.push({el:rowEl,cells:cellsR,chEl:chEl,sp:sp,want:chr})});
+function writeWord(){mem.forEach(function(m){var bits=m.want.charCodeAt(0).toString(2).padStart(8,'0');
+  m.cells.forEach(function(c,i){c.q=+bits[i];c.tau=6.5+Math.random()*9})});paintMem()}
+function paintMem(){mem.forEach(function(m){var code=0;
+  m.cells.forEach(function(c){c.lv.style.height=(c.q*100).toFixed(0)+'%';c.lv.style.opacity=(0.35+0.65*c.q).toFixed(2);code=code*2+(c.q>0.5?1:0)});
+  var chr=(code>=33&&code<=126)?String.fromCharCode(code):(code===32?'␣':'□'),bad=chr!==m.want;
+  m.chEl.textContent=chr;m.sp.textContent=chr;m.chEl.classList.toggle('bad',bad);m.sp.classList.toggle('bad',bad)})}
+async function sweep(){sweeping=true;
+  for(var r=0;r<mem.length;r++){var m=mem[r];m.el.classList.add('sweep');m.cells.forEach(function(c){c.q=c.q>0.5?1:0});paintMem();await sleep(110);m.el.classList.remove('sweep')}
+  sweeping=false;sinceRefresh=0}
+function stepMem(dt){mem.forEach(function(m){m.cells.forEach(function(c){c.q*=Math.exp(-dt/c.tau)})});
+  sinceRefresh+=dt;if(refreshOn&&!sweeping&&sinceRefresh>3)sweep();
+  paintAcc+=dt;if(paintAcc>0.12){paintAcc=0;paintMem()}}
+$('#refresh').addEventListener('click',function(){refreshOn=!refreshOn;this.setAttribute('aria-pressed',refreshOn?'true':'false');this.textContent=refreshOn?'リフレッシュ 入':'リフレッシュ 切';if(refreshOn)sinceRefresh=3});
+$('#rewrite').addEventListener('click',writeWord);
+writeWord();
+
+/* ---------- ループ ---------- */
+renderChain();drawScope();
+var last=performance.now();
+function loop(now){var dt=Math.min(0.1,(now-last)/1000);last=now;
+  if(dt>0){stepChain(dt);stepMem(dt);
+    if(!reduce){noiseT+=dt;if(noiseT>0.3){noiseT=0;drawScope()}}}
+  requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>内部をのぞく</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#E8EEE9;--ink:#12281F;--muted:#4B6358;--rule:#BFCDC4;
+  --board:#0F4F3E;--board-deep:#0A3A2E;--trace:#E8BE4E;--trace-off:#2E7560;
+  --silk:#F1F5EE;--silk-dim:#A9C4B8;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#07120E;--ink:#E4EDE6;--muted:#9DB3A8;--rule:#1E3A30;--board:#0D4435;--board-deep:#082E24}}
+:root[data-theme="dark"]{--page:#07120E;--ink:#E4EDE6;--muted:#9DB3A8;--rule:#1E3A30;--board:#0D4435;--board-deep:#082E24}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:640px;margin:0 auto;padding:32px 18px 72px}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .4em}
+.lede{color:var(--muted);margin:0 0 20px}
+p{margin:0 0 1em}
+:focus-visible{outline:3px solid var(--trace);outline-offset:2px}
+
+/* 全体図 */
+.map{background:var(--board);border-radius:14px;padding:12px 10px 6px;color:var(--silk)}
+.map svg{display:block;width:100%;height:auto}
+.map text{font-family:var(--dot);fill:var(--silk);font-size:15px;text-anchor:middle}
+.map .lbl{font-size:11px;fill:var(--silk-dim)}
+.map .box{fill:var(--board-deep);stroke:var(--silk-dim);stroke-width:2}
+.map .cable{fill:none;stroke:var(--silk-dim);stroke-width:3;stroke-linecap:round}
+.map .cable.on{stroke:var(--trace)}
+.map .hot circle{fill:var(--board-deep);stroke:var(--silk);stroke-width:2.5;cursor:pointer}
+.map .hot text{font-size:16px;pointer-events:none}
+.map .hot.on circle{fill:var(--trace);stroke:var(--trace)}
+.map .hot.on text{fill:var(--board-deep)}
+
+/* 内部パネル */
+.inner{margin-top:14px;background:var(--board);border-radius:14px;padding:16px 12px 14px;color:var(--silk)}
+.inner-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
+.inner-head .t{font-family:var(--dot);font-size:1.2rem}
+.inner-head .s{font-family:var(--dot);font-size:.8rem;color:var(--silk-dim)}
+.wrap{display:grid;grid-template-columns:1fr 34px;gap:8px}
+.stack{display:flex;flex-direction:column-reverse;gap:8px}
+.layer{border:1.5px solid var(--trace-off);border-radius:10px;background:var(--board-deep);overflow:hidden;cursor:pointer;transition:border-color .15s}
+.layer .bar{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:.92rem;font-weight:700;min-height:44px}
+.layer .n{font-family:var(--dot);font-weight:400;color:var(--trace);flex:none}
+.layer .body{display:none;padding:2px 12px 12px}
+.layer.open{border-color:var(--trace)}
+.layer.open .body{display:block}
+.layer.open .bar{color:var(--trace)}
+.layer .fig{display:block;width:100%;height:auto;max-height:150px;margin:2px 0 8px}
+.layer .fig .w{stroke:var(--silk-dim);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.layer .fig .g{stroke:var(--trace);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.layer .fig .gf{fill:var(--trace)}
+.layer .fig .sf{fill:var(--silk-dim)}
+.layer .fig .bf{fill:var(--board)}
+.layer .fig text{font-family:var(--dot);fill:var(--silk-dim);font-size:9px;text-anchor:middle}
+.layer .body p{font-size:.9rem;line-height:1.7;margin:0;color:var(--silk)}
+.layer .link{margin-top:8px;padding-top:8px;border-top:1px dashed var(--trace-off);font-size:.82rem;color:var(--silk-dim)}
+.layer .link b{color:var(--trace);font-family:var(--dot);font-weight:400}
+.dim{opacity:.55}
+
+.rail{display:flex;flex-direction:column;align-items:center;padding-top:6px}
+.rail .line{flex:1;width:2px;background:var(--trace-off);margin-top:4px}
+.rail .arrow{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid var(--trace)}
+.rail .lk{font-family:var(--dot);font-size:.72rem;color:var(--trace);writing-mode:vertical-rl;letter-spacing:.2em;margin-top:6px}
+
+.nav{display:flex;gap:8px;margin-top:12px}
+.btn{font:inherit;font-weight:700;min-height:44px;flex:1;padding:6px 10px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--trace);border-color:var(--trace);color:var(--board-deep)}
+.btn:disabled{opacity:.35;cursor:default}
+.after{margin-top:16px;padding-left:14px;border-left:3px solid var(--trace)}
+</style>
+</head>
+<body>
+<main>
+<h1>内部をのぞく</h1>
+<p class="lede">キーボードからモニターまでの道すじの3か所に拡大鏡を当てます。①②③を押すと、その場所の「中」が下から上へ積み上がって見えます。</p>
+
+<div class="map">
+  <svg viewBox="0 0 360 250" role="img" aria-label="キーボードとPCの全体図" id="map">
+    <rect class="box" x="20" y="150" width="200" height="70" rx="8"/>
+    <text x="120" y="192">keyboard</text>
+    <rect class="box" x="20" y="22" width="200" height="90" rx="8"/>
+    <text x="120" y="62">PC</text><text class="lbl" x="120" y="82">(monitor)</text>
+    <path class="cable" id="cab" d="M220 185 C270 185 270 120 300 100 C320 88 305 60 220 62"/>
+    <g class="hot" data-s="0" tabindex="0" role="button" aria-label="① キーボード内部を見る"><circle cx="120" cy="150" r="17"/><text x="120" y="156">1</text></g>
+    <g class="hot" data-s="1" tabindex="0" role="button" aria-label="② ケーブル内部を見る"><circle cx="290" cy="140" r="17"/><text x="290" y="146">2</text></g>
+    <g class="hot" data-s="2" tabindex="0" role="button" aria-label="③ PC内部を見る"><circle cx="120" cy="112" r="17"/><text x="120" y="118">3</text></g>
+    <text class="lbl" x="120" y="240" id="cap">①②③ を押してください</text>
+  </svg>
+</div>
+
+<div class="inner" id="inner" hidden>
+  <div class="inner-head"><span class="t" id="ttl"></span><span class="s" id="sub"></span></div>
+  <div class="wrap">
+    <div class="stack" id="stack"></div>
+    <div class="rail" aria-hidden="true"><div class="arrow"></div><div class="lk">Link</div><div class="line"></div></div>
+  </div>
+  <div class="nav">
+    <button class="btn" id="prev" type="button">↓ 手前へ</button>
+    <button class="btn pri" id="next" type="button">奥へ ↑</button>
+  </div>
+</div>
+
+<p class="after">どの場所でも、いちばん下の層は「触れるもの」で、上に行くほど「電気のパターン」になります。各層の出口が次の層の入口につながっている(Link)ので、指の一押しがモニターの光まで途切れずに届きます。</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+var S=[
+ {t:'① key 内部',cap:'① キーボードの中を、下から順に',cab:false,L:[
+  {n:'キーキャップ',f:'<svg viewBox="0 0 200 70"><path class="w" d="M60 20h80l8 30H52z"/><path class="g" d="M100 4v10M96 10l4 5 4-5"/><path class="w" d="M85 50v12M115 50v12"/><rect class="sf" x="40" y="62" width="120" height="4" rx="2"/></svg>',
+   p:'指が押すのはプラスチックの板。その下の軸(ステム)を数ミリ押し下げます。ここまでは純粋に力学の世界です。',
+   k:'押し下げた軸が、下の<b>接点</b>を触れさせる'},
+  {n:'スイッチの接点',f:'<svg viewBox="0 0 200 70"><path class="w" d="M20 45h60"/><path class="g" d="M80 45l38-16"/><path class="w" d="M120 45h60"/><circle class="sf" cx="80" cy="45" r="3.5"/><circle class="sf" cx="120" cy="45" r="3.5"/><path class="g" d="M95 12l5 8 5-8"/><text x="100" y="66">押すと金属片が触れて回路がつながる</text></svg>',
+   p:'2枚の金属片が触れ、回路がつながります。それまで途切れていた配線に電流が流れ、その線の電圧が変わる。ここが「力 → 電気」の変換点です。',
+   k:'つながった配線は<b>マトリクス</b>の1本'},
+  {n:'キーマトリクス',f:'<svg viewBox="0 0 200 70"><path class="w" d="M30 15h140M30 35h140M30 55h140M55 5v60M95 5v60M135 5v60"/><path class="g" d="M30 35h140M95 5v60"/><circle class="gf" cx="95" cy="35" r="6"/><text x="182" y="38">行</text><text x="95" y="4" style="font-size:8px">列</text></svg>',
+   p:'100個のキーに100本の線は引けないので、配線は行と列の格子です。キー1つは格子の交点1つ。接点が閉じると、その行と列が導通します。',
+   k:'導通した交点を<b>マイコン</b>が見つける'},
+  {n:'マイコン(走査)',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="70" y="12" width="60" height="46" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="100" y="40" style="font-size:11px;fill:var(--silk)">MCU</text><path class="w" d="M70 20h-30M70 30h-30M70 40h-30M70 50h-30"/><path class="g" d="M130 35h40"/><text x="150" y="30">0100 0001</text><text x="30" y="66">行を1本ずつ順に調べる</text></svg>',
+   p:'小さなコンピュータが行を1本ずつ順に電圧を上げ、どの列に返ってくるかを毎秒何百回も調べます。見つかった交点をキー番号(スキャンコード)に変え、8ビットの列にします。',
+   k:'ビット列を<b>USB送信回路</b>へ'},
+  {n:'USB送信回路',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 50h180" stroke-dasharray="3 4"/><path class="g" d="M10 50h20v-30h20v30h20v-30h40v30h20v-30h20v30h20"/><text x="40" y="66">0</text><text x="60" y="66">1</text><text x="80" y="66">0</text><text x="110" y="66">1</text><text x="140" y="66">1</text><text x="160" y="66">0</text></svg>',
+   p:'ビット列を、信号線の電圧を高速に上げ下げする波形に変えます。1なら高く、0なら低く。これがケーブルへ送り出されます。',
+   k:'波形は<b>② ケーブル</b>を伝わる'}
+ ]},
+ {t:'② cable 内部',cap:'② ケーブルの中を、下から順に',cab:true,L:[
+  {n:'2本の信号線',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 25h180M10 45h180"/><path class="g" d="M10 25h30v-10h40v10h30v-10h40v10h30"/><path class="g" d="M10 45h30v10h40v-10h30v10h40v-10h30" opacity=".6"/><text x="190" y="20">D+</text><text x="190" y="62">D-</text></svg>',
+   p:'USBはD+とD-の2本で、いつも逆向きの電圧を送ります。受け取り側は「2本の差」を読むので、外から同じノイズが両方に乗っても打ち消せます。',
+   k:'電圧の並びは<b>パケット</b>という単位'},
+  {n:'パケット',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="10" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><rect class="bf" x="50" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><rect x="90" y="20" width="60" height="30" rx="3" class="gf"/><rect class="bf" x="154" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><text x="28" y="40">同期</text><text x="68" y="40">宛先</text><text x="120" y="40" style="fill:var(--board-deep)">データ</text><text x="172" y="40">検査</text></svg>',
+   p:'ビットはバラで送られず、「同期パターン・宛先・データ本体・誤り検査」のひとまとまりで送られます。PCは1ミリ秒ごとにキーボードに「何かある?」と聞き、キーボードがこの形で答えます。',
+   k:'本当の波形は<b>なめらか</b>'},
+  {n:'実際の電圧波形',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 35h180" stroke-dasharray="3 4"/><path class="g" d="M10 55 C25 55 25 15 40 15 S55 55 70 55 S85 15 100 15 S115 55 130 55 S145 15 160 15 S175 55 190 55"/><text x="100" y="66">しきい値より上なら1、下なら0</text></svg>',
+   p:'配線を走る電圧は角ばっておらず、なだらかで、ノイズも乗っています。受け取り側はしきい値で0か1に読み直し、きれいな信号に整え直します。',
+   k:'整えた信号が<b>③ PC</b>に入る'}
+ ]},
+ {t:'③ PC 内部',cap:'③ PCの中を、下から順に',cab:false,L:[
+  {n:'USBコントローラ',f:'<svg viewBox="0 0 200 70"><path class="g" d="M10 35h50"/><rect class="bf" x="60" y="15" width="80" height="40" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="100" y="33" style="font-size:10px;fill:var(--silk)">USB host</text><text x="100" y="47">受信バッファ</text><path class="w" d="M140 35h50"/></svg>',
+   p:'マザーボード上のチップが波形を受け取り、パケットを解いて、中身のスキャンコードを小さな記憶場所(バッファ)に置きます。',
+   k:'置いたら<b>CPUに知らせる</b>'},
+  {n:'割り込み',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="20" y="20" width="50" height="30" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="45" y="39">USB</text><path class="g" d="M70 35h60M122 29l8 6-8 6"/><rect class="bf" x="130" y="12" width="56" height="46" rx="4" stroke="var(--trace)" stroke-width="2"/><text x="158" y="39" style="font-size:12px;fill:var(--silk)">CPU</text><text x="100" y="28">IRQ</text></svg>',
+   p:'CPUにつながる1本の線の電圧を上げます。CPUは今の作業を一時中断し、「入力が来たときに実行する場所」へ飛びます。',
+   k:'飛び先は<b>OSのドライバ</b>'},
+  {n:'OS(ドライバ)',f:'<svg viewBox="0 0 200 70"><text x="40" y="38" style="font-size:12px">0x1E</text><path class="g" d="M65 35h30M88 29l7 6-7 6"/><rect class="bf" x="98" y="18" width="40" height="34" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="118" y="40">配列表</text><path class="g" d="M138 35h25"/><text x="178" y="40" style="font-size:16px;fill:var(--trace)">A</text></svg>',
+   p:'ドライバがバッファを読み、キー番号をキー配列表で文字に変換し、いま前面にあるアプリに渡します。ここで初めて「A」という文字になります。',
+   k:'文字は<b>メモリ</b>に書かれる'},
+  {n:'メモリ(DRAM)',f:'<svg viewBox="0 0 200 70"><g class="w"><rect x="20" y="20" width="14" height="30" rx="2"/><rect x="42" y="20" width="14" height="30" rx="2"/><rect x="64" y="20" width="14" height="30" rx="2"/><rect x="86" y="20" width="14" height="30" rx="2"/><rect x="108" y="20" width="14" height="30" rx="2"/><rect x="130" y="20" width="14" height="30" rx="2"/><rect x="152" y="20" width="14" height="30" rx="2"/><rect x="174" y="20" width="14" height="30" rx="2"/></g><rect class="gf" x="42" y="20" width="14" height="30" rx="2"/><rect class="gf" x="174" y="20" width="14" height="30" rx="2"/><text x="100" y="64">0 1 0 0 0 0 0 1 = A</text></svg>',
+   p:'アプリが文字をメモリに書きます。8個のコンデンサのうち、1にあたるものだけに電荷をためる。これがハードウェア上で「電荷が動く」瞬間です。',
+   k:'次は<b>画面用メモリ</b>へ'},
+  {n:'画面用メモリ',f:'<svg viewBox="0 0 200 70"><g class="w"><path d="M55 10h90v50H55zM55 22h90M55 34h90M55 46h90M67 10v50M79 10v50M91 10v50M103 10v50M115 10v50M127 10v50"/></g><g class="gf"><rect x="91" y="10" width="12" height="12"/><rect x="79" y="22" width="12" height="12"/><rect x="103" y="22" width="12" height="12"/><rect x="79" y="34" width="36" height="12"/><rect x="67" y="46" width="12" height="14"/><rect x="115" y="46" width="12" height="14"/></g></svg>',
+   p:'アプリは「A」の形を画素の並びに変え、画面用のメモリ(フレームバッファ)に書きます。1画素ごとに明るさの数値が入ります。',
+   k:'数値が<b>ディスプレイ</b>の電圧になる'},
+  {n:'ディスプレイ',f:'<svg viewBox="0 0 200 70"><rect class="w" x="60" y="8" width="80" height="54" rx="4"/><text x="100" y="45" style="font-size:30px;fill:var(--trace)">A</text><path class="g" d="M150 20l12-8M150 35h14M150 50l12 8"/></svg>',
+   p:'画素ごとの数値が電圧になり、液晶の向きや有機ELの明るさを変えます。電気が光に戻り、あなたの目に「A」が届きます。',
+   k:'ここで<b>一周</b>。指 → 電気 → 光'}
+ ]}
+];
+var cur=-1,lv=0;
+var $=function(s){return document.querySelector(s)};
+var inner=$('#inner'),stack=$('#stack'),hots=[].slice.call(document.querySelectorAll('.hot'));
+function render(){
+  var st=S[cur];$('#ttl').textContent=st.t;$('#sub').textContent='下から '+(lv+1)+' / '+st.L.length+' 層';
+  $('#cap').textContent=st.cap;$('#cab').classList.toggle('on',st.cab);
+  hots.forEach(function(h,i){h.classList.toggle('on',i===cur)});
+  stack.innerHTML='';
+  st.L.forEach(function(L,i){
+    var d=document.createElement('div');d.className='layer'+(i===lv?' open':'')+(i>lv?' dim':'');
+    var idx=i===0?'内部①':String(i+1);
+    d.innerHTML='<div class="bar"><span class="n">'+idx+'</span><span>'+L.n+'</span></div><div class="body">'+L.f.replace('<svg','<svg class="fig"')+'<p>'+L.p+'</p><div class="link">Link ↑ '+L.k+'</div></div>';
+    d.addEventListener('click',function(){lv=i;render()});
+    stack.appendChild(d)});
+  $('#prev').disabled=lv===0;
+  var last=lv===st.L.length-1;$('#next').textContent=last?(cur<2?'次の '+['②','③'][cur]+' へ':'最初の ① に戻る'):'奥へ ↑';
+  inner.hidden=false;
+}
+hots.forEach(function(h,i){function go(){cur=i;lv=0;render();inner.scrollIntoView({behavior:'smooth',block:'nearest'})}
+  h.addEventListener('click',go);h.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
+$('#prev').addEventListener('click',function(){if(lv>0){lv--;render()}});
+$('#next').addEventListener('click',function(){if(lv<S[cur].L.length-1){lv++;render()}else{cur=(cur+1)%3;lv=0;render();$('#map').scrollIntoView({behavior:'smooth',block:'start'})}});
+})();
+</script>
+</body>
+</html>
