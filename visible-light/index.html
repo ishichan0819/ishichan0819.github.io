@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>可視光通信 — 光で文字を送る</title>
+<meta name="description" content="LEDの点滅で文字を送り、受光側で波形からビットを読み取って復号する。可視光通信(Li-Fi)の仕組みを体験するアクティビティ。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--led-glow:#FFE08A;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:960px;margin:0 auto;padding:28px 18px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:40em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim)}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:10px 0 4px}
+input[type=text]{width:100%;font:inherit;font-family:var(--dot);font-size:1.1rem;padding:8px 10px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk)}
+input[type=range]{width:100%;accent-color:var(--led)}
+.btn{font:inherit;font-weight:700;min-height:40px;padding:4px 16px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+
+/* ---- 送信 / 経路 / 受信 ---- */
+.link{display:grid;grid-template-columns:1fr 150px 1fr;gap:12px;align-items:stretch}
+@media (max-width:719px){.link{grid-template-columns:1fr}}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge)}
+.side .h{font-family:var(--dot);font-size:.95rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between}
+.ledwrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0 4px}
+.led{width:84px;height:84px;border-radius:50%;background:#3A3220;border:3px solid #5A4D2A;transition:background .04s,box-shadow .04s;position:relative}
+.led.on{background:var(--led);border-color:var(--led-glow);box-shadow:0 0 22px 8px rgba(255,197,61,.55),0 0 60px 20px rgba(255,197,61,.25)}
+.led.fast{background:#E8B437;border-color:var(--led-glow);box-shadow:0 0 16px 6px rgba(255,197,61,.35)}
+.led::after{content:"";position:absolute;left:18px;top:14px;width:22px;height:14px;border-radius:50%;background:rgba(255,255,255,.35)}
+.bitnow{font-family:var(--dot);font-size:.85rem;color:var(--silk-dim);min-height:1.5em;text-align:center}
+.bitnow b{color:var(--led);font-weight:400;font-size:1.3rem}
+
+.channel{display:flex;flex-direction:column;justify-content:center;gap:8px;text-align:center}
+.beam{height:44px;position:relative;display:flex;align-items:center;justify-content:center}
+.beam .ray{position:absolute;left:0;right:0;top:50%;height:6px;margin-top:-3px;border-radius:3px;
+  background:linear-gradient(90deg,rgba(255,197,61,.9),rgba(255,197,61,.15));opacity:.15;transition:opacity .05s}
+.beam.on .ray{opacity:1}
+.beam .hand{position:relative;font-size:2rem;line-height:1;opacity:0;transform:translateY(-24px);transition:.2s}
+.beam.blocked .hand{opacity:1;transform:none}
+.beam.blocked .ray{background:linear-gradient(90deg,rgba(255,197,61,.9) 45%,transparent 50%)}
+@media (max-width:719px){.beam .ray{left:20%;right:20%}}
+.channel .lab{margin-top:4px;text-align:left}
+.sun{font-size:.8rem;color:var(--silk-dim)}
+
+.pd{width:60px;height:60px;margin:6px auto 0;border-radius:8px;background:#1C2436;border:2px solid var(--edge);display:grid;place-items:center;font-size:1.6rem}
+.meter{height:10px;border-radius:5px;background:var(--edge);overflow:hidden;margin:8px 0 2px}
+.meter i{display:block;height:100%;width:0;background:var(--wave);transition:width .04s}
+.mlab{display:flex;justify-content:space-between;font-family:var(--dot);font-size:.72rem;color:var(--silk-dim)}
+canvas{display:block;width:100%;height:120px;border-radius:8px;background:var(--room-deep);border:1px solid var(--edge);margin-top:10px}
+.frame{display:flex;gap:3px;margin-top:10px}
+.frame .b{flex:1;text-align:center;font-family:var(--dot);border:1.5px solid var(--edge);border-radius:5px;padding:3px 0;font-size:.95rem;background:var(--room-deep)}
+.frame .b small{display:block;font-size:.6rem;color:var(--silk-dim);line-height:1.2}
+.frame .b.s{border-color:var(--silk-dim)}
+.frame .b.one{color:var(--led)}
+.frame .b.err{border-color:var(--bad);color:var(--bad)}
+.frame .b.now{background:#1C2436;border-color:var(--wave)}
+.screen{margin-top:10px;background:var(--room-deep);border:1.5px solid var(--edge);border-radius:8px;padding:8px 10px;min-height:3.2em;font-family:var(--dot);font-size:1.4rem;line-height:1.4;word-break:break-all;white-space:pre-wrap}
+.screen .x{color:var(--bad);text-decoration:underline dotted}
+.screen .c{display:inline-block;width:.55em;height:1.1em;vertical-align:-.15em;background:var(--wave);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.stat{font-size:.82rem;color:var(--silk-dim);margin-top:6px;min-height:1.4em}
+.stat b{color:var(--silk);font-weight:400}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim);min-height:1.5em}
+.note.hi{color:var(--led)}
+
+/* ---- 手動チャレンジ ---- */
+.manual{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:719px){.manual{grid-template-columns:1fr}}
+.target{font-family:var(--dot);font-size:3rem;line-height:1;color:var(--led);text-align:center;margin:4px 0}
+.slots{display:flex;gap:4px;margin:8px 0}
+.slots .b{flex:1;text-align:center;font-family:var(--dot);border:1.5px solid var(--edge);border-radius:5px;padding:6px 0;font-size:1.1rem;background:var(--room-deep);position:relative}
+.slots .b small{display:block;font-size:.6rem;color:var(--silk-dim)}
+.slots .b.now{border-color:var(--wave);background:#1C2436}
+.slots .b.ok{border-color:var(--ok);color:var(--ok)}
+.slots .b.ng{border-color:var(--bad);color:var(--bad)}
+.slots .b.want{color:var(--led)}
+.prog{height:6px;border-radius:3px;background:var(--edge);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--wave)}
+.hold{width:100%;min-height:96px;font:inherit;font-family:var(--dot);font-size:1.4rem;border-radius:14px;border:2px solid var(--edge);background:var(--room-deep);color:var(--silk);cursor:pointer;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-touch-callout:none;margin-top:10px}
+.hold.on{background:var(--led);border-color:var(--led-glow);color:#1A1200;box-shadow:0 0 30px 8px rgba(255,197,61,.45)}
+.count{font-family:var(--dot);font-size:2.2rem;text-align:center;min-height:1.3em;color:var(--wave)}
+.res{font-family:var(--dot);text-align:center;font-size:1.2rem;min-height:1.6em;margin-top:6px}
+.res.ok{color:var(--ok)}.res.ng{color:var(--bad)}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+@media (prefers-reduced-motion:reduce){.screen .c{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a></p>
+<h1>光で文字を送る</h1>
+<p class="lede">可視光通信(VLC / Li-Fi)は、LEDを目に見えないほど速く点滅させてデータを運ぶ技術です。ここではその点滅を目で追える速さまで落として、文字が光になり、光がまた文字に戻るところを見ます。</p>
+
+<h2>① メッセージを光で送る</h2>
+<div class="panel">
+  <div class="ph"><span class="t">LED → 空間 → フォトダイオード</span><span class="s">OOK / 1文字 = 10ビット</span></div>
+  <div class="link">
+    <!-- 送信 -->
+    <div class="side">
+      <div class="h"><span>送信側 (LED)</span><span id="txst">待機</span></div>
+      <div class="ledwrap"><div class="led on" id="led"></div><div class="bitnow" id="bitnow">idle = 点灯</div></div>
+      <label class="lab" for="msg">送るメッセージ (半角英数)</label>
+      <input type="text" id="msg" value="HELLO" maxlength="24" autocomplete="off" spellcheck="false">
+      <label class="lab" for="bps">速さ: <b id="bpsv">4</b> ビット/秒</label>
+      <input type="range" id="bps" min="1" max="60" value="4">
+      <div class="ctl"><button class="btn pri" id="send" type="button">▶ 送信</button><button class="btn" id="stop" type="button" disabled>■ 停止</button></div>
+    </div>
+    <!-- 経路 -->
+    <div class="side channel">
+      <div class="beam" id="beam"><div class="ray"></div><div class="hand">✋</div></div>
+      <button class="btn" id="block" type="button" aria-pressed="false">✋ 手でさえぎる</button>
+      <label class="lab" for="sun">外の明かり(ノイズ): <span id="sunv">0</span>%</label>
+      <input type="range" id="sun" min="0" max="100" value="0">
+      <div class="sun">☀ 強いほど受光が乱れる</div>
+    </div>
+    <!-- 受信 -->
+    <div class="side">
+      <div class="h"><span>受信側 (フォトダイオード)</span><span id="rxst">--</span></div>
+      <div class="pd">◐</div>
+      <div class="meter"><i id="lv"></i></div>
+      <div class="mlab"><span>暗</span><span>しきい値</span><span>明</span></div>
+      <canvas id="wave" width="400" height="120" aria-label="受光レベルの波形"></canvas>
+      <div class="frame" id="frame"></div>
+      <div class="screen" id="rx"><span class="c"></span></div>
+      <div class="stat" id="stat"></div>
+    </div>
+  </div>
+  <div class="note" id="note">「送信」を押すと、LEDが 0 のとき消え、1 のとき点きます。受信側はビットの真ん中で明るさを測り、しきい値より明るければ 1 と読みます。</div>
+</div>
+
+<h2>② 自分がLEDになる</h2>
+<p class="lede">今度はあなたがLEDです。1秒ごとに1ビット、目標の文字のビット列どおりにボタンを押して(=点灯)、離して(=消灯)ください。受信側は各ビットの真ん中で明るさを読みます。</p>
+<div class="panel">
+  <div class="manual">
+    <div class="side">
+      <div class="h"><span>目標</span><span id="mcode"></span></div>
+      <div class="target" id="mt">A</div>
+      <div class="slots" id="mslots"></div>
+      <div class="prog"><i id="mprog"></i></div>
+      <div class="ctl"><button class="btn pri" id="mstart" type="button">スタート</button><button class="btn" id="mnext" type="button">別の文字</button></div>
+    </div>
+    <div class="side">
+      <div class="h"><span>あなた (LED)</span><span>受信側が読んだ値 ↓</span></div>
+      <div class="count" id="mcount">&nbsp;</div>
+      <button class="hold" id="hold" type="button" aria-pressed="false">押している間 点灯<br><small style="font-size:.7rem;color:inherit;opacity:.7">(スペースキーでも可)</small></button>
+      <div class="res" id="mres">&nbsp;</div>
+    </div>
+  </div>
+</div>
+
+<p class="after">見えたこと
+<ul>
+  <li><b>光は0と1のスイッチにできる</b>。点いていれば 1、消えていれば 0。これが最も単純な変調 OOK (On-Off Keying)。</li>
+  <li><b>速くすると点滅は見えなくなる</b>。実際のLi-Fiは毎秒数百万回以上。目には普通の照明にしか見えないまま、データが流れている。</li>
+  <li><b>光は壁を抜けない</b>。手でさえぎると通信は途切れる。欠点でもあり、隣の部屋に漏れない安全さでもある。</li>
+  <li><b>外の光はノイズ</b>。しきい値の判定が乱れてビットが化ける。実物はフィルタや符号化で対策する。</li>
+  <li><b>区切りが必要</b>。スタートビットで「ここから1文字」を知らせ、ストップビットで確認する。ずれると文字が化ける。</li>
+</ul>
+</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var led=$('#led'),beam=$('#beam'),bitnow=$('#bitnow'),txst=$('#txst'),rxst=$('#rxst'),lv=$('#lv'),note=$('#note');
+var cv=$('#wave'),cx=cv.getContext('2d'),frameEl=$('#frame'),rx=$('#rx'),cur=rx.querySelector('.c'),stat=$('#stat');
+var bpsEl=$('#bps'),sunEl=$('#sun');
+var S={run:false,bits:[],t0:0,dur:250,blocked:false,sun:0,samples:[],lastIdx:-1,rxBits:{},frames:[],okN:0,totN:0,level:0};
+
+/* ---- ビット列を作る: idle(1) ×2, 各文字 = start(0) + 8bit(MSB→) + stop(1) + idle(1) ---- */
+function build(text){
+  var bits=[{b:1,k:'idle'},{b:1,k:'idle'}];
+  for(var i=0;i<text.length;i++){
+    var c=text.charCodeAt(i);if(c>126||c<32)c=63;
+    bits.push({b:0,k:'S',ci:i,pos:0});
+    for(var j=7;j>=0;j--)bits.push({b:(c>>j)&1,k:String(j),ci:i,pos:8-j});
+    bits.push({b:1,k:'P',ci:i,pos:9});bits.push({b:1,k:'idle'});
+  }
+  return bits;
+}
+function frameUI(bits){
+  frameEl.innerHTML='';
+  var labels=['S','7','6','5','4','3','2','1','0','P'];
+  labels.forEach(function(l,i){var d=document.createElement('div');d.className='b'+((i===0||i===9)?' s':'');d.innerHTML='<small>'+(i===0?'start':i===9?'stop':'d'+l)+'</small><span>-</span>';d.id='fb'+i;frameEl.appendChild(d)});
+}
+frameUI();
+
+/* ---- 受光レベル: LEDの状態 + 障害物 + 外光ノイズ ---- */
+function sense(on){
+  var base=S.blocked?0.03:(on?0.95:0.06);
+  var n=S.sun/100;
+  return Math.max(0,Math.min(1,base+n*0.35+(Math.random()-0.5)*n*1.3));
+}
+function setLed(on){
+  var fast=S.run&&S.dur<25;
+  led.classList.toggle('on',on&&!fast);led.classList.toggle('fast',fast);
+  beam.classList.toggle('on',on);
+}
+
+/* ---- ループ ---- */
+function loop(){
+  if(!S.run)return;
+  var now=performance.now(),t=now-S.t0,idx=Math.floor(t/S.dur);
+  if(idx>=S.bits.length){finish();return}
+  var bit=S.bits[idx];
+  setLed(bit.b===1);
+  bitnow.innerHTML=bit.k==='idle'?'idle = 点灯':'<b>'+bit.b+'</b> '+(bit.k==='S'?'start':bit.k==='P'?'stop':'d'+bit.k)+' ('+ (S.bits[idx].ci!==undefined?'"'+S.text[bit.ci]+'"':'')+')';
+  /* 受光 */
+  S.level=sense(bit.b===1);
+  S.samples.push({t:t,v:S.level});
+  while(S.samples.length&&S.samples[0].t<t-win())S.samples.shift();
+  lv.style.width=(S.level*100)+'%';
+  /* まだ読んでいないビットの真ん中を過ぎたら読む */
+  for(var k=S.lastIdx+1;k<=idx;k++){
+    if(t>=(k+0.5)*S.dur){var v=(k===idx)?S.level:sense(S.bits[k].b===1);S.rxBits[k]=v>=0.5?1:0;S.samples.push({t:(k+0.5)*S.dur,v:v,s:S.rxBits[k]});S.lastIdx=k;showBit(k)}
+  }
+  draw(t);
+  requestAnimationFrame(loop);
+}
+function win(){return Math.max(2500,S.dur*24)}
+function showBit(k){
+  var b=S.bits[k],r=S.rxBits[k];
+  if(b.k==='idle'){rxst.textContent='idle';return}
+  if(b.pos===0){for(var i=0;i<10;i++){var e=$('#fb'+i);e.className='b'+((i===0||i===9)?' s':'');e.lastChild.textContent='-'}}
+  var e=$('#fb'+b.pos);e.lastChild.textContent=r;e.classList.add('now');e.classList.toggle('one',r===1);
+  if(b.pos===0&&r!==0)e.classList.add('err');if(b.pos===9&&r!==1)e.classList.add('err');
+  rxst.textContent='読取中 '+(b.pos+1)+'/10';
+  if(b.pos===9)decode(b.ci);
+}
+function decode(ci){
+  var base=S.frameStart[ci],start=S.rxBits[base],stop=S.rxBits[base+9],code=0,errs=0;
+  for(var j=0;j<8;j++)code=(code<<1)|S.rxBits[base+1+j];
+  var want=S.text.charCodeAt(ci);if(want>126||want<32)want=63;
+  var ok=start===0&&stop===1&&code===want;
+  var sp=document.createElement('span');
+  if(start!==0||stop!==1){sp.textContent='▯';sp.className='x';sp.title='フレームずれ (start/stop が不正)'}
+  else{sp.textContent=(code>=32&&code<127)?String.fromCharCode(code):'▯';if(!ok){sp.className='x';sp.title='ビット化け: '+want.toString(2)+' → '+code.toString(2)}}
+  rx.insertBefore(sp,cur);
+  S.totN++;if(ok)S.okN++;
+  stat.innerHTML='届いた文字: <b>'+S.okN+'</b> / '+S.totN+(S.okN<S.totN?'  <span style="color:var(--bad)">('+(S.totN-S.okN)+' 文字化け)</span>':'');
+}
+function draw(t){
+  var w=cv.width,h=cv.height,W=win();
+  cx.clearRect(0,0,w,h);
+  cx.strokeStyle='#26304A';cx.setLineDash([4,4]);cx.beginPath();cx.moveTo(0,h/2);cx.lineTo(w,h/2);cx.stroke();cx.setLineDash([]);
+  cx.fillStyle='#9AA6C2';cx.font='10px monospace';cx.fillText('しきい値',4,h/2-4);
+  cx.strokeStyle='#5EE7FF';cx.lineWidth=2;cx.beginPath();var first=true;
+  S.samples.forEach(function(s){if(s.s!==undefined)return;var x=w-(t-s.t)/W*w,y=h-6-s.v*(h-12);if(first){cx.moveTo(x,y);first=false}else cx.lineTo(x,y)});
+  cx.stroke();
+  S.samples.forEach(function(s){if(s.s===undefined)return;var x=w-(t-s.t)/W*w,y=h-6-s.v*(h-12);cx.fillStyle=s.s?'#FFC53D':'#9AA6C2';cx.beginPath();cx.arc(x,y,3.5,0,6.29);cx.fill()});
+}
+function fit(){var r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(120*d);cx.setTransform(1,0,0,1,0,0);cx.scale(1,1)}
+window.addEventListener('resize',fit);fit();
+
+function start(){
+  var text=$('#msg').value.replace(/[^\x20-\x7E]/g,'?');if(!text){$('#msg').focus();return}
+  S.text=text;S.bits=build(text);S.frameStart={};S.bits.forEach(function(b,i){if(b.pos===0)S.frameStart[b.ci]=i});
+  S.dur=1000/(+bpsEl.value);S.t0=performance.now();S.samples=[];S.lastIdx=-1;S.rxBits={};S.okN=0;S.totN=0;S.run=true;
+  while(cur.previousSibling)cur.previousSibling.remove();stat.textContent='';frameUI();
+  $('#send').disabled=true;$('#stop').disabled=false;$('#msg').disabled=true;bpsEl.disabled=true;
+  txst.textContent='送信中 '+(+bpsEl.value)+' bps';
+  note.className='note'+(S.dur<25?' hi':'');
+  note.textContent=S.dur<25?'この速さだと、目にはLEDがずっと点いているように見えます。でも受信側は点滅を読めています。これが Li-Fi が照明に見える理由です。':
+    (S.blocked?'手でさえぎっているので、LEDが何を送っても受信側には暗いままです。':S.sun>50?'外光が強いので、しきい値の判定が乱れてビットが化けることがあります。':'LEDの点滅と、右の波形・ビット読み取り・文字が現れるのを見比べてください。');
+  requestAnimationFrame(loop);
+}
+function finish(){
+  S.run=false;setLed(true);bitnow.textContent='idle = 点灯';txst.textContent='送信完了';rxst.textContent='待機';
+  $('#send').disabled=false;$('#stop').disabled=true;$('#msg').disabled=false;bpsEl.disabled=false;
+  if(S.totN&&S.okN===S.totN)note.textContent='全部届きました。速さを上げたり、手でさえぎったり、外光を強くして、どこで壊れるか試してください。';
+}
+$('#send').addEventListener('click',start);
+$('#stop').addEventListener('click',function(){S.run=false;finish();txst.textContent='停止'});
+$('#msg').addEventListener('keydown',function(e){if(e.key==='Enter')start()});
+bpsEl.addEventListener('input',function(){$('#bpsv').textContent=this.value});
+sunEl.addEventListener('input',function(){S.sun=+this.value;$('#sunv').textContent=this.value});
+$('#block').addEventListener('click',function(){S.blocked=!S.blocked;this.setAttribute('aria-pressed',String(S.blocked));beam.classList.toggle('blocked',S.blocked)});
+setLed(true);
+
+/* ================= ② 手動チャレンジ ================= */
+var M={target:'A',bits:[],run:false,held:false,read:[],timer:null};
+var mt=$('#mt'),mslots=$('#mslots'),mprog=$('#mprog'),mcount=$('#mcount'),mres=$('#mres'),hold=$('#hold');
+var POOL='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function mset(ch){
+  M.target=ch;var c=ch.charCodeAt(0);M.bits=[];for(var j=7;j>=0;j--)M.bits.push((c>>j)&1);
+  mt.textContent=ch;$('#mcode').textContent=M.bits.join('')+' ('+c+')';
+  mslots.innerHTML='';M.bits.forEach(function(b,i){var d=document.createElement('div');d.className='b want';d.innerHTML='<small>d'+(7-i)+'</small><span>'+b+'</span><small id="mr'+i+'">&nbsp;</small>';mslots.appendChild(d)});
+  mprog.style.width='0';mres.textContent=' ';mres.className='res';
+}
+function setHeld(v){if(M.held===v)return;M.held=v;hold.classList.toggle('on',v);hold.setAttribute('aria-pressed',String(v))}
+hold.addEventListener('pointerdown',function(e){e.preventDefault();hold.setPointerCapture(e.pointerId);setHeld(true)});
+hold.addEventListener('pointerup',function(){setHeld(false)});hold.addEventListener('pointercancel',function(){setHeld(false)});
+hold.addEventListener('lostpointercapture',function(){setHeld(false)});
+document.addEventListener('keydown',function(e){if(e.key===' '&&e.target.tagName!=='INPUT'){e.preventDefault();setHeld(true)}});
+document.addEventListener('keyup',function(e){if(e.key===' ')setHeld(false)});
+
+function mstart(){
+  if(M.run)return;M.run=true;M.read=[];mset(M.target);$('#mstart').disabled=true;$('#mnext').disabled=true;
+  var SLOT=1000,n=0,t0;
+  var cd=3;mcount.textContent=cd;
+  var ct=setInterval(function(){cd--;if(cd>0){mcount.textContent=cd}else{clearInterval(ct);mcount.textContent='GO';t0=performance.now();tick()}},1000);
+  function tick(){
+    var t=performance.now()-t0,i=Math.floor(t/SLOT);
+    mprog.style.width=Math.min(100,t/(SLOT*8)*100)+'%';
+    [].forEach.call(mslots.children,function(d,k){d.classList.toggle('now',k===i)});
+    if(i<8)mcount.textContent='bit '+(i+1)+' / 8 → '+(M.bits[i]?'点ける':'消す');
+    /* 各スロットの真ん中で読む */
+    if(i<8&&i===M.read.length&&t>=(i+0.5)*SLOT){
+      var r=M.held?1:0;M.read.push(r);var d=mslots.children[i];$('#mr'+i).textContent='読み: '+r;d.classList.add(r===M.bits[i]?'ok':'ng');
+    }
+    if(M.read.length<8){requestAnimationFrame(tick);return}
+    var code=0;M.read.forEach(function(b){code=(code<<1)|b});
+    var got=(code>=32&&code<127)?String.fromCharCode(code):'?';var ok=code===M.target.charCodeAt(0);
+    mcount.textContent='';mres.textContent=ok?'受信: "'+got+'"  成功!':'受信: "'+got+'" ('+M.read.join('')+')  もう一回';mres.className='res '+(ok?'ok':'ng');
+    M.run=false;$('#mstart').disabled=false;$('#mnext').disabled=false;
+  }
+}
+$('#mstart').addEventListener('click',mstart);
+$('#mnext').addEventListener('click',function(){mset(POOL[Math.floor(Math.random()*POOL.length)])});
+mset('A');
+})();
+</script>
+</body>
+</html>
