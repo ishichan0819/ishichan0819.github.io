@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ダイクストラ法 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>ダイクストラ法</h1>
+<p class="lede">辺に<b>非負の重み</b>がある最短路。BFS の「近い順に確定」を、キューの代わりに<b>優先度付きキュー</b> (距離が小さいものから出てくる) で行います。取り出した頂点の距離はその時点で確定なので、そこから隣を更新 (緩和) していくだけです。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>確定の順番</b>　未確定の中で最も距離が小さい頂点は、他のどの経路でもそれより短くならない (重みが非負だから)。だから取り出した瞬間に確定してよい。優先度付きキューには (距離, 頂点) を入れ、取り出したときに「古い情報」(dist より大きい) なら捨てる。</div>
+<ul>
+  <li>負の辺があると成り立たない → ベルマンフォード or ワーシャルフロイド。</li>
+  <li>「古い情報を捨てる」チェックを忘れると計算量が壊れる (同じ頂点を何度も広げる)。</li>
+  <li>頂点数 N ≤ 10^5, 辺数 M ≤ 2×10^5 の制約はダイクストラのサイン。</li>
+  <li>経路復元は、更新したときに prev[u] = v を記録して終点から逆にたどる。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>頂点 0 から各頂点への最短距離。緑が確定、黄色が優先度付きキューに入っている頂点です。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 隣接リスト G[v] = {(隣, 重み)}。s からの最短距離 dist (到達不能は INF)
+using P = pair<long long, int>;                   // (距離, 頂点)
+const long long INF = 1e18;
+vector<vector<P>> G(N);                           // G[v].push_back({u, w}) で辺を追加 ※ (隣, 重み) の順に注意
+vector<long long> dist(N, INF);
+vector<int> prevv(N, -1);
+priority_queue<P, vector<P>, greater<P>> pq;      // 小さい順に出る
+dist[s] = 0; pq.push({0, s});
+while (!pq.empty()) {
+    auto [d, v] = pq.top(); pq.pop();
+    if (d > dist[v]) continue;                    // 古い情報は捨てる (重要)
+    for (auto [u, w] : G[v]) {
+        if (dist[v] + w < dist[u]) {              // 緩和
+            dist[u] = dist[v] + w;
+            prevv[u] = v;
+            pq.push({dist[u], u});
+        }
+    }
+}
+// 経路復元: t から prevv をたどって逆順にする
+vector<int> path;
+for (int v = t; v != -1; v = prevv[v]) path.push_back(v);
+reverse(path.begin(), path.end());
+</script>
+<script type="text/plain" data-lang="Python">
+import heapq
+# 隣接リスト G[v] = [(隣, 重み), ...]。s からの最短距離 dist (到達不能は INF)
+INF = float('inf')
+dist = [INF] * N
+prev = [-1] * N
+dist[s] = 0
+pq = [(0, s)]                                   # (距離, 頂点) のヒープ。小さい順に出る
+while pq:
+    d, v = heapq.heappop(pq)
+    if d > dist[v]:
+        continue                                # 古い情報は捨てる (重要)
+    for u, w in G[v]:
+        if dist[v] + w < dist[u]:               # 緩和
+            dist[u] = dist[v] + w
+            prev[u] = v
+            heapq.heappush(pq, (dist[u], u))
+
+# 経路復元: t から prev をたどって逆順にする
+path = []
+v = t
+while v != -1:
+    path.append(v)
+    v = prev[v]
+path.reverse()
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>O((N + M) log N)。N = M = 2×10^5 で 10^7 程度。</li>
+  <li>C++ の <code>priority_queue</code> は既定で大きい順。<code>greater&lt;P&gt;</code> を忘れない。pair の順序は (距離, 頂点) で距離を先に。</li>
+  <li>距離の合計は int を超えやすい。<code>long long</code> と INF = 10^18。</li>
+  <li>無向グラフは両方向に辺を入れる。</li>
+  <li>「状態」を頂点に: (頂点, 使った割引券の枚数) のように N × K 個の頂点で回すと、条件付き最短路になる。</li>
+  <li>全点対 (N ≤ 400 程度) はワーシャルフロイド O(N^3) の方が楽。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>都市間の最短時間、最小コスト (辺の重みが非負)</li>
+  <li>「電車は乗り換えに時間がかかる」など、辺の重みが状態に依存する最短路</li>
+  <li>始点が複数あるとき: すべて距離 0 でキューに入れる (多始点ダイクストラ)</li>
+  <li>「通ってよい頂点を 1 つだけ追加できる」→ 始点からと終点からの 2 回のダイクストラを合わせる</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('dijkstra');
+var NODES=[{x:40,y:100},{x:150,y:40},{x:150,y:160},{x:270,y:40},{x:270,y:160},{x:380,y:100},{x:480,y:100}];
+var EDGES=[[0,1,7],[0,2,3],[1,2,2],[1,3,4],[2,4,8],[3,4,1],[3,5,6],[4,5,2],[5,6,5],[4,6,9]];
+Viz('#viz',function(){
+  var n=NODES.length,G=[],fr=[];for(var i=0;i<n;i++)G.push([]);EDGES.forEach(function(e){G[e[0]].push([e[1],e[2]]);G[e[1]].push([e[0],e[2]])});
+  var INF=Infinity,dist=[],done=[],prev=[];for(i=0;i<n;i++){dist.push(INF);done.push(false);prev.push(-1)}
+  var pq=[];function push(d,v){pq.push([d,v]);pq.sort(function(a,b){return a[0]-b[0]||a[1]-b[1]})}
+  function draw(cur,hlEdges){var nodes=NODES.map(function(p,i){return {x:p.x,y:p.y,l:i,cls:i===cur?'cur':done[i]?'done':pq.some(function(q){return q[1]===i})?'q':'',sub:dist[i]===INF?'∞':dist[i]}});
+    var edges=EDGES.map(function(e){var on=prev[e[0]]===e[1]||prev[e[1]]===e[0];var hi=hlEdges&&hlEdges.some(function(h){return (h[0]===e[0]&&h[1]===e[1])||(h[0]===e[1]&&h[1]===e[0])});return {a:e[0],b:e[1],w:e[2],cls:hi?'hi':on?'on':''}});
+    return svgGraph(nodes,edges,520,200)+'<div class="kv">pq (距離, 頂点): '+(pq.length?pq.map(function(q){return '('+q[0]+','+q[1]+')'}).join(' '):'空')+'</div><div class="kv">dist = ['+dist.map(function(d){return d===INF?'∞':d}).join(', ')+']</div>'}
+  dist[0]=0;push(0,0);
+  fr.push({h:draw(),c:'dist[0] = 0、他は ∞。pq に (0, 0) を入れる。'});
+  while(pq.length){var top=pq.shift(),d=top[0],v=top[1];
+    if(d>dist[v]){fr.push({h:draw(v),c:'('+d+', '+v+') を取り出したが dist['+v+'] = '+dist[v]+' &lt; '+d+' なので<b>古い情報。捨てる</b>。'});continue}
+    done[v]=true;var upd=[],hl=[];
+    G[v].forEach(function(e){var u=e[0],w=e[1];hl.push([v,u]);if(dist[v]+w<dist[u]){dist[u]=dist[v]+w;prev[u]=v;push(dist[u],u);upd.push('dist['+u+'] → '+dist[u])}});
+    fr.push({h:draw(v,hl),c:'('+d+', '+v+') を取り出す。dist['+v+'] = '+d+' で<b>確定</b>。隣を緩和: '+(upd.length?upd.join(', ')+' を pq に入れる。':'更新なし。')});
+  }
+  fr.push({h:draw(),c:'pq が空で終了。緑の辺が最短路木 (prev をたどると経路)。頂点 6 までの最短距離は <b>'+dist[6]+'</b>。'});
+  return fr;
+},{ms:900});
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>貪欲法とソート — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>貪欲法とソート</h1>
+<p class="lede">「その時点で一番よさそうな選択」を繰り返すのが貪欲法です。うまくいく問題では圧倒的に速く簡単ですが、<b>なぜ正しいか</b>を言えないと、うまくいかない問題で使ってしまいます。ここでは代表例の区間スケジューリングで、正しい理由まで確かめます。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>区間スケジューリング</b>　重ならないように最大何個の区間を選べるか。答え: <b>終わりが早い順</b>に見て、直前に選んだ区間と重ならなければ選ぶ。理由 (交換論法): 最適解の最初の区間を「終わりが最も早い区間」に置き換えても、残りの選択肢は減らない。以下同様。</div>
+<ul>
+  <li>貪欲が正しい典型的な形: ソートして端から決める / 交換しても損しないことが示せる / マトロイド構造がある。</li>
+  <li>正しさが言えないときは、小さいケースで全探索と比べる (反例探し)。</li>
+  <li>「終わりが早い順」ではなく「始まりが早い順」や「短い順」だと反例がある (図で試せます)。</li>
+  <li>ソートの比較関数を自分で書く (<code>sort(v.begin(), v.end(), [](auto&amp; a, auto&amp; b){ return a.second &lt; b.second; })</code>)。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>区間を終了時刻でソートし、左から見ていきます。黄色が今見ている区間、緑が採用、薄い赤が却下です。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 区間スケジューリング: 区間 (l, r) を最大何個、重ならずに選べるか (端が接するのは OK とする)
+vector<pair<long long,long long>> iv;          // (l, r)
+sort(iv.begin(), iv.end(), [](auto& a, auto& b) { return a.second < b.second; });  // 終わりが早い順
+int cnt = 0;
+long long last = -1e18;                        // 直前に選んだ区間の終わり
+for (auto [l, r] : iv) {
+    if (l >= last) { cnt++; last = r; }        // 重ならなければ採用
+}
+
+// よく使う貪欲のパターン
+// ・コインの枚数最小 (額面が倍数関係なら大きい額から)
+// ・締め切りつき仕事: 締め切り順にソートして priority_queue で「一番軽い / 重い」を捨てる
+// ・「x 以上を保証しつつ最小化」: 小さい順に取って条件を満たした瞬間に止める
+</script>
+<script type="text/plain" data-lang="Python">
+# 区間スケジューリング: 区間 (l, r) を最大何個、重ならずに選べるか (端が接するのは OK とする)
+iv.sort(key=lambda x: x[1])            # 終わりが早い順
+cnt = 0
+last = -float('inf')                   # 直前に選んだ区間の終わり
+for l, r in iv:
+    if l >= last:                      # 重ならなければ採用
+        cnt += 1
+        last = r
+
+# よく使う貪欲のパターン
+# ・コインの枚数最小 (額面が倍数関係なら大きい額から)
+# ・締め切りつき仕事: 締め切り順にソートして heapq で「一番軽い / 重い」を捨てる
+# ・「x 以上を保証しつつ最小化」: 小さい順に取って条件を満たした瞬間に止める
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>ソート O(N log N) + 1 回の走査 O(N)。</li>
+  <li>「端が接する」を許すかで <code>&gt;=</code> か <code>&gt;</code> が変わる。問題文を読む。</li>
+  <li>「見た目が貪欲っぽい」問題の多くは DP。貪欲で WA が出たら DP を疑う。</li>
+  <li>ソートの key に複数条件 (第 1 キー、第 2 キー) が必要なことが多い。tuple にして sort。</li>
+  <li>priority_queue と組み合わせる貪欲 (「今取れる中で最大を取る」) は頻出。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>区間スケジューリング、会議室が何部屋必要か (開始・終了イベントをソート)</li>
+  <li>ロープや紙を切るコストの最小化 (小さい順に合体)</li>
+  <li>マッチング: 「A の各要素に B の要素を割り当てて条件を満たす」を両方ソートして 2 ポインタ</li>
+  <li>文字列を辞書順最小にする操作 (先頭から貪欲に小さい文字を置く)</li>
+  <li>締め切りと報酬のある仕事の選択 (締め切り順 + ヒープ)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('greedy');
+var IV=[[1,4],[3,5],[0,6],[5,7],[3,9],[5,9],[6,10],[8,11],[8,12],[2,14],[12,16]];
+Viz('#viz',function(){
+  var iv=IV.slice().sort(function(a,b){return a[1]-b[1]}),fr=[],state=[],last=-Infinity,cnt=0,T=17;
+  function draw(cur){var h='<svg viewBox="0 0 520 '+(iv.length*22+30)+'" width="520">';
+    for(var t=0;t<=T;t+=2)h+='<line x1="'+(20+t*29)+'" y1="10" x2="'+(20+t*29)+'" y2="'+(iv.length*22+12)+'" stroke="#2A3146"/><text class="sm" x="'+(20+t*29)+'" y="'+(iv.length*22+22)+'">'+t+'</text>';
+    if(last>-Infinity)h+='<line x1="'+(20+last*29)+'" y1="6" x2="'+(20+last*29)+'" y2="'+(iv.length*22+12)+'" stroke="#FFB93B" stroke-dasharray="4 3"/>';
+    iv.forEach(function(v,i){var col=i===cur?'#FFB93B':state[i]==='ok'?'#4ADE80':state[i]==='ng'?'#7A2A36':'#3A4258';
+      h+='<rect x="'+(20+v[0]*29)+'" y="'+(14+i*22)+'" width="'+((v[1]-v[0])*29)+'" height="16" rx="4" fill="'+col+'"/><text class="sm" x="'+(20+(v[0]+v[1])/2*29)+'" y="'+(22+i*22)+'" style="fill:#0C101B">'+v[0]+'–'+v[1]+'</text>'});
+    return h+'</svg><div class="kv">終了時刻順にソート済み。last = <b>'+(last===-Infinity?'なし':last)+'</b>, 採用数 = <b>'+cnt+'</b></div>'}
+  fr.push({h:draw(-1),c:'まず終了時刻でソート。点線が「直前に採用した区間の終わり」で、これより左で始まる区間は重なるので取れません。'});
+  iv.forEach(function(v,i){var ok=v[0]>=last;
+    fr.push({h:draw(i),c:'['+v[0]+', '+v[1]+'] を見る。始まり '+v[0]+' は last = '+(last===-Infinity?'−∞':last)+' '+(ok?'以上 → <b>採用</b>。last = '+v[1]+'。':'より小さい → 重なるので<b>却下</b>。')});
+    state[i]=ok?'ok':'ng';if(ok){cnt++;last=v[1]}});
+  fr.push({h:draw(-1),c:'答え <b>'+cnt+' 個</b>。「終わりが早い区間を取る」と残りの自由度が最大になるので、これが最適です。'});
+  return fr;
+},{ms:800});
+</script>
+</body>
+</html>

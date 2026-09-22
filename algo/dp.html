@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>動的計画法 (DP) — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>動的計画法 (DP)</h1>
+<p class="lede">「全探索したいが 2^N は無理」なとき、<b>途中までの結果を表にして使い回す</b>のが DP です。緑から水色に上がる最大の壁で、コツは「表の定義を日本語で 1 文で言えるまで決める」こと。ここでは 0-1 ナップサックで表の埋まり方を見ます。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>dp[i][w] = 最初の i 個の品物から、重さの合計が w 以下になるように選んだときの価値の最大値</b>　品物 i (重さ W_i, 価値 V_i) を「選ばない」なら dp[i][w] = dp[i−1][w]、「選ぶ」なら dp[i−1][w − W_i] + V_i。大きい方を取る。答えは dp[N][W]。</div>
+<ul>
+  <li>手順: ① 表の定義 ② 初期値 (dp[0][*] = 0) ③ 遷移 (どこから来るか) ④ 答えの場所 ⑤ 計算順 (依存先が先に埋まる順)。</li>
+  <li>「もらう DP」(dp[i] を作るために前を見る) と「配る DP」(dp[i] から先へ足す) は同じことの裏表。書きやすい方で。</li>
+  <li>ナップサックは重さを添字にしたが、価値が小さく重さが巨大なら「価値を添字にして重さの最小値を持つ」と入れ替える。</li>
+  <li>LIS (最長増加部分列)、編集距離、区間 DP、bit DP、木 DP はすべて「表の定義」を変えただけ。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>品物 4 個、容量 W = 8。表の各マスが上の行のどこから来たかを水色で示します。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 0-1 ナップサック: N 個, 容量 W, 品物 i は (wt[i], val[i])
+vector<vector<long long>> dp(N + 1, vector<long long>(W + 1, 0));
+for (int i = 0; i < N; i++) {
+    for (int w = 0; w <= W; w++) {
+        dp[i + 1][w] = dp[i][w];                                   // 選ばない
+        if (w >= wt[i]) dp[i + 1][w] = max(dp[i + 1][w], dp[i][w - wt[i]] + val[i]);  // 選ぶ
+    }
+}
+long long ans = dp[N][W];
+
+// 1 次元版 (w を大きい方から回すと「1 回だけ」が保証される)
+vector<long long> dp1(W + 1, 0);
+for (int i = 0; i < N; i++)
+    for (int w = W; w >= wt[i]; w--)
+        dp1[w] = max(dp1[w], dp1[w - wt[i]] + val[i]);
+// 個数無制限 (完全ナップサック) は w を小さい方から回すだけ
+
+// LIS の長さ O(N log N): L[k] = 長さ k+1 の増加列の末尾の最小値
+vector<long long> L;
+for (long long a : A) {
+    auto it = lower_bound(L.begin(), L.end(), a);   // 「以上」: 狭義単調増加
+    if (it == L.end()) L.push_back(a); else *it = a;
+}
+int lis = L.size();
+</script>
+<script type="text/plain" data-lang="Python">
+# 0-1 ナップサック: N 個, 容量 W, 品物 i は (wt[i], val[i])
+dp = [[0] * (W + 1) for _ in range(N + 1)]
+for i in range(N):
+    for w in range(W + 1):
+        dp[i + 1][w] = dp[i][w]                          # 選ばない
+        if w >= wt[i]:                                   # 選ぶ
+            dp[i + 1][w] = max(dp[i + 1][w], dp[i][w - wt[i]] + val[i])
+ans = dp[N][W]
+
+# 1 次元版 (w を大きい方から回すと「1 回だけ」が保証される)
+dp1 = [0] * (W + 1)
+for i in range(N):
+    for w in range(W, wt[i] - 1, -1):
+        dp1[w] = max(dp1[w], dp1[w - wt[i]] + val[i])
+# 個数無制限 (完全ナップサック) は w を小さい方から回すだけ
+
+# LIS の長さ O(N log N): L[k] = 長さ k+1 の増加列の末尾の最小値
+from bisect import bisect_left
+L = []
+for a in A:
+    i = bisect_left(L, a)          # 「以上」: 狭義単調増加
+    if i == len(L):
+        L.append(a)
+    else:
+        L[i] = a
+lis = len(L)
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>ナップサックは O(NW)。N = 100, W = 10^5 なら 10^7 で余裕。W = 10^9 なら価値側を添字にする。</li>
+  <li><b>初期値</b>: 最大化なら 0 か −∞、最小化なら +∞ (<code>1e18</code>)。「到達不能」を表す値を決めておく。</li>
+  <li>1 次元化するときのループの向き (0-1 は逆順、無制限は正順) を混同しない。</li>
+  <li>「i 番目まで見た」の i が 0-indexed か 1-indexed かを固定する。dp のサイズは N+1。</li>
+  <li>復元が必要なら、どの遷移を選んだかを別の表に残すか、答えから逆にたどる。</li>
+  <li>メモ化再帰でも同じ。C++ なら再帰でも速いが、Python では表を回す方が安全。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>ナップサック (0-1 / 個数無制限 / 個数制限あり)、部分和が作れるか (bool の DP)</li>
+  <li>最長増加部分列 (LIS)、最長共通部分列 (LCS)、編集距離</li>
+  <li>階段の上り方の数、経路の数 (mod 10^9+7 で数える DP)</li>
+  <li>「i 日目にどの行動をとるか」で状態を持つ (dp[i][行動])</li>
+  <li>区間 DP (dp[l][r]: 区間 [l, r) の最適値)、bit DP (dp[集合][最後の頂点])</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('dp');
+var IT=[[2,3],[3,4],[4,5],[5,6]],W=8; /* [重さ,価値] */
+Viz('#viz',function(){
+  var N=IT.length,fr=[],dp=[];for(var i=0;i<=N;i++){dp.push([]);for(var w=0;w<=W;w++)dp[i].push(i===0?0:null)}
+  function table(ci,cw,src){var h='<div class="kv" style="margin-bottom:8px">品物: '+IT.map(function(it,i){return (i===ci-1?'<b>':'')+'#'+(i+1)+'(重'+it[0]+',価'+it[1]+')'+(i===ci-1?'</b>':'')}).join('  ')+'</div><table class="dp"><tr><th>i \\ w</th>';
+    for(var w=0;w<=W;w++)h+='<th>'+w+'</th>';h+='</tr>';
+    for(var i=0;i<=N;i++){h+='<tr><th>'+i+'</th>';for(w=0;w<=W;w++){var cl=(i===ci&&w===cw)?'cur':(src&&src.some(function(s){return s[0]===i&&s[1]===w}))?'src':dp[i][w]==null?'nd':'done';h+='<td class="'+cl+'">'+(dp[i][w]==null?'·':dp[i][w])+'</td>'}h+='</tr>'}
+    return h+'</table>'}
+  fr.push({h:table(-1,-1),c:'dp[0][w] = 0 (品物が 0 個なら価値 0)。ここから 1 行ずつ埋めます。'});
+  for(var i=0;i<N;i++){var wt=IT[i][0],val=IT[i][1];
+    for(var w=0;w<=W;w++){var no=dp[i][w],yes=w>=wt?dp[i][w-wt]+val:null;var v=yes!=null?Math.max(no,yes):no;
+      var src=[[i,w]];if(yes!=null)src.push([i,w-wt]);dp[i+1][w]=v;
+      var msg='dp['+(i+1)+']['+w+'] = max(選ばない dp['+i+']['+w+'] = '+no+(yes!=null?', 選ぶ dp['+i+']['+(w-wt)+'] + '+val+' = '+yes:'')+') = <b>'+v+'</b>'+(yes==null?' (重さ '+wt+' が入らない)':'');
+      fr.push({h:table(i+1,w,src),c:msg})}}
+  fr.push({h:table(N,W,[]),c:'答えは右下 dp['+N+']['+W+'] = <b>'+dp[N][W]+'</b>。各マスは上の行の 2 か所しか見ていないので O(NW)。'});
+  return fr;
+},{ms:450});
+</script>
+</body>
+</html>

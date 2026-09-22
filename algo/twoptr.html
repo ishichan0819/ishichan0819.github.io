@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>尺取り法 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>尺取り法</h1>
+<p class="lede">「条件を満たす連続部分列」を数えたり最長・最短を求めたりするとき、左端 l を固定して右端 r を伸ばし、伸ばせなくなったら l を進める。<b>l も r も一度も戻らない</b>ので、区間の数は O(N^2) あっても全体は O(N) です。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>使える条件</b>　区間を縮めると条件が満たしやすく (または満たしにくく) なる、という<b>単調性</b>があること。例: 「和が K 以下」は縮めれば必ず満たす。「和がちょうど K」は単調でないので尺取りは使えない (累積和 + map で数える)。</div>
+<ul>
+  <li>l を固定したとき、r は「これ以上伸ばすと条件を破る」ぎりぎりまで伸ばす。</li>
+  <li>l を 1 進めても r は戻す必要がない (区間が縮む方向だから条件は保たれる)。</li>
+  <li>r が l より小さくなるケース (空区間) の処理を忘れない。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>正の整数列 A で、和が K 以下になる連続部分列の個数を数えます。各 l について「r をどこまで伸ばせるか」を求め、(r − l) 個を足します。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 和が K 以下の連続部分列の個数 (A は正の整数)
+int N = A.size();
+long long count = 0, sum = 0;
+int r = 0;                                   // 区間は [l, r)
+for (int l = 0; l < N; l++) {
+    while (r < N && sum + A[r] <= K) {       // 伸ばせるだけ伸ばす
+        sum += A[r];
+        r++;
+    }
+    count += r - l;                          // [l, l+1), ..., [l, r) の r-l 個
+    if (r == l) r++;                         // 空区間なら r も進める (A[l] 単体で K 超え)
+    else sum -= A[l];                        // 左端を外す
+}
+</script>
+<script type="text/plain" data-lang="Python">
+# 和が K 以下の連続部分列の個数 (A は正の整数)
+N = len(A)
+count = 0
+total = 0
+r = 0                                   # 区間は [l, r)
+for l in range(N):
+    while r < N and total + A[r] <= K:  # 伸ばせるだけ伸ばす
+        total += A[r]
+        r += 1
+    count += r - l                      # [l, l+1), ..., [l, r) の r-l 個
+    if r == l:
+        r += 1                          # 空区間なら r も進める
+    else:
+        total -= A[l]                   # 左端を外す
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>O(N)。r は合計で N 回しか進まない。</li>
+  <li>負の数があると「縮めれば和が減る」が崩れて使えない。そのときは累積和 + 二分探索や map。</li>
+  <li>「種類数が K 以下」など、区間の状態を map / 配列で持つ場合は、外すときの減算を忘れずに。</li>
+  <li>r == l (空区間) のときに <code>sum -= A[l]</code> すると壊れる。分岐を入れる。</li>
+  <li>「以上」の最短長さを求める問題は、条件が逆向き (伸ばすと満たす) なので、満たした瞬間に長さを記録して l を進める。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>和が K 以下 / 積が K 以下 の連続部分列の個数</li>
+  <li>和が K 以上になる最短の連続部分列</li>
+  <li>すべて異なる要素からなる最長の連続部分列 (要素の出現回数を配列で管理)</li>
+  <li>2 つのソート済み配列を同時に走査して差が最小のペアを探す (2 ポインタ)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('twoptr');
+var A=[3,1,4,1,5,9,2,6],K=10;
+Viz('#viz',function(){
+  var fr=[],n=A.length,r=0,sum=0,cnt=0,idx=A.map(function(_,i){return i});
+  function frame(l,r,extra,cls){var c=[],t=[];for(var i=0;i<n;i++){c.push(cls&&cls[i]?cls[i]:(i>=l&&i<r?'hi':''));t.push(i===l?'l':'')}
+    if(r<n)t[r]=(t[r]?'l,':'')+'r';return '<div class="lbl">K = '+K+'　区間 [l, r) の和 ≤ K を保つ</div>'+cellsHTML(A,c,idx,t)+'<div class="kv" style="margin-top:20px">l = <b>'+l+'</b>, r = <b>'+r+'</b>, sum = <b>'+sum+'</b>, count = <b>'+cnt+'</b>'+(extra||'')+'</div>'}
+  fr.push({h:frame(0,0),c:'l = 0, r = 0, sum = 0 から。各 l について、r を「和が K を超えない限り」伸ばします。'});
+  for(var l=0;l<n;l++){
+    while(r<n&&sum+A[r]<=K){sum+=A[r];r++;fr.push({h:frame(l,r),c:'A['+(r-1)+'] = '+A[r-1]+' を加えても '+sum+' ≤ '+K+'。<b>r を '+r+' に伸ばす</b>。'})}
+    var stopMsg=r<n?'次の A['+r+'] = '+A[r]+' を足すと '+(sum+A[r])+' > '+K+' なので止まる。':'右端に到達。';
+    cnt+=r-l;
+    fr.push({h:frame(l,r,'　→ l = '+l+' から始まる区間は <b>'+(r-l)+' 個</b>'),c:stopMsg+' l = '+l+' から始まる区間は [l, l+1) … [l, r) の <b>'+(r-l)+' 個</b>。count += '+(r-l)+'。'});
+    if(r===l){r++;fr.push({h:frame(l+1,r),c:'空区間 (A['+l+'] 単体で K 超え) なので r も進める。'})}
+    else{sum-=A[l];if(l+1<n)fr.push({h:frame(l+1,r),c:'l を 1 進める。sum から A['+l+'] = '+A[l]+' を引いて '+sum+'。<b>r は戻さない</b>。'})}
+  }
+  fr.push({h:frame(n,r,'','').replace('l = <b>'+n+'</b>','終了'),c:'答え <b>'+cnt+' 個</b>。l も r も合計 N 回しか動かないので O(N)。'});
+  return fr;
+},{ms:800});
+</script>
+</body>
+</html>

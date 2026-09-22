@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全探索と bit 全探索 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>全探索と bit 全探索</h1>
+<p class="lede">競プロの出発点は「全部試す」です。ただし全部試すには、<b>漏れなく・重複なく・制限時間内に</b>列挙する書き方が要ります。N 個の要素それぞれを「選ぶ / 選ばない」で分ける 2^N 通りは、0 から 2^N−1 までの整数 1 つで表せます。これが bit 全探索です。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>選び方 = 整数</b>　整数 <code>s</code> の下から i 番目のビットが 1 なら「i 番目を選ぶ」。<code>s</code> を 0 から 2^N−1 まで回すだけで、すべての部分集合を 1 回ずつ通ります。判定は <code>(s &gt;&gt; i) &amp; 1</code>。</div>
+<ul>
+  <li>N ≤ 20 なら 2^20 ≈ 10^6 通り。各通りの処理が O(N) でも 2×10^7 で余裕です。N ≤ 25 くらいまでが限界。</li>
+  <li>「選ぶ / 選ばない」以外の分岐 (例: 3 通り) は 3 進数で同じことができます。</li>
+  <li>順列の全探索は <code>next_permutation</code> (C++) / <code>itertools.permutations</code> (Python)。N ≤ 10 が目安 (10! ≈ 3.6×10^6)。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>A = [3, 5, 7, 9] から、和がちょうど 12 になる選び方をすべて見つけます。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// A の部分集合で和が target になるものを数える (N <= 20)
+int N = A.size();
+int count = 0;
+for (int s = 0; s < (1 << N); s++) {        // s: 選び方 (0 .. 2^N - 1)
+    long long sum = 0;
+    for (int i = 0; i < N; i++) {
+        if ((s >> i) & 1) sum += A[i];      // i 番目のビットが立っていれば選ぶ
+    }
+    if (sum == target) count++;
+}
+// 順列の全探索
+vector<int> p(N);
+iota(p.begin(), p.end(), 0);                 // 0,1,...,N-1
+do {
+    // p を 1 つの並び順として処理する
+} while (next_permutation(p.begin(), p.end()));
+</script>
+<script type="text/plain" data-lang="Python">
+# A の部分集合で和が target になるものを数える (N <= 20)
+N = len(A)
+count = 0
+for s in range(1 << N):                 # s: 選び方 (0 .. 2^N - 1)
+    total = 0
+    for i in range(N):
+        if (s >> i) & 1:                # i 番目のビットが立っていれば選ぶ
+            total += A[i]
+    if total == target:
+        count += 1
+
+# 順列の全探索
+from itertools import permutations
+for p in permutations(range(N)):
+    pass  # p を 1 つの並び順として処理する
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<table><tr><th>方法</th><th>計算量</th><th>N の目安</th></tr>
+<tr><td>bit 全探索</td><td>O(2^N · N)</td><td>N ≤ 20〜22</td></tr>
+<tr><td>順列全探索</td><td>O(N! · N)</td><td>N ≤ 10</td></tr>
+<tr><td>2 重ループ</td><td>O(N^2)</td><td>N ≤ 5000</td></tr></table>
+<ul>
+  <li><code>1 &lt;&lt; N</code> は N ≥ 31 でオーバーフロー。C++ で N が大きいときは <code>1LL &lt;&lt; N</code>。</li>
+  <li>和の途中で int を超えることが多い。C++ では <code>long long</code> を最初から使う。</li>
+  <li>「制約が小さい」は全探索のサイン。N ≤ 20 を見たらまず bit 全探索を疑う。</li>
+  <li>半分全列挙: N ≤ 40 なら前半と後半を 2^20 ずつ列挙して二分探索で合わせる (次のページ)。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>N 個の中からいくつか選んで、和や条件を満たす組み合わせの個数・最大値</li>
+  <li>N 人をチーム A / B に分ける最良の分け方 (2^N 通りの分け方)</li>
+  <li>N 個のスイッチ / 電球の ON・OFF のすべての状態を試す</li>
+  <li>N ≤ 8 の並び替えで最短経路や最良の順序を求める (順列全探索)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('bitfull');
+var A=[3,5,7,9],T=12;
+Viz('#viz',function(){
+  var fr=[],found=[];
+  fr.push({h:cellsHTML(A,null,A.map(function(_,i){return 'i='+i})),c:'A の各要素を「選ぶ / 選ばない」。選び方は 2^4 = <b>16 通り</b>。s = 0 から 15 まで順に見ていきます。'});
+  for(var s=0;s<16;s++){
+    var sel=[],sum=0,cls=[];
+    for(var i=0;i<4;i++){var on=(s>>i)&1;cls.push(on?'hi':'dim');if(on){sel.push(i);sum+=A[i]}}
+    var hit=sum===T;if(hit)found.push(sel.map(function(i){return A[i]}));
+    var bits='';for(i=3;i>=0;i--)bits+=((s>>i)&1)?'<b>1</b>':'<i>0</i>';
+    fr.push({h:'<div class="lbl">s = '+s+' = <span class="bits">'+bits+'</span> (右端が i=0)</div>'+cellsHTML(A,cls,A.map(function(_,i){return 'bit'+i}))+
+      '<div class="kv" style="margin-top:22px">sum = '+(sel.length?sel.map(function(i){return A[i]}).join(' + '):'0')+' = <b>'+sum+'</b> '+(hit?'<span style="color:var(--ok)">= 12 ✓</span>':'')+'</div>'+
+      '<div class="kv">見つかった: '+(found.length?found.map(function(f){return '{'+f.join(',')+'}'}).join(' '):'-')+'</div>',
+      c:'s = '+s+' のとき、ビットが 1 の位置 '+(sel.length?'{'+sel.join(',')+'}':'なし')+' を選ぶ。和は '+sum+(hit?'。<b>条件を満たす</b>':'。')});
+  }
+  fr.push({h:'<div class="kv">答え: '+found.map(function(f){return '{'+f.join(',')+'}'}).join(' と ')+' の <b>'+found.length+' 通り</b></div>',c:'16 通りすべてを 1 回ずつ調べ終えました。漏れも重複もありません。'});
+  return fr;
+},{ms:600});
+</script>
+</body>
+</html>

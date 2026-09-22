@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>累積和・いもす法 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>累積和・いもす法</h1>
+<p class="lede">「区間 [l, r) の和」を何度も聞かれるとき、毎回足すと O(N) × 質問数で間に合いません。先頭からの和 S を 1 回作っておけば、どの区間の和も <b>S[r] − S[l]</b> の引き算 1 回。逆に「区間に一様に足す」を何度も行うなら、差分だけ記録して最後に累積するのが<b>いもす法</b>です。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>S[i] = A[0] + … + A[i−1]</b>　長さ N+1 で S[0] = 0。半開区間 [l, r) の和は S[r] − S[l]。「S[r] は r 個ぶん、S[l] は l 個ぶん」と覚えると添字を間違えません。</div>
+<ul>
+  <li>2 次元でも同じ。S[i][j] を左上からの矩形和にして、矩形の和は 4 項の足し引き。</li>
+  <li>いもす法: 区間 [l, r) に +v するとき D[l] += v, D[r] −= v だけ記録。最後に D を累積すると各点の値になる。</li>
+  <li>和以外にも「個数」「XOR」「mod 上の積 (逆元があれば)」など、引き算 (逆演算) ができる演算なら使える。最小値はできない (セグメント木の出番)。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 1 次元累積和
+int N = A.size();
+vector<long long> S(N + 1, 0);
+for (int i = 0; i < N; i++) S[i + 1] = S[i] + A[i];
+// 区間 [l, r) の和 (0-indexed, r は含まない)
+long long sum = S[r] - S[l];
+
+// 2 次元累積和: S[i+1][j+1] = 左上 (0,0) から (i,j) までの矩形和
+vector<vector<long long>> S2(H + 1, vector<long long>(W + 1, 0));
+for (int i = 0; i < H; i++)
+    for (int j = 0; j < W; j++)
+        S2[i+1][j+1] = S2[i][j+1] + S2[i+1][j] - S2[i][j] + G[i][j];
+// 行 [r1, r2), 列 [c1, c2) の和
+long long rect = S2[r2][c2] - S2[r1][c2] - S2[r2][c1] + S2[r1][c1];
+
+// いもす法: Q 個の「[l, r) に v を足す」をまとめて処理
+vector<long long> D(N + 1, 0);
+for (auto [l, r, v] : queries) { D[l] += v; D[r] -= v; }
+for (int i = 0; i < N; i++) D[i + 1] += D[i];   // D[i] が最終的な各点の値 (i < N)
+</script>
+<script type="text/plain" data-lang="Python">
+# 1 次元累積和
+N = len(A)
+S = [0] * (N + 1)
+for i in range(N):
+    S[i + 1] = S[i] + A[i]
+# itertools.accumulate でも: S = [0] + list(accumulate(A))
+# 区間 [l, r) の和 (0-indexed, r は含まない)
+total = S[r] - S[l]
+
+# 2 次元累積和: S2[i+1][j+1] = 左上から (i,j) までの矩形和
+S2 = [[0] * (W + 1) for _ in range(H + 1)]
+for i in range(H):
+    for j in range(W):
+        S2[i+1][j+1] = S2[i][j+1] + S2[i+1][j] - S2[i][j] + G[i][j]
+# 行 [r1, r2), 列 [c1, c2) の和
+rect = S2[r2][c2] - S2[r1][c2] - S2[r2][c1] + S2[r1][c1]
+
+# いもす法: Q 個の「[l, r) に v を足す」をまとめて処理
+D = [0] * (N + 1)
+for l, r, v in queries:
+    D[l] += v
+    D[r] -= v
+for i in range(N):
+    D[i + 1] += D[i]      # D[i] が最終的な各点の値 (i < N)
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>前計算 O(N)、質問 1 回 O(1)。2 次元は前計算 O(HW)。</li>
+  <li><b>半開区間 [l, r)</b> に統一する。閉区間 [l, r] なら S[r+1] − S[l]。1-indexed の入力は 0-indexed に直してから。</li>
+  <li>いもす法の D は長さ N+1 が必要 (r = N のとき D[N] に書く)。</li>
+  <li>2 次元の符号は「足す・引く・引く・足す」。図を描いて確認する。</li>
+  <li>和が大きくなるので C++ は long long。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>Q 個の区間の和 / 平均 / 「条件を満たす要素の個数」を答える</li>
+  <li>長さ K の窓の和の最大値 (S[i+K] − S[i] の最大)</li>
+  <li>2 次元グリッドで矩形内の黒マスの個数</li>
+  <li>N 人の「入室時刻と退室時刻」から、各時刻の人数 (いもす法)</li>
+  <li>「区間の和が X の倍数」→ S を X で割った余りが等しいペアの個数 (累積和 + 個数カウント)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('prefixsum');
+var A=[2,5,1,7,3,6,4,2],Q=[[1,4],[3,7],[0,8],[5,6]];
+Viz('#viz',function(){
+  var fr=[],n=A.length,S=[0];
+  var idx=A.map(function(_,i){return i}),idx1=S.concat(A).map(function(_,i){return i});
+  fr.push({h:'<div class="lbl">A</div>'+cellsHTML(A,null,idx)+'<div class="lbl" style="margin-top:20px">S (S[0] = 0)</div>'+cellsHTML([0],null,[0]),c:'S[0] = 0 から始め、S[i+1] = S[i] + A[i] で右へ 1 つずつ作ります。'});
+  for(var i=0;i<n;i++){S.push(S[i]+A[i]);
+    var ca=[],cs=[];for(var k=0;k<n;k++)ca.push(k===i?'hi':'');for(k=0;k<=i+1;k++)cs.push(k===i?'cur':k===i+1?'hi':'');
+    fr.push({h:'<div class="lbl">A</div>'+cellsHTML(A,ca,idx)+'<div class="lbl" style="margin-top:20px">S</div>'+cellsHTML(S,cs,S.map(function(_,i){return i})),c:'S['+(i+1)+'] = S['+i+'] + A['+i+'] = '+S[i]+' + '+A[i]+' = <b>'+S[i+1]+'</b>'});
+  }
+  Q.forEach(function(q){var l=q[0],r=q[1],ca=[],cs=[];for(var k=0;k<n;k++)ca.push(k>=l&&k<r?'hi':'dim');for(k=0;k<=n;k++)cs.push(k===l||k===r?'cur':'');
+    fr.push({h:'<div class="lbl">A の区間 ['+l+', '+r+')</div>'+cellsHTML(A,ca,idx)+'<div class="lbl" style="margin-top:20px">S</div>'+cellsHTML(S,cs,S.map(function(_,i){return i}))+
+      '<div class="kv" style="margin-top:10px">sum = S['+r+'] − S['+l+'] = '+S[r]+' − '+S[l]+' = <b>'+(S[r]-S[l])+'</b></div>',
+      c:'質問: [l, r) = ['+l+', '+r+') の和。S['+r+'] は先頭 '+r+' 個の和、S['+l+'] は先頭 '+l+' 個の和。引き算 1 回で <b>'+(S[r]-S[l])+'</b>。'})});
+  /* いもす法 */
+  var D=new Array(n+1).fill(0),ops=[[1,5,2],[3,8,1],[0,2,3]];
+  fr.push({h:'<div class="lbl">いもす法: D (すべて 0)</div>'+cellsHTML(D,null,D.map(function(_,i){return i})),c:'次はいもす法。長さ N+1 の D を 0 で用意し、「[l, r) に v を足す」を D[l] += v, D[r] −= v で記録します。'});
+  ops.forEach(function(o){var l=o[0],r=o[1],v=o[2];D[l]+=v;D[r]-=v;var c=[];for(var k=0;k<=n;k++)c.push(k===l?'ok':k===r?'bad':'');
+    fr.push({h:'<div class="lbl">[ '+l+', '+r+' ) に +'+v+'</div>'+cellsHTML(D,c,D.map(function(_,i){return i})),c:'D['+l+'] += '+v+', D['+r+'] −= '+v+'。区間の中身には触りません。O(1)。'})});
+  var R=D.slice();for(var i=0;i<n;i++){R[i+1]+=R[i];var c=[];for(var k=0;k<=n;k++)c.push(k===i?'cur':k===i+1?'hi':k<i?'ok':'');
+    fr.push({h:'<div class="lbl">累積する</div>'+cellsHTML(R,c,R.map(function(_,i){return i})),c:'D['+(i+1)+'] += D['+i+'] → '+R[i+1]+'。左から累積すると、各点に「何回ぶん足されたか」が現れます。'})}
+  fr.push({h:'<div class="lbl">各点の値 (i = 0 .. N−1)</div>'+cellsHTML(R.slice(0,n),R.slice(0,n).map(function(){return 'ok'}),idx),c:'3 回の区間加算が O(N + Q) で終わりました。'});
+  return fr;
+},{ms:900});
+</script>
+</body>
+</html>

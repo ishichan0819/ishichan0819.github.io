@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>整数論の道具 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>整数論の道具</h1>
+<p class="lede">数え上げや約数の問題で毎回出てくる 4 つの道具です。<b>エラトステネスの篩</b> (素数表)、<b>試し割りの素因数分解</b>、<b>繰り返し二乗法</b> (a^n mod p を O(log n))、<b>mod 逆元</b> (割り算を mod の世界でやる)。「10^9+7 で割った余りを求めよ」を見たら全部使います。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>篩</b>　2 から順に、まだ消えていない数 p は素数。その倍数 2p, 3p, … を消す。p·p から始めてよい (それ未満はもっと小さい素数で消えている)。O(N log log N)。</div>
+<div class="kp"><b>繰り返し二乗法</b>　a^n は n を 2 進数で見て、a, a^2, a^4, … のうちビットが立っている所だけ掛ける。O(log n)。<b>逆元</b>: p が素数なら フェルマーの小定理 a^(p−1) ≡ 1 より a^(−1) ≡ a^(p−2)。</div>
+<ul>
+  <li>素因数分解は √N まで試し割り。N ≤ 10^12 でも 10^6 回。</li>
+  <li>約数の列挙も √N まで。i が割り切れたら i と N/i の両方。</li>
+  <li>階乗と逆元を前計算しておくと二項係数 nCk が O(1)。</li>
+  <li>gcd はユークリッドの互除法 (<code>std::gcd</code> / <code>math.gcd</code>)。lcm = a / gcd · b (先に割る)。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>1 から 60 のエラトステネスの篩。黄色が今の素数 p、赤が消される倍数、緑が確定した素数です。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// エラトステネスの篩: isPrime[i]
+vector<bool> isPrime(N + 1, true);
+isPrime[0] = isPrime[1] = false;
+for (long long p = 2; p * p <= N; p++)
+    if (isPrime[p])
+        for (long long q = p * p; q <= N; q += p) isPrime[q] = false;
+
+// 試し割りの素因数分解: {素因数, 指数}
+vector<pair<long long,int>> factorize(long long n) {
+    vector<pair<long long,int>> res;
+    for (long long p = 2; p * p <= n; p++) {
+        if (n % p) continue;
+        int e = 0;
+        while (n % p == 0) { n /= p; e++; }
+        res.push_back({p, e});
+    }
+    if (n > 1) res.push_back({n, 1});
+    return res;
+}
+
+// 繰り返し二乗法: a^n mod m
+long long modpow(long long a, long long n, long long m) {
+    long long r = 1; a %= m;
+    while (n > 0) {
+        if (n & 1) r = r * a % m;      // ビットが立っていれば掛ける
+        a = a * a % m;                 // a, a^2, a^4, ...
+        n >>= 1;
+    }
+    return r;
+}
+// 逆元 (m が素数): a^(m-2)
+const long long MOD = 1000000007;
+long long inv(long long a) { return modpow(a, MOD - 2, MOD); }
+
+// 二項係数の前計算: fact, ifact
+vector<long long> fact(MAXN + 1), ifact(MAXN + 1);
+fact[0] = 1;
+for (int i = 1; i <= MAXN; i++) fact[i] = fact[i - 1] * i % MOD;
+ifact[MAXN] = inv(fact[MAXN]);
+for (int i = MAXN; i > 0; i--) ifact[i - 1] = ifact[i] * i % MOD;
+long long comb(int n, int k) { return (k < 0 || k > n) ? 0 : fact[n] * ifact[k] % MOD * ifact[n - k] % MOD; }
+</script>
+<script type="text/plain" data-lang="Python">
+# エラトステネスの篩: is_prime[i]
+is_prime = [True] * (N + 1)
+is_prime[0] = is_prime[1] = False
+for p in range(2, int(N ** 0.5) + 1):
+    if is_prime[p]:
+        for q in range(p * p, N + 1, p):
+            is_prime[q] = False
+
+# 試し割りの素因数分解: [(素因数, 指数), ...]
+def factorize(n):
+    res = []
+    p = 2
+    while p * p <= n:
+        if n % p == 0:
+            e = 0
+            while n % p == 0:
+                n //= p
+                e += 1
+            res.append((p, e))
+        p += 1
+    if n > 1:
+        res.append((n, 1))
+    return res
+
+# 繰り返し二乗法は組み込みの pow(a, n, m) が同じもの
+MOD = 10 ** 9 + 7
+def inv(a):                      # 逆元 (MOD が素数): a^(MOD-2)
+    return pow(a, MOD - 2, MOD)
+
+# 二項係数の前計算: fact, ifact
+fact = [1] * (MAXN + 1)
+for i in range(1, MAXN + 1):
+    fact[i] = fact[i - 1] * i % MOD
+ifact = [1] * (MAXN + 1)
+ifact[MAXN] = inv(fact[MAXN])
+for i in range(MAXN, 0, -1):
+    ifact[i - 1] = ifact[i] * i % MOD
+def comb(n, k):
+    if k < 0 or k > n:
+        return 0
+    return fact[n] * ifact[k] % MOD * ifact[n - k] % MOD
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>篩 O(N log log N)、N = 10^7 まで実用的。素因数分解 O(√N)。modpow O(log n)。</li>
+  <li>掛け算のたびに mod を取る。<code>a * b</code> は 10^18 まで行くので long long。3 つ以上掛けるときは 2 つずつ。</li>
+  <li>引き算は <code>(a − b + MOD) % MOD</code>。負の余りを出さない。</li>
+  <li>逆元は MOD が素数のときだけ a^(MOD−2)。合成数なら拡張ユークリッド。</li>
+  <li>「余りを求めよ」で分母が出てくる (平均、確率、二項係数) → 逆元。</li>
+  <li>Python の <code>pow(a, -1, m)</code> (3.8+) でも逆元が取れる。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>N 以下の素数の個数、区間 [L, R] の素数 (区間篩)</li>
+  <li>約数の個数・総和 (素因数分解から (e1+1)(e2+1)…)</li>
+  <li>経路数や並べ方を mod 10^9+7 で数える (二項係数)</li>
+  <li>「確率を mod で答えよ」→ 分子 × 分母の逆元</li>
+  <li>a^b の下 k 桁、a^b mod m を大きな b に対して</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('math');
+Viz('#viz',function(){
+  var N=60,st=[],fr=[];for(var i=0;i<=N;i++)st.push(i<2?'x':'');
+  function draw(p,marks){var h='<div class="grid" style="grid-template-columns:repeat(10,34px)">';
+    for(var i=1;i<=N;i++){var cl='g';if(i===p)cl+=' cur';else if(marks&&marks.indexOf(i)>=0)cl+=' q';else if(st[i]==='x')cl+=' wall';else if(st[i]==='p')cl+=' seen';h+='<div class="'+cl+'">'+i+'</div>'}
+    return h+'</div>'}
+  fr.push({h:draw(),c:'2 以上の数を全部「素数候補」にしておきます。'});
+  for(var p=2;p*p<=N;p++){if(st[p]==='x')continue;st[p]='p';var m=[];for(var q=p*p;q<=N;q+=p){if(st[q]!=='x')m.push(q)}
+    fr.push({h:draw(p,m),c:p+' は消えていないので<b>素数</b>。'+p+'·'+p+' = '+(p*p)+' から '+p+' おきに倍数を消す ('+m.length+' 個)。'});
+    m.forEach(function(q){st[q]='x'})}
+  for(i=2;i<=N;i++)if(st[i]==='')st[i]='p';
+  var primes=[];for(i=2;i<=N;i++)if(st[i]==='p')primes.push(i);
+  fr.push({h:draw(),c:'p·p > N になったら終了。残った緑が素数 (<b>'+primes.length+' 個</b>): '+primes.join(', ')});
+  /* modpow */
+  var a=3,n=13,M=1000000007,r=1,base=a,bits=n.toString(2),k=0,steps=[];
+  fr.push({h:'<div class="kv">3^13 mod (10^9+7) を繰り返し二乗法で。13 = <span class="bits">'+bits.split('').map(function(b){return b==='1'?'<b>1</b>':'<i>0</i>'}).join('')+'</span> (2 進)</div>',c:'次は繰り返し二乗法。n の 2 進数の各ビットに a, a^2, a^4, a^8 を対応させます。'});
+  var nn=n;while(nn>0){var bit=nn&1;var line='bit'+k+' = '+bit+': '+(bit?'r = r × '+base+' = ':'')+'';if(bit)r=r*base%M;steps.push('2^'+k+' の位 = '+bit+(bit?' → r × '+base+' = <b>'+r+'</b>':' → 掛けない')+'　(次の a = '+base+'^2 = '+(base*base%M)+')');base=base*base%M;nn>>=1;k++;
+    fr.push({h:'<div class="kv">'+steps.join('<br>')+'</div>',c:'r = '+r});}
+  fr.push({h:'<div class="kv">'+steps.join('<br>')+'<br>答え: 3^13 = <b>'+r+'</b> (= 1594323)</div>',c:'4 回の掛け算で 3^13 が求まりました。n = 10^18 でも 60 回。'});
+  return fr;
+},{ms:800});
+</script>
+</body>
+</html>

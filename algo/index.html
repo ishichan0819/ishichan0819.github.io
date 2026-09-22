@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>競プロ アルゴリズム図鑑</title>
+<meta name="description" content="AtCoder 茶色から青色を目指すための重要アルゴリズムを、ステップ実行できる図と C++ / Python の実装でまとめた教材。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+<style>
+.lvh{display:flex;align-items:center;gap:10px;margin:28px 0 8px}
+.lvh h2{margin:0;border:0;padding:0;flex:1}
+.lvh .goal{font-size:.82rem;color:var(--muted)}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:8px 0 6px}
+.how div{background:var(--board);color:var(--silk);border-radius:12px;padding:12px 14px;font-size:.9rem}
+.how b{color:var(--acc);display:block;font-family:var(--dot);font-weight:400;margin-bottom:4px}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a></p>
+<h1>競プロ アルゴリズム図鑑</h1>
+<p class="lede">AtCoder の茶色から青色を目指すときに避けて通れないアルゴリズムを、12 個に絞ってまとめました。どのページも「考え方 → 動かして見る → 実装 (C++ / Python) → ハマりどころ → 典型問題」の順です。図は 1 ステップずつ進められるので、頭の中で追えるようになるまで何度でも動かしてください。</p>
+
+<div class="how">
+  <div><b>1. 図を動かす</b>まず再生して全体を眺め、次に ◀ ▶| で 1 手ずつ。「次に何が起きるか」を予想してから進めると定着します。</div>
+  <div><b>2. 写経して提出</b>実装は写して、典型問題を 1 問解いて通るまでが 1 セット。C++ でも Python でも同じ構造です。</div>
+  <div><b>3. 型を言葉で持つ</b>「区間の和 → 累積和」「K 回先 → ダブリング」のように、問題文の形と道具を結びつけて覚えます。</div>
+</div>
+
+<div id="list"></div>
+
+<h2>この先 (青以降で必要になるもの)</h2>
+<p class="lede">この図鑑に入れていない主なもの。上の 12 個が体に入ってから触ると吸収が早いです。</p>
+<ul>
+  <li><b>DP の応用</b>: bit DP (巡回セールスマン)、桁 DP、木 DP、区間 DP、expected value DP</li>
+  <li><b>グラフ</b>: トポロジカルソート、強連結成分分解、最小全域木 (クラスカル法)、LCA (ダブリング の続き)、最大流</li>
+  <li><b>データ構造</b>: BIT (Fenwick 木)、遅延評価セグメント木、優先度付きキューの応用、平衡二分木の代替 (set / multiset)</li>
+  <li><b>文字列</b>: Z アルゴリズム、ローリングハッシュ、Trie</li>
+  <li><b>数学</b>: 包除原理、二項係数の前計算、行列累乗、拡張ユークリッド、中国剰余定理</li>
+</ul>
+
+<h2>使っている道具</h2>
+<ul>
+  <li>C++ は <code>g++ -std=c++17</code> 以降を想定。<code>#include &lt;bits/stdc++.h&gt;</code> と <code>using namespace std;</code> を省略しています。</li>
+  <li>Python は 3.8 以降。再帰を使う場合は <code>sys.setrecursionlimit</code> を上げ、速度が必要なら PyPy を使います。</li>
+  <li>計算量は「1 秒に約 10^8 回」を目安に。N ≤ 20 なら 2^N、N ≤ 3000 なら N^2、N ≤ 2×10^5 なら N log N が通る感覚です。</li>
+</ul>
+</main>
+<script src="common.js"></script>
+<script>
+(function(){
+var LV={1:['茶 → 緑','「全部試す」と「前計算」を正しく書けるようになる'],2:['緑 → 水','DP とグラフを道具として使い分けられる'],3:['水 → 青','ログ時間のデータ構造で N=2×10^5 を通す']};
+var host=document.getElementById('list'),html='';
+[1,2,3].forEach(function(lv){
+  html+='<div class="lvh"><span class="lv lv'+lv+'">'+LV[lv][0]+'</span><h2>'+LV[lv][1]+'</h2></div><div class="roadmap">';
+  ALGO_TOPICS.forEach(function(t,i){if(t.lv!==lv)return;html+='<a class="tcard" href="'+t.id+'.html"><span class="no">'+(i+1)+'</span><span><span class="t">'+t.t+'</span><br><span class="d">'+t.d+'</span></span></a>'});
+  html+='</div>';
+});
+host.innerHTML=html;
+})();
+</script>
+</body>
+</html>

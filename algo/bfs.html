@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BFS と DFS — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>BFS と DFS</h1>
+<p class="lede">グラフやグリッドを「つながっている順に全部見る」のが探索です。<b>BFS (幅優先)</b> はキューで近い順に広げるので、辺の重みが全部 1 なら最短距離がそのまま出ます。<b>DFS (深さ優先)</b> は行けるところまで潜るので、連結成分や木の処理、閉路検出に向きます。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>BFS の不変条件</b>　キューの中には「距離 d のもの」と「距離 d+1 のもの」しか入っていない。だから取り出した順が距離順になり、初めて到達したときの距離が最短。到達済みの判定は「dist が −1 でない」で行う。</div>
+<ul>
+  <li>グリッドは (行, 列) をそのまま頂点にする。4 方向は <code>dx = {1,0,−1,0}, dy = {0,1,0,−1}</code>。</li>
+  <li>グラフは隣接リスト <code>vector&lt;vector&lt;int&gt;&gt; G(N)</code> で持つ。</li>
+  <li>DFS は再帰で書くのが楽だが、Python は深さ 10^5 で落ちるので、スタックで書くか再帰上限を上げる。</li>
+  <li>「01-BFS」: 辺の重みが 0 か 1 だけなら、deque の先頭 / 末尾に入れ分けて BFS と同じ計算量で最短路。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>S から各マスまでの最短距離を BFS で求めます。灰色は壁。黄色がキューに入っているマス、水色は距離が確定したマスです。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// グリッド BFS: '#' が壁。(sr, sc) からの最短距離 dist を求める (到達不能は -1)
+int H, W;
+vector<string> g;                                   // g[r][c]
+vector<vector<int>> dist(H, vector<int>(W, -1));
+int dr[4] = {1, 0, -1, 0}, dc[4] = {0, 1, 0, -1};
+queue<pair<int,int>> q;
+dist[sr][sc] = 0; q.push({sr, sc});
+while (!q.empty()) {
+    auto [r, c] = q.front(); q.pop();
+    for (int k = 0; k < 4; k++) {
+        int nr = r + dr[k], nc = c + dc[k];
+        if (nr < 0 || nr >= H || nc < 0 || nc >= W) continue;   // 範囲外
+        if (g[nr][nc] == '#' || dist[nr][nc] != -1) continue;   // 壁 or 訪問済み
+        dist[nr][nc] = dist[r][c] + 1;
+        q.push({nr, nc});
+    }
+}
+
+// グラフ DFS (再帰): 連結成分に番号を付ける
+vector<vector<int>> G(N);
+vector<int> comp(N, -1);
+void dfs(int v, int id) {
+    comp[v] = id;
+    for (int u : G[v]) if (comp[u] == -1) dfs(u, id);
+}
+int cnt = 0;
+for (int v = 0; v < N; v++) if (comp[v] == -1) dfs(v, cnt++);   // cnt = 連結成分の数
+</script>
+<script type="text/plain" data-lang="Python">
+from collections import deque
+# グリッド BFS: '#' が壁。(sr, sc) からの最短距離 dist を求める (到達不能は -1)
+dist = [[-1] * W for _ in range(H)]
+dist[sr][sc] = 0
+q = deque([(sr, sc)])
+while q:
+    r, c = q.popleft()
+    for dr, dc in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+        nr, nc = r + dr, c + dc
+        if not (0 <= nr < H and 0 <= nc < W):      # 範囲外
+            continue
+        if g[nr][nc] == '#' or dist[nr][nc] != -1:  # 壁 or 訪問済み
+            continue
+        dist[nr][nc] = dist[r][c] + 1
+        q.append((nr, nc))
+
+# グラフ DFS (スタック版。再帰だと深いグラフで落ちる)
+comp = [-1] * N
+cnt = 0
+for s in range(N):
+    if comp[s] != -1:
+        continue
+    stack = [s]
+    comp[s] = cnt
+    while stack:
+        v = stack.pop()
+        for u in G[v]:
+            if comp[u] == -1:
+                comp[u] = cnt
+                stack.append(u)
+    cnt += 1        # cnt = 連結成分の数
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>O(V + E)。グリッドなら O(HW)。</li>
+  <li>訪問済みチェックは「キューに入れるとき」に行う。取り出すときにすると同じ頂点が何度も入って遅くなる。</li>
+  <li>範囲外チェックを壁チェックより先に (添字エラー)。</li>
+  <li>C++ の再帰 DFS は深さ 10^5 程度なら大抵大丈夫だが、10^6 はスタックが不安。</li>
+  <li>「状態」を頂点にする発想: (位置, 持ち物の有無) や (位置, 残り回数) を 1 つの頂点として BFS すると、条件付きの最短路が解ける。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>迷路の最短手数、到達できるマスの個数</li>
+  <li>グラフの連結成分の数、二部グラフ判定 (BFS で色を交互に塗る)</li>
+  <li>木の各頂点の深さ・親 (根から DFS / BFS)</li>
+  <li>「特定のマスを通らずに行けるか」「壁を 1 回だけ壊してよい」(状態を増やす BFS)</li>
+  <li>幅優先で「最短経路の復元」(親を記録して逆順にたどる)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('bfs');
+var MAP=['S..#....','.#.#.##.','.#...#..','.####.#.','......#G'];
+Viz('#viz',function(){
+  var H=MAP.length,W=MAP[0].length,dist=[],fr=[],q=[],sr=0,sc=0;
+  for(var r=0;r<H;r++){dist.push([]);for(var c=0;c<W;c++){dist[r].push(-1);if(MAP[r][c]==='S'){sr=r;sc=c}}}
+  function frame(cur,note){var h='<div class="grid" style="grid-template-columns:repeat('+W+',34px)">';
+    for(var r=0;r<H;r++)for(var c=0;c<W;c++){var cl='g';var inq=q.some(function(p){return p[0]===r&&p[1]===c});
+      if(MAP[r][c]==='#')cl+=' wall';else if(cur&&cur[0]===r&&cur[1]===c)cl+=' cur';else if(inq)cl+=' q';else if(dist[r][c]>=0)cl+=' seen';if(MAP[r][c]==='G')cl+=' goal';
+      h+='<div class="'+cl+'">'+(MAP[r][c]==='#'?'':dist[r][c]>=0?dist[r][c]:MAP[r][c]==='G'?'G':'')+'</div>'}
+    return h+'</div><div class="kv" style="margin-top:10px">queue: '+(q.length?q.map(function(p){return '('+p[0]+','+p[1]+')'}).join(' '):'空')+'</div>'}
+  dist[sr][sc]=0;q.push([sr,sc]);
+  fr.push({h:frame(null),c:'S の距離を 0 にしてキューに入れる。'});
+  var D=[[1,0],[0,1],[-1,0],[0,-1]];
+  while(q.length){var p=q.shift(),r=p[0],c=p[1],added=[];
+    for(var k=0;k<4;k++){var nr=r+D[k][0],nc=c+D[k][1];if(nr<0||nr>=H||nc<0||nc>=W)continue;if(MAP[nr][nc]==='#'||dist[nr][nc]!==-1)continue;dist[nr][nc]=dist[r][c]+1;q.push([nr,nc]);added.push('('+nr+','+nc+')')}
+    fr.push({h:frame([r,c]),c:'('+r+','+c+') を取り出す (距離 '+dist[r][c]+')。未訪問の隣 '+(added.length?added.join(' ')+' に距離 <b>'+(dist[r][c]+1)+'</b> を書いてキューへ。':'はない。')});
+  }
+  var gr,gc;for(r=0;r<H;r++)for(c=0;c<W;c++)if(MAP[r][c]==='G'){gr=r;gc=c}
+  fr.push({h:frame(null),c:'キューが空になり終了。G までの最短距離は <b>'+dist[gr][gc]+'</b>。各マスの数字が S からの最短距離です。'});
+  return fr;
+},{ms:500});
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>セグメント木 — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>セグメント木</h1>
+<p class="lede">「1 点を更新」と「区間の和 / 最小 / 最大を取得」を<b>どちらも O(log N)</b> でこなすデータ構造です。累積和は更新に弱く、配列は取得に弱い。その両方を、区間を半分ずつに分けた木で解決します。水色から青に上がるとき、N = 2×10^5 のクエリ問題で必ず使います。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>1-indexed の配列で木を持つ</b>　葉を n 個 (n は N 以上の 2 のべき) 用意し、葉 i は <code>tree[n + i]</code>。親は <code>k / 2</code>、子は <code>2k, 2k+1</code>。根 <code>tree[1]</code> が全体の値。ノード k は「自分の担当区間」の演算結果を持つ。</div>
+<ul>
+  <li>更新: 葉を書き換え、親へ上がりながら <code>tree[k] = op(tree[2k], tree[2k+1])</code> で作り直す。log N 個。</li>
+  <li>取得 [l, r): 左右から狭めていく (ボトムアップ)。l が右の子なら取って右へ、r が右の子なら 1 つ戻って取る。担当区間がぴったり収まるノードだけを O(log N) 個集める。</li>
+  <li>演算は結合法則があればよい: 和、最小、最大、gcd、XOR、行列積… 単位元 (和なら 0、最小なら +∞) を決める。</li>
+  <li>「区間に一様に足して区間の和」は遅延評価セグメント木 (青以降)。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>N = 8 の区間和セグメント木。まず 1 点更新で親が作り直される様子、次に区間 [2, 7) の和をどのノードから集めるかを見ます。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// 区間和セグメント木 (op = +, 単位元 e = 0)。min にするなら op と e を変える
+struct SegTree {
+    int n; vector<long long> t;
+    long long e = 0;
+    long long op(long long a, long long b) { return a + b; }
+    SegTree(int N) { n = 1; while (n < N) n <<= 1; t.assign(2 * n, e); }
+    void set(int i, long long v) {              // 点更新: A[i] = v
+        i += n; t[i] = v;
+        for (i >>= 1; i >= 1; i >>= 1) t[i] = op(t[2*i], t[2*i+1]);
+    }
+    long long get(int i) { return t[i + n]; }
+    long long prod(int l, int r) {              // [l, r) の演算結果
+        long long L = e, R = e;
+        for (l += n, r += n; l < r; l >>= 1, r >>= 1) {
+            if (l & 1) L = op(L, t[l++]);       // l が右の子なら取ってから右へ
+            if (r & 1) R = op(t[--r], R);       // r が右の子なら 1 つ戻って取る
+        }
+        return op(L, R);
+    }
+};
+// 使い方
+SegTree st(N);
+for (int i = 0; i < N; i++) st.set(i, A[i]);   // O(N log N)。build 関数で O(N) にもできる
+st.set(3, 10);                                  // A[3] = 10
+long long s = st.prod(2, 7);                    // A[2] + ... + A[6]
+</script>
+<script type="text/plain" data-lang="Python">
+# 区間和セグメント木 (op = +, 単位元 e = 0)。min にするなら op と e を変える
+class SegTree:
+    def __init__(self, N, op=lambda a, b: a + b, e=0):
+        self.n = 1
+        while self.n < N:
+            self.n *= 2
+        self.op, self.e = op, e
+        self.t = [e] * (2 * self.n)
+
+    def set(self, i, v):                  # 点更新: A[i] = v
+        i += self.n
+        self.t[i] = v
+        i //= 2
+        while i >= 1:
+            self.t[i] = self.op(self.t[2 * i], self.t[2 * i + 1])
+            i //= 2
+
+    def get(self, i):
+        return self.t[i + self.n]
+
+    def prod(self, l, r):                 # [l, r) の演算結果
+        L, R = self.e, self.e
+        l += self.n
+        r += self.n
+        while l < r:
+            if l & 1:                     # l が右の子なら取ってから右へ
+                L = self.op(L, self.t[l])
+                l += 1
+            if r & 1:                     # r が右の子なら 1 つ戻って取る
+                r -= 1
+                R = self.op(self.t[r], R)
+            l //= 2
+            r //= 2
+        return self.op(L, R)
+
+# 使い方
+st = SegTree(N)
+for i, a in enumerate(A):
+    st.set(i, a)
+st.set(3, 10)                  # A[3] = 10
+s = st.prod(2, 7)              # A[2] + ... + A[6]
+# 最小値なら SegTree(N, min, float('inf'))
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>更新・取得ともに O(log N)。メモリは 2n (n は N 以上の 2 のべき) で最大 4N。</li>
+  <li>単位元を間違えると最小値クエリが 0 を返したりする。min なら +∞、max なら −∞、gcd なら 0。</li>
+  <li>取得は半開区間 [l, r)。閉区間で聞かれたら r+1。</li>
+  <li>非可換な演算 (行列積など) は左右の順序を保つ。上のコードは L と R を分けているので対応済み。</li>
+  <li>Python は素直に書くと遅い。PyPy を使うか、ループを関数の外で回さない。</li>
+  <li>C++ なら AtCoder Library の <code>atcoder::segtree</code> をそのまま使ってよい。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>点更新と区間和 / 区間最小 / 区間最大のクエリが混ざる</li>
+  <li>転倒数 (右から見て「自分より小さい値が何個あるか」を出現回数のセグ木で)</li>
+  <li>「x 以下の要素の個数」を座標圧縮 + セグ木 (または BIT)</li>
+  <li>LIS の変形: 「末尾が v 以下の最長増加列」を最大値セグ木で</li>
+  <li>区間の最大値を持ち、二分探索で「左から初めて x 以上になる位置」を探す (max_right)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('segtree');
+var A=[5,3,7,9,6,4,1,2];
+Viz('#viz',function(){
+  var n=8,t=new Array(16).fill(0),fr=[];for(var i=0;i<n;i++)t[n+i]=A[i];for(i=n-1;i>=1;i--)t[i]=t[2*i]+t[2*i+1];
+  function range(k){var d=Math.floor(Math.log2(k)),len=n>>d,l=(k-(1<<d))*len;return '['+l+','+(l+len)+')'}
+  function draw(hl,edgesHl,note){var nodes=[],edges=[],W=560;
+    for(var k=1;k<16;k++){var d=Math.floor(Math.log2(k)),cnt=1<<d,pos=k-cnt;nodes[k]={x:W/(cnt*2)*(2*pos+1),y:30+d*52,l:t[k],cls:hl&&hl[k]?hl[k]:'',sub:d===3?'i='+pos:''};if(k>1)edges.push({a:k,b:k>>1,cls:edgesHl&&edgesHl[k]?'hi':''})}
+    nodes[0]={x:-100,y:-100,l:''};/* 未使用 */
+    var s=svgGraph(nodes,edges,W,220).replace('<circle class="nd " cx="-100" cy="-100" r="16"/><text x="-100" y="-100"></text>','');
+    return s+(note?'<div class="kv">'+note+'</div>':'')}
+  fr.push({h:draw(null,null,'葉 (下段) が A、各ノードは子 2 つの和。根 tree[1] = '+t[1]+' が全体の和'),c:'配列で持った木。葉 i は tree[8 + i]、親は k / 2。'});
+  /* 更新 A[3] = 10 */
+  var i=3,v=10,k=n+i,hl={};hl[k]='cur';t[k]=v;
+  fr.push({h:draw(hl,null,'set(3, 10): 葉 tree['+k+'] を 10 に'),c:'1 点更新。葉 tree['+k+'] = 10 に書き換え、親へ上がりながら作り直します。'});
+  var eh={};for(k>>=1;k>=1;k>>=1){eh[2*k]=1;eh[2*k+1]=1;t[k]=t[2*k]+t[2*k+1];var h2={};h2[k]='cur';h2[2*k]='hi';h2[2*k+1]='hi';
+    fr.push({h:draw(h2,eh,'tree['+k+'] = tree['+(2*k)+'] + tree['+(2*k+1)+'] = '+t[2*k]+' + '+t[2*k+1]+' = '+t[k]),c:'親 tree['+k+'] (担当 '+range(k)+') を子の和で作り直す。'})}
+  fr.push({h:draw(null,null,'更新完了。触ったノードは log N = 3 個 + 葉'),c:'根まで 3 回で更新が終わりました。'});
+  /* 取得 [2,7) */
+  var l=2,r=7,L=0,R=0,used={},lq=l+n,rq=r+n,step=0;
+  function cur(){var h={};Object.keys(used).forEach(function(k){h[k]='done'});if(lq<rq){h[lq]='cur';h[rq-1]='cur'}return h}
+  fr.push({h:draw(cur(),null,'prod(2, 7): l = '+lq+', r = '+rq+' (葉の添字)'),c:'区間 [2, 7) の和。l = 2 + 8, r = 7 + 8 から、担当区間がぴったり収まるノードだけ集めます。'});
+  while(lq<rq){var msg=[];
+    if(lq&1){L+=t[lq];used[lq]=1;msg.push('l = '+lq+' は右の子なので tree['+lq+'] = '+t[lq]+' ('+range(lq)+') を取って l++');lq++}
+    if(rq&1){rq--;R+=t[rq];used[rq]=1;msg.push('r = '+(rq+1)+' は右の子なので r−− して tree['+rq+'] = '+t[rq]+' ('+range(rq)+') を取る')}
+    lq>>=1;rq>>=1;
+    fr.push({h:draw(cur(),null,(msg.length?msg.join('<br>')+'<br>':'')+'次: l = '+lq+', r = '+rq+'　L = '+L+', R = '+R),c:msg.length?'ぴったり収まるノードを取りました。':'どちらも左の子なので何も取らず、親へ。'})}
+  fr.push({h:draw(cur(),null,'答え = L + R = '+L+' + '+R+' = <b>'+(L+R)+'</b>'),c:'集めたノードは '+Object.keys(used).map(function(k){return 'tree['+k+']'+range(+k)}).join(' + ')+'。区間の長さに関係なく O(log N) 個です。'});
+  return fr;
+},{ms:1000});
+</script>
+</body>
+</html>

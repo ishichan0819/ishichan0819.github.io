@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ダブリング — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>ダブリング</h1>
+<p class="lede">「各頂点から次に行く先が 1 つ決まっている」(関数 f) とき、<b>K 回進んだ先</b>を K = 10^18 でも求めたい。1 回先、2 回先、4 回先、… の表を作っておけば、K の 2 進数のビットが立っている分だけ表を引いて O(log K)。木の祖先 (LCA) もこの発想です。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>up[k][v] = v から 2^k 回進んだ先</b>　up[0][v] = f(v)。up[k+1][v] = up[k][ up[k][v] ] (2^k 進んでからさらに 2^k)。K 回進むには、K のビット k が立っているごとに v = up[k][v]。</div>
+<ul>
+  <li>表は LOG × N。LOG は K の最大値のビット数 (10^18 なら 60)。</li>
+  <li>「進んだ先」だけでなく「途中の和・最小値」も同じ形で持てる (sum[k][v] = 2^k 回ぶんの和)。</li>
+  <li>木の LCA: up[k][v] = v の 2^k 個上の祖先。深い方を同じ深さまで上げ、上から k を下げながら「上げても一致しない」なら両方上げる。最後に 1 つ上が LCA。</li>
+  <li>周期を見つける (ρ 型) 方法もあるが、ダブリングは周期に入らないケースも一括で扱える。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>各頂点の行き先が決まったグラフで、頂点 0 から K = 13 回進んだ先を求めます。13 = 8 + 4 + 1 なので、表を 3 回引くだけです。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+// f[v] = v の行き先 (0..N-1)。v から K 回進んだ先を求める
+const int LOG = 60;                                // K < 2^60
+vector<vector<int>> up(LOG, vector<int>(N));
+for (int v = 0; v < N; v++) up[0][v] = f[v];
+for (int k = 0; k + 1 < LOG; k++)
+    for (int v = 0; v < N; v++)
+        up[k + 1][v] = up[k][ up[k][v] ];           // 2^k 進んでからさらに 2^k
+long long K; int v = start;
+for (int k = 0; k < LOG; k++)
+    if ((K >> k) & 1) v = up[k][v];                 // ビットが立っていれば 2^k 進む
+// v が答え
+
+// LCA (根付き木, depth と親 par を DFS/BFS で求めておく。根の親は根自身)
+int lca(int a, int b) {
+    if (depth[a] < depth[b]) swap(a, b);
+    for (int k = 0; k < LOG; k++)                   // a を b と同じ深さまで上げる
+        if (((depth[a] - depth[b]) >> k) & 1) a = up[k][a];
+    if (a == b) return a;
+    for (int k = LOG - 1; k >= 0; k--)              // 上から: 一致しないなら両方上げる
+        if (up[k][a] != up[k][b]) { a = up[k][a]; b = up[k][b]; }
+    return up[0][a];                                 // 1 つ上が LCA
+}
+// 2 点間の距離 = depth[a] + depth[b] - 2 * depth[lca(a, b)]
+</script>
+<script type="text/plain" data-lang="Python">
+# f[v] = v の行き先 (0..N-1)。v から K 回進んだ先を求める
+LOG = 60                                    # K < 2^60
+up = [f[:]]                                 # up[k][v] = v から 2^k 回進んだ先
+for k in range(LOG - 1):
+    prev = up[k]
+    up.append([prev[prev[v]] for v in range(N)])   # 2^k 進んでからさらに 2^k
+v = start
+for k in range(LOG):
+    if (K >> k) & 1:                        # ビットが立っていれば 2^k 進む
+        v = up[k][v]
+# v が答え
+
+# LCA (根付き木, depth と親 par を BFS で求めておく。根の親は根自身)
+def lca(a, b):
+    if depth[a] < depth[b]:
+        a, b = b, a
+    d = depth[a] - depth[b]
+    for k in range(LOG):                    # a を b と同じ深さまで上げる
+        if (d >> k) & 1:
+            a = up[k][a]
+    if a == b:
+        return a
+    for k in range(LOG - 1, -1, -1):        # 上から: 一致しないなら両方上げる
+        if up[k][a] != up[k][b]:
+            a, b = up[k][a], up[k][b]
+    return up[0][a]                          # 1 つ上が LCA
+# 2 点間の距離 = depth[a] + depth[b] - 2 * depth[lca(a, b)]
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>前計算 O(N log K)、クエリ O(log K)。N = 2×10^5, LOG = 60 で表は 1.2×10^7 要素 (int で約 48 MB)。メモリに注意して LOG を必要最小限に。</li>
+  <li>行き先が存在しない (葉から上がりきる) 場合は「自分自身」や −1 で番兵にする。根の親は根にしておくと LCA の実装が楽。</li>
+  <li>K のビットを下から見る (進む先) のと、LCA で上から見る (一致しない限界を探す) のを混同しない。</li>
+  <li>Python は N × LOG の 2 重ループが重い。LOG を log2(K の最大) + 1 に絞る。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>すごろく / ワープ装置で K 回移動した後の位置 (K が巨大)</li>
+  <li>「i 番目の人は f(i) 番目の人に投票する」を K 回繰り返した結果</li>
+  <li>木の 2 頂点間の距離、パス上の最大辺 (LCA + 区間最大の同時ダブリング)</li>
+  <li>「区間 [l, r) から次に飛べる位置」を前計算して、何回で右端を超えるか (ジャンプの回数)</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('doubling');
+var F=[1,2,3,4,5,2,7,6],K=13,LOG=4;
+var POS=[{x:40,y:60},{x:130,y:40},{x:220,y:60},{x:300,y:120},{x:220,y:180},{x:130,y:200},{x:430,y:180},{x:430,y:60}];
+Viz('#viz',function(){
+  var n=F.length,up=[F.slice()],fr=[];
+  for(var k=0;k+1<LOG;k++){var p=up[k],nx=[];for(var v=0;v<n;v++)nx.push(p[p[v]]);up.push(nx)}
+  function table(rows,hlk,hlv){var h='<table class="dp"><tr><th>k \\ v</th>';for(var v=0;v<n;v++)h+='<th>'+v+'</th>';h+='</tr>';
+    for(var k=0;k<rows;k++){h+='<tr><th>2^'+k+'='+(1<<k)+'</th>';for(v=0;v<n;v++)h+='<td class="'+((k===hlk&&v===hlv)?'cur':(hlk===k)?'src':'done')+'">'+up[k][v]+'</td>'}return h+'</table>'}
+  function graph(cur,hlEdges){var nodes=POS.map(function(p,i){return {x:p.x,y:p.y,l:i,cls:i===cur?'cur':''}}),edges=[];for(var v=0;v<n;v++)edges.push({a:v,b:F[v],dir:true,cls:hlEdges&&hlEdges.indexOf(v)>=0?'hi':''});return svgGraph(nodes,edges,480,230)}
+  fr.push({h:graph()+'<div class="lbl">up[0][v] = f(v)</div>'+table(1),c:'矢印が f。up[0] は f そのもの。1 回進んだ先です。'});
+  for(k=1;k<LOG;k++)fr.push({h:graph()+'<div class="lbl">up['+k+'][v] = up['+(k-1)+'][ up['+(k-1)+'][v] ]</div>'+table(k+1,k-1),c:'2^'+k+' = '+(1<<k)+' 回進んだ先。up['+(k-1)+'] を 2 回引くだけで作れます。例: up['+k+'][0] = up['+(k-1)+'][up['+(k-1)+'][0]] = up['+(k-1)+']['+up[k-1][0]+'] = '+up[k][0]});
+  var v=0,bits=K.toString(2),path=[0];
+  fr.push({h:graph(0)+'<div class="kv">K = '+K+' = <span class="bits">'+bits.split('').map(function(b){return b==='1'?'<b>1</b>':'<i>0</i>'}).join('')+'</span> (2 進) = 8 + 4 + 1。v = <b>0</b> から出発</div>'+table(LOG),c:'K の 2 進数で立っているビット k ごとに、v = up[k][v] と進みます。'});
+  for(k=0;k<LOG;k++){if(!((K>>k)&1)){fr.push({h:graph(v)+'<div class="kv">ビット '+k+' (2^'+k+') は 0 → 進まない。v = <b>'+v+'</b></div>'+table(LOG),c:'2^'+k+' の位は 0 なので何もしません。'});continue}
+    var nv=up[k][v];fr.push({h:graph(nv)+'<div class="kv">ビット '+k+' (2^'+k+') は 1 → v = up['+k+']['+v+'] = <b>'+nv+'</b></div>'+table(LOG,k,v),c:'2^'+k+' = '+(1<<k)+' 回ぶん一気に進む。表を 1 回引くだけ。'});path.push(nv);v=nv}
+  /* 検算 */
+  var w=0;for(var i=0;i<K;i++)w=F[w];
+  fr.push({h:graph(v)+'<div class="kv">答え: 0 から '+K+' 回進むと <b>'+v+'</b>。1 回ずつ '+K+' 回進んで検算しても '+w+'。</div>'+table(LOG),c:'表を 3 回引くだけで K = 13 回ぶんが求まりました。K = 10^18 でも 60 回です。'});
+  return fr;
+},{ms:1000});
+</script>
+</body>
+</html>

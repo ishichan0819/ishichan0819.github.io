@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Union-Find — 競プロ アルゴリズム図鑑</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>Union-Find</h1>
+<p class="lede">「a と b を同じグループにする」「a と b は同じグループか?」を何度も処理するデータ構造です。各要素が<b>親</b>を 1 つ持つ森として表し、根が同じなら同じグループ。経路圧縮と union by size を入れると、1 回の操作がほぼ O(1) になります。</p>
+
+<h2>考え方</h2>
+<div class="kp"><b>find(x)</b> = x の根。たどる途中の頂点を全部根に直接つなぎ直す (経路圧縮)。<b>unite(a, b)</b> = 根どうしをつなぐ。小さい木を大きい木の下につける (union by size)。同じグループかは <code>find(a) == find(b)</code>。</div>
+<ul>
+  <li>辺を追加していく問題 (時間順に「つながる」) と相性がよい。逆に辺を削除する問題は、クエリを逆順にして「追加」に変える。</li>
+  <li>グループのサイズを根に持たせると「グループの人数」も O(1)。</li>
+  <li>「連結成分の数」は N から unite が成功した回数を引くだけ。</li>
+  <li>重み付き Union-Find (a と b の差が d) や、2 部グラフ判定への拡張もある。</li>
+</ul>
+
+<h2>動かして見る</h2>
+<p>8 個の要素に unite を順に適用します。矢印は「親」を指します。</p>
+<div id="viz"></div>
+
+<h2>実装</h2>
+<div class="code">
+<script type="text/plain" data-lang="C++">
+struct UnionFind {
+    vector<int> par, sz;                       // par[x] = 親 (根なら自分), sz[根] = グループの大きさ
+    UnionFind(int n) : par(n), sz(n, 1) { iota(par.begin(), par.end(), 0); }
+    int find(int x) {
+        if (par[x] == x) return x;
+        return par[x] = find(par[x]);          // 経路圧縮: たどった頂点を根に直結
+    }
+    bool unite(int a, int b) {
+        a = find(a); b = find(b);
+        if (a == b) return false;              // すでに同じグループ
+        if (sz[a] < sz[b]) swap(a, b);         // 大きい方 a の下に小さい方 b をつける
+        par[b] = a; sz[a] += sz[b];
+        return true;
+    }
+    bool same(int a, int b) { return find(a) == find(b); }
+    int size(int x) { return sz[find(x)]; }
+};
+// 使い方
+UnionFind uf(N);
+uf.unite(0, 1);
+if (uf.same(0, 1)) { /* 同じグループ */ }
+// 連結成分の数: 全頂点で find(v) == v となる v の個数
+</script>
+<script type="text/plain" data-lang="Python">
+class UnionFind:
+    def __init__(self, n):
+        self.par = list(range(n))       # par[x] = 親 (根なら自分)
+        self.sz = [1] * n               # sz[根] = グループの大きさ
+
+    def find(self, x):
+        root = x
+        while self.par[root] != root:   # 根を探す (ループ版: 再帰上限を気にしない)
+            root = self.par[root]
+        while self.par[x] != root:      # 経路圧縮: たどった頂点を根に直結
+            self.par[x], x = root, self.par[x]
+        return root
+
+    def unite(self, a, b):
+        a, b = self.find(a), self.find(b)
+        if a == b:
+            return False                # すでに同じグループ
+        if self.sz[a] < self.sz[b]:
+            a, b = b, a                 # 大きい方 a の下に小さい方 b をつける
+        self.par[b] = a
+        self.sz[a] += self.sz[b]
+        return True
+
+    def same(self, a, b):
+        return self.find(a) == self.find(b)
+
+    def size(self, x):
+        return self.sz[self.find(x)]
+
+# 使い方
+uf = UnionFind(N)
+uf.unite(0, 1)
+if uf.same(0, 1):
+    pass  # 同じグループ
+</script>
+</div>
+
+<h2>計算量とハマりどころ</h2>
+<ul>
+  <li>経路圧縮 + union by size で 1 操作あたり実質 O(α(N)) ≈ O(1)。片方だけでも O(log N)。</li>
+  <li>「グループの大きさ」「グループの数」は根でしか正しくない。必ず find してから見る。</li>
+  <li>unite の戻り値 (新しくつながったか) を数えると「何本目の辺で全部つながるか」が分かる。</li>
+  <li>Python は再帰版 find だと深い木で RecursionError。上のループ版を使う。</li>
+  <li>頂点番号は 0-indexed に揃える。1-indexed 入力は −1。</li>
+</ul>
+
+<h2>典型問題のパターン</h2>
+<ul>
+  <li>辺を 1 本ずつ追加して、追加のたびに連結成分の数 / 最大グループの大きさを答える</li>
+  <li>「道が壊れる」順を逆にして、つながっていないペア数の変化を求める</li>
+  <li>クラスカル法 (最小全域木): 辺を重み順に見て、別グループなら採用</li>
+  <li>グリッドで同じ色のマスをつなぎ、領域の数を数える</li>
+  <li>「x と y は同じ人 (別名)」のようなグループ判定</li>
+</ul>
+<p id="pn"></p>
+</main>
+<script src="common.js"></script>
+<script>
+algoNav('unionfind');
+var OPS=[[0,1],[2,3],[1,3],[4,5],[6,7],[5,7],[3,7],[0,6]];
+Viz('#viz',function(){
+  var n=8,par=[],sz=[],fr=[];for(var i=0;i<n;i++){par.push(i);sz.push(1)}
+  function root(x){while(par[x]!==x)x=par[x];return x}
+  function depth(x){var d=0;while(par[x]!==x){x=par[x];d++}return d}
+  function draw(hl,edgeHl,msg){ /* 根を上、子を下に配置 */
+    var roots=[];for(var i=0;i<n;i++)if(par[i]===i)roots.push(i);
+    var pos={},x=0,W=0;roots.forEach(function(r){var mem=[];for(var i=0;i<n;i++)if(root(i)===r)mem.push(i);
+      var byd={};mem.forEach(function(v){var d=depth(v);(byd[d]=byd[d]||[]).push(v)});var wid=Math.max.apply(null,Object.keys(byd).map(function(d){return byd[d].length}));
+      Object.keys(byd).forEach(function(d){byd[d].forEach(function(v,k){pos[v]={x:x+30+k*46+(wid-byd[d].length)*23,y:30+d*60}})});x+=wid*46+20});
+    W=Math.max(x+10,300);var nodes=[],edges=[];for(i=0;i<n;i++){nodes.push({x:pos[i].x,y:pos[i].y,l:i,cls:hl&&hl.indexOf(i)>=0?'cur':par[i]===i?'done':'',sub:par[i]===i?'size '+sz[i]:''});if(par[i]!==i)edges.push({a:i,b:par[i],dir:true,cls:edgeHl&&edgeHl.indexOf(i)>=0?'hi':''})}
+    return svgGraph(nodes,edges,W,190)+'<div class="kv">par = ['+par.join(', ')+']</div>'}
+  fr.push({h:draw(),c:'最初は全員が自分の根 (8 グループ)。'});
+  OPS.forEach(function(op){var a=op[0],b=op[1];
+    var pathA=[],x=a;while(par[x]!==x){pathA.push(x);x=par[x]}var ra=x;var pathB=[],y=b;while(par[y]!==y){pathB.push(y);y=par[y]}var rb=y;
+    fr.push({h:draw([a,b],pathA.concat(pathB)),c:'unite('+a+', '+b+'): find('+a+') = '+ra+', find('+b+') = '+rb+'。'+(ra===rb?'同じ根なので<b>何もしない</b> (すでに同じグループ)。':'根が違うのでつなぐ。')});
+    /* 経路圧縮 */
+    var comp=false;pathA.forEach(function(v){if(par[v]!==ra){par[v]=ra;comp=true}});pathB.forEach(function(v){if(par[v]!==rb){par[v]=rb;comp=true}});
+    if(comp)fr.push({h:draw([a,b]),c:'経路圧縮: たどった頂点を根に直接つなぎ直す。次からの find が速くなる。'});
+    if(ra===rb)return;
+    if(sz[ra]<sz[rb]){var t=ra;ra=rb;rb=t}par[rb]=ra;sz[ra]+=sz[rb];
+    fr.push({h:draw([rb],[rb]),c:'小さい方の根 '+rb+' を大きい方の根 '+ra+' の下につける (union by size)。size['+ra+'] = <b>'+sz[ra]+'</b>。'});
+  });
+  var g=0;for(var i=0;i<n;i++)if(par[i]===i)g++;
+  fr.push({h:draw(),c:'終了。グループ数は <b>'+g+'</b>。木の高さが低く保たれているので、find はほぼ 1 手で根に届きます。'});
+  return fr;
+},{ms:900});
+</script>
+</body>
+</html>
