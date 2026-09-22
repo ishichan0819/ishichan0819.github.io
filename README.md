@@ -12,3 +12,4 @@ https://ishichan0819.github.io/
 - [Visible Light: 光で文字を送る](https://ishichan0819.github.io/visible-light/) — LEDの点滅で文字を送って復号する、可視光通信(Li-Fi)のアクティビティ
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
 - [競プロ アルゴリズム図鑑](https://ishichan0819.github.io/algo/) — AtCoder 茶色から青色を目指す 12 のアルゴリズム。ステップ実行できる図と C++ / Python の実装
+- [タルとハシゴ](https://ishichan0819.github.io/barrel/) — 斜めの足場とハシゴをのぼり、樽を飛び越えててっぺんを目指すレトロ風アクションゲーム
