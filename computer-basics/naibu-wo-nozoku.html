@@ -11,7 +11,7 @@
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
   --page:#E8EEE9;--ink:#12281F;--muted:#4B6358;--rule:#BFCDC4;
   --board:#0F4F3E;--board-deep:#0A3A2E;--trace:#E8BE4E;--trace-off:#2E7560;
-  --silk:#F1F5EE;--silk-dim:#A9C4B8;
+  --silk:#F1F5EE;--silk-dim:#A9C4B8;--glow:#FFE58A;
   --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
   --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
 }
@@ -19,172 +19,259 @@
 :root[data-theme="dark"]{--page:#07120E;--ink:#E4EDE6;--muted:#9DB3A8;--rule:#1E3A30;--board:#0D4435;--board-deep:#082E24}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
-main{max-width:640px;margin:0 auto;padding:32px 18px 72px}
-h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .4em}
-.lede{color:var(--muted);margin:0 0 20px}
-p{margin:0 0 1em}
+main{max-width:960px;margin:0 auto;padding:28px 18px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+.lede{color:var(--muted);margin:0 0 18px;max-width:40em}
 :focus-visible{outline:3px solid var(--trace);outline-offset:2px}
 
-/* 全体図 */
-.map{background:var(--board);border-radius:14px;padding:12px 10px 6px;color:var(--silk)}
-.map svg{display:block;width:100%;height:auto}
-.map text{font-family:var(--dot);fill:var(--silk);font-size:15px;text-anchor:middle}
-.map .lbl{font-size:11px;fill:var(--silk-dim)}
-.map .box{fill:var(--board-deep);stroke:var(--silk-dim);stroke-width:2}
-.map .cable{fill:none;stroke:var(--silk-dim);stroke-width:3;stroke-linecap:round}
-.map .cable.on{stroke:var(--trace)}
-.map .hot circle{fill:var(--board-deep);stroke:var(--silk);stroke-width:2.5;cursor:pointer}
-.map .hot text{font-size:16px;pointer-events:none}
-.map .hot.on circle{fill:var(--trace);stroke:var(--trace)}
-.map .hot.on text{fill:var(--board-deep)}
+.stage{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:719px){.stage{grid-template-columns:1fr}}
+.panel{background:var(--board);border-radius:14px;padding:14px 12px 12px;color:var(--silk)}
+.panel .ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.panel .ph .t{font-family:var(--dot);font-size:1.15rem}
+.panel .ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim)}
 
-/* 内部パネル */
-.inner{margin-top:14px;background:var(--board);border-radius:14px;padding:16px 12px 14px;color:var(--silk)}
-.inner-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px}
-.inner-head .t{font-family:var(--dot);font-size:1.2rem}
-.inner-head .s{font-family:var(--dot);font-size:.8rem;color:var(--silk-dim)}
-.wrap{display:grid;grid-template-columns:1fr 34px;gap:8px}
-.stack{display:flex;flex-direction:column-reverse;gap:8px}
-.layer{border:1.5px solid var(--trace-off);border-radius:10px;background:var(--board-deep);overflow:hidden;cursor:pointer;transition:border-color .15s}
-.layer .bar{display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:.92rem;font-weight:700;min-height:44px}
-.layer .n{font-family:var(--dot);font-weight:400;color:var(--trace);flex:none}
-.layer .body{display:none;padding:2px 12px 12px}
-.layer.open{border-color:var(--trace)}
-.layer.open .body{display:block}
-.layer.open .bar{color:var(--trace)}
-.layer .fig{display:block;width:100%;height:auto;max-height:150px;margin:2px 0 8px}
-.layer .fig .w{stroke:var(--silk-dim);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.layer .fig .g{stroke:var(--trace);stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
-.layer .fig .gf{fill:var(--trace)}
-.layer .fig .sf{fill:var(--silk-dim)}
-.layer .fig .bf{fill:var(--board)}
-.layer .fig text{font-family:var(--dot);fill:var(--silk-dim);font-size:9px;text-anchor:middle}
-.layer .body p{font-size:.9rem;line-height:1.7;margin:0;color:var(--silk)}
-.layer .link{margin-top:8px;padding-top:8px;border-top:1px dashed var(--trace-off);font-size:.82rem;color:var(--silk-dim)}
-.layer .link b{color:var(--trace);font-family:var(--dot);font-weight:400}
-.dim{opacity:.55}
+/* モニター */
+.monitor{background:var(--board-deep);border:2px solid var(--silk-dim);border-radius:10px;padding:10px 12px;min-height:96px;position:relative}
+.monitor::after{content:"";position:absolute;left:50%;bottom:-14px;width:60px;height:12px;transform:translateX(-50%);background:var(--silk-dim);border-radius:0 0 6px 6px;opacity:.6}
+.screen{font-family:var(--dot);font-size:1.5rem;line-height:1.4;word-break:break-all;min-height:2.8em;color:var(--trace);white-space:pre-wrap}
+.screen .cur{display:inline-block;width:.6em;height:1.1em;vertical-align:-0.15em;background:var(--trace);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.screen .new{animation:pop .35s ease-out}
+@keyframes pop{0%{color:var(--glow);text-shadow:0 0 12px var(--glow)}100%{text-shadow:none}}
+.hint{font-size:.78rem;color:var(--silk-dim);margin:16px 0 6px;text-align:center}
 
-.rail{display:flex;flex-direction:column;align-items:center;padding-top:6px}
-.rail .line{flex:1;width:2px;background:var(--trace-off);margin-top:4px}
-.rail .arrow{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-bottom:14px solid var(--trace)}
-.rail .lk{font-family:var(--dot);font-size:.72rem;color:var(--trace);writing-mode:vertical-rl;letter-spacing:.2em;margin-top:6px}
+/* キーボード */
+.kbd{margin-top:14px;background:var(--board-deep);border-radius:10px;padding:10px 6px 8px;user-select:none;-webkit-user-select:none}
+.row{display:flex;justify-content:center;gap:4px;margin-bottom:5px}
+.k{font:inherit;font-family:var(--dot);font-size:.95rem;flex:1 1 0;max-width:40px;min-width:0;height:40px;padding:0;
+  border-radius:6px;border:1.5px solid var(--trace-off);background:var(--board);color:var(--silk);cursor:pointer;
+  transition:transform .06s,background .06s,border-color .06s;touch-action:manipulation}
+.k.w{max-width:64px;flex-basis:64px;font-size:.8rem}
+.k.sp{max-width:220px;flex-basis:220px;font-size:.8rem}
+.k:hover{border-color:var(--silk-dim)}
+.k.down{background:var(--trace);border-color:var(--trace);color:var(--board-deep);transform:translateY(2px)}
+@media (max-width:400px){.k{height:36px;font-size:.85rem}.row{gap:3px}}
 
-.nav{display:flex;gap:8px;margin-top:12px}
-.btn{font:inherit;font-weight:700;min-height:44px;flex:1;padding:6px 10px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
-.btn.pri{background:var(--trace);border-color:var(--trace);color:var(--board-deep)}
-.btn:disabled{opacity:.35;cursor:default}
-.after{margin-top:16px;padding-left:14px;border-left:3px solid var(--trace)}
+/* 回路 */
+.circ svg{display:block;width:100%;height:auto}
+.circ text{font-family:var(--dot);fill:var(--silk);text-anchor:middle;font-size:11px}
+.circ .nm{font-size:11px}
+.circ .val{font-size:10px;fill:var(--silk-dim)}
+.circ .node rect{fill:var(--board-deep);stroke:var(--trace-off);stroke-width:2;transition:stroke .15s,fill .15s}
+.circ .node.on rect{stroke:var(--glow);fill:#3E5A1E;filter:drop-shadow(0 0 6px var(--glow))}
+.circ .node.on .val{fill:var(--glow)}
+.circ .node.done rect{stroke:var(--trace)}
+.circ .wire{fill:none;stroke:var(--trace-off);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+.circ .wire.on{stroke:var(--trace);filter:drop-shadow(0 0 4px var(--glow))}
+.circ .pulse{fill:var(--glow);filter:drop-shadow(0 0 6px var(--glow))}
+.circ .tag{font-size:9px;fill:var(--silk-dim)}
+.circ .grid line{stroke:var(--silk-dim);stroke-width:1;opacity:.6}
+.circ .grid .hot{stroke:var(--glow);stroke-width:2;opacity:0}
+.circ .node.on .grid .hot{opacity:1}
+.circ .wave{fill:none;stroke:var(--silk-dim);stroke-width:1.5}
+.circ .node.on .wave{stroke:var(--glow)}
+.circ .cell{fill:none;stroke:var(--silk-dim);stroke-width:1}
+.circ .cell.b1{fill:var(--trace)}
+.circ .node.on .cell.b1{fill:var(--glow)}
+.circ .cont{stroke:var(--silk-dim);stroke-width:2;stroke-linecap:round;fill:none}
+.circ .node.on .cont{stroke:var(--glow)}
+.circ .node.on .mov{transform:rotate(0deg)}
+.circ .mov{transform-origin:82px 45px;transform:rotate(-24deg);transition:transform .12s}
+
+.cap{margin-top:10px;min-height:2.6em;font-size:.9rem;line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+.cap .n{font-family:var(--dot);color:var(--trace);flex:none}
+.ctl{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:700;min-height:40px;padding:4px 14px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn[aria-pressed="true"]{background:var(--trace);border-color:var(--trace);color:var(--board-deep)}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--trace);font-size:.95rem}
+.after ol{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+@media (prefers-reduced-motion:reduce){.screen .cur,.screen .new{animation:none}}
 </style>
 </head>
 <body>
 <main>
+<p class="top"><a href="./">← コンピュータの底</a></p>
 <h1>内部をのぞく</h1>
-<p class="lede">キーボードからモニターまでの道すじの3か所に拡大鏡を当てます。①②③を押すと、その場所の「中」が下から上へ積み上がって見えます。</p>
+<p class="lede">下のキーボードを押してみてください（お使いのキーボードでも打てます）。押した瞬間、右側の回路に電気が走り、たどり着いた先のモニターに文字が現れます。</p>
 
-<div class="map">
-  <svg viewBox="0 0 360 250" role="img" aria-label="キーボードとPCの全体図" id="map">
-    <rect class="box" x="20" y="150" width="200" height="70" rx="8"/>
-    <text x="120" y="192">keyboard</text>
-    <rect class="box" x="20" y="22" width="200" height="90" rx="8"/>
-    <text x="120" y="62">PC</text><text class="lbl" x="120" y="82">(monitor)</text>
-    <path class="cable" id="cab" d="M220 185 C270 185 270 120 300 100 C320 88 305 60 220 62"/>
-    <g class="hot" data-s="0" tabindex="0" role="button" aria-label="① キーボード内部を見る"><circle cx="120" cy="150" r="17"/><text x="120" y="156">1</text></g>
-    <g class="hot" data-s="1" tabindex="0" role="button" aria-label="② ケーブル内部を見る"><circle cx="290" cy="140" r="17"/><text x="290" y="146">2</text></g>
-    <g class="hot" data-s="2" tabindex="0" role="button" aria-label="③ PC内部を見る"><circle cx="120" cy="112" r="17"/><text x="120" y="118">3</text></g>
-    <text class="lbl" x="120" y="240" id="cap">①②③ を押してください</text>
-  </svg>
+<div class="stage">
+  <!-- 左: モニター + キーボード -->
+  <div class="panel">
+    <div class="ph"><span class="t">monitor + keyboard</span><span class="s" id="cnt">0 文字</span></div>
+    <div class="monitor"><div class="screen" id="screen"><span class="cur"></span></div></div>
+    <p class="hint">▲ 文字が出る場所　▼ ここを押す</p>
+    <div class="kbd" id="kbd" aria-label="画面上のキーボード">
+      <div class="row" data-keys="1234567890"></div>
+      <div class="row" data-keys="qwertyuiop"></div>
+      <div class="row" data-keys="asdfghjkl"></div>
+      <div class="row" data-keys="zxcvbnm" data-tail="bs"></div>
+      <div class="row" data-tail="sp"></div>
+    </div>
+    <div class="ctl">
+      <button class="btn" type="button" id="slow" aria-pressed="false">🐢 ゆっくり流す</button>
+      <button class="btn" type="button" id="clr">画面を消す</button>
+    </div>
+  </div>
+
+  <!-- 右: 内部回路 -->
+  <div class="panel circ">
+    <div class="ph"><span class="t">内部の回路</span><span class="s">keyboard → cable → PC</span></div>
+    <svg viewBox="0 0 320 400" role="img" aria-label="キーからモニターまでの回路図" id="circ">
+      <!-- 配線 (通る順) -->
+      <path class="wire" id="w0" d="M100 60 H120"/>
+      <path class="wire" id="w1" d="M200 60 H220"/>
+      <path class="wire" id="w2" d="M260 85 V155"/>
+      <path class="wire" id="w3" d="M220 180 H200"/>
+      <path class="wire" id="w4" d="M120 180 H100"/>
+      <path class="wire" id="w5" d="M60 205 V275"/>
+      <path class="wire" id="w6" d="M100 300 H120"/>
+      <path class="wire" id="w7" d="M200 300 H220"/>
+      <path class="wire" id="w8" d="M260 325 V350"/>
+      <path id="track" d="M60 60 H260 V180 H60 V300 H260 V365" fill="none" stroke="none"/>
+
+      <!-- 区間ラベル -->
+      <text class="tag" x="160" y="24">keyboard の中</text>
+      <text class="tag" x="160" y="140">cable → PC の中</text>
+      <text class="tag" x="160" y="262">PC の中</text>
+
+      <!-- ノード -->
+      <g class="node" id="n0"><rect x="20" y="35" width="80" height="50" rx="6"/>
+        <g class="sw"><path class="cont" d="M34 62h14"/><path class="cont mov" d="M48 62 L70 62"/><path class="cont" d="M70 62h16"/></g>
+        <text class="nm" x="60" y="49">スイッチ</text><text class="val" x="60" y="79" id="v0">OFF</text></g>
+      <g class="node" id="n1"><rect x="120" y="35" width="80" height="50" rx="6"/>
+        <g class="grid"><line x1="134" y1="58" x2="186" y2="58"/><line x1="134" y1="66" x2="186" y2="66"/><line x1="134" y1="74" x2="186" y2="74"/>
+          <line x1="146" y1="52" x2="146" y2="80"/><line x1="160" y1="52" x2="160" y2="80"/><line x1="174" y1="52" x2="174" y2="80"/>
+          <line class="hot" id="gr" x1="134" y1="66" x2="186" y2="66"/><line class="hot" id="gc" x1="160" y1="52" x2="160" y2="80"/></g>
+        <text class="nm" x="160" y="49">マトリクス</text></g>
+      <g class="node" id="n2"><rect x="220" y="35" width="80" height="50" rx="6"/>
+        <text class="nm" x="260" y="49">マイコン</text><text class="val" x="260" y="66" id="v2">scan: --</text><text class="val" x="260" y="79" id="v2b">--------</text></g>
+
+      <g class="node" id="n3"><rect x="220" y="155" width="80" height="50" rx="6"/>
+        <text class="nm" x="260" y="169">USBケーブル</text><path class="wave" id="wv" d="M228 192h64"/><text class="val" x="260" y="200" id="v3"></text></g>
+      <g class="node" id="n4"><rect x="120" y="155" width="80" height="50" rx="6"/>
+        <text class="nm" x="160" y="169">USB受信</text><text class="val" x="160" y="186" id="v4">バッファ</text><text class="val" x="160" y="199" id="v4b">[ ]</text></g>
+      <g class="node" id="n5"><rect x="20" y="155" width="80" height="50" rx="6"/>
+        <text class="nm" x="60" y="169">CPU</text><text class="val" x="60" y="186" id="v5">待機中</text><text class="val" x="60" y="199" id="v5b"></text></g>
+
+      <g class="node" id="n6"><rect x="20" y="275" width="80" height="50" rx="6"/>
+        <text class="nm" x="60" y="289">メモリ</text>
+        <g id="mem"></g><text class="val" x="60" y="320" id="v6"></text></g>
+      <g class="node" id="n7"><rect x="120" y="275" width="80" height="50" rx="6"/>
+        <text class="nm" x="160" y="289">画面メモリ</text><text class="val" x="160" y="315" id="v7" style="font-size:20px"></text></g>
+      <g class="node" id="n8"><rect x="220" y="275" width="80" height="50" rx="6"/>
+        <text class="nm" x="260" y="289">ディスプレイ</text><text class="val" x="260" y="315" id="v8">電圧 → 光</text></g>
+
+      <text class="tag" x="260" y="382">↓ モニターへ</text>
+      <g id="pulses"></g>
+    </svg>
+    <div class="cap"><span class="n" id="capn">--</span><span id="capt">キーを押すと、ここに今どこを電気が通っているかが出ます。</span></div>
+  </div>
 </div>
 
-<div class="inner" id="inner" hidden>
-  <div class="inner-head"><span class="t" id="ttl"></span><span class="s" id="sub"></span></div>
-  <div class="wrap">
-    <div class="stack" id="stack"></div>
-    <div class="rail" aria-hidden="true"><div class="arrow"></div><div class="lk">Link</div><div class="line"></div></div>
-  </div>
-  <div class="nav">
-    <button class="btn" id="prev" type="button">↓ 手前へ</button>
-    <button class="btn pri" id="next" type="button">奥へ ↑</button>
-  </div>
-</div>
-
-<p class="after">どの場所でも、いちばん下の層は「触れるもの」で、上に行くほど「電気のパターン」になります。各層の出口が次の層の入口につながっている(Link)ので、指の一押しがモニターの光まで途切れずに届きます。</p>
+<p class="after">押すたびに同じ道を通ります。
+<ol>
+  <li>指の力でスイッチの金属片が触れ、配線がつながる（力 → 電気）</li>
+  <li>マトリクスの交点をマイコンが見つけ、キー番号にする</li>
+  <li>番号は電圧の波になってケーブルを走り、PCが受け取ってCPUに知らせる</li>
+  <li>OSが番号を文字に変え、メモリに電荷として書き、画面メモリの数値が光になる</li>
+</ol>
+</p>
 </main>
 
 <script>
 (function(){
 'use strict';
-var S=[
- {t:'① key 内部',cap:'① キーボードの中を、下から順に',cab:false,L:[
-  {n:'キーキャップ',f:'<svg viewBox="0 0 200 70"><path class="w" d="M60 20h80l8 30H52z"/><path class="g" d="M100 4v10M96 10l4 5 4-5"/><path class="w" d="M85 50v12M115 50v12"/><rect class="sf" x="40" y="62" width="120" height="4" rx="2"/></svg>',
-   p:'指が押すのはプラスチックの板。その下の軸(ステム)を数ミリ押し下げます。ここまでは純粋に力学の世界です。',
-   k:'押し下げた軸が、下の<b>接点</b>を触れさせる'},
-  {n:'スイッチの接点',f:'<svg viewBox="0 0 200 70"><path class="w" d="M20 45h60"/><path class="g" d="M80 45l38-16"/><path class="w" d="M120 45h60"/><circle class="sf" cx="80" cy="45" r="3.5"/><circle class="sf" cx="120" cy="45" r="3.5"/><path class="g" d="M95 12l5 8 5-8"/><text x="100" y="66">押すと金属片が触れて回路がつながる</text></svg>',
-   p:'2枚の金属片が触れ、回路がつながります。それまで途切れていた配線に電流が流れ、その線の電圧が変わる。ここが「力 → 電気」の変換点です。',
-   k:'つながった配線は<b>マトリクス</b>の1本'},
-  {n:'キーマトリクス',f:'<svg viewBox="0 0 200 70"><path class="w" d="M30 15h140M30 35h140M30 55h140M55 5v60M95 5v60M135 5v60"/><path class="g" d="M30 35h140M95 5v60"/><circle class="gf" cx="95" cy="35" r="6"/><text x="182" y="38">行</text><text x="95" y="4" style="font-size:8px">列</text></svg>',
-   p:'100個のキーに100本の線は引けないので、配線は行と列の格子です。キー1つは格子の交点1つ。接点が閉じると、その行と列が導通します。',
-   k:'導通した交点を<b>マイコン</b>が見つける'},
-  {n:'マイコン(走査)',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="70" y="12" width="60" height="46" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="100" y="40" style="font-size:11px;fill:var(--silk)">MCU</text><path class="w" d="M70 20h-30M70 30h-30M70 40h-30M70 50h-30"/><path class="g" d="M130 35h40"/><text x="150" y="30">0100 0001</text><text x="30" y="66">行を1本ずつ順に調べる</text></svg>',
-   p:'小さなコンピュータが行を1本ずつ順に電圧を上げ、どの列に返ってくるかを毎秒何百回も調べます。見つかった交点をキー番号(スキャンコード)に変え、8ビットの列にします。',
-   k:'ビット列を<b>USB送信回路</b>へ'},
-  {n:'USB送信回路',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 50h180" stroke-dasharray="3 4"/><path class="g" d="M10 50h20v-30h20v30h20v-30h40v30h20v-30h20v30h20"/><text x="40" y="66">0</text><text x="60" y="66">1</text><text x="80" y="66">0</text><text x="110" y="66">1</text><text x="140" y="66">1</text><text x="160" y="66">0</text></svg>',
-   p:'ビット列を、信号線の電圧を高速に上げ下げする波形に変えます。1なら高く、0なら低く。これがケーブルへ送り出されます。',
-   k:'波形は<b>② ケーブル</b>を伝わる'}
- ]},
- {t:'② cable 内部',cap:'② ケーブルの中を、下から順に',cab:true,L:[
-  {n:'2本の信号線',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 25h180M10 45h180"/><path class="g" d="M10 25h30v-10h40v10h30v-10h40v10h30"/><path class="g" d="M10 45h30v10h40v-10h30v10h40v-10h30" opacity=".6"/><text x="190" y="20">D+</text><text x="190" y="62">D-</text></svg>',
-   p:'USBはD+とD-の2本で、いつも逆向きの電圧を送ります。受け取り側は「2本の差」を読むので、外から同じノイズが両方に乗っても打ち消せます。',
-   k:'電圧の並びは<b>パケット</b>という単位'},
-  {n:'パケット',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="10" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><rect class="bf" x="50" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><rect x="90" y="20" width="60" height="30" rx="3" class="gf"/><rect class="bf" x="154" y="20" width="36" height="30" rx="3" stroke="var(--silk-dim)" stroke-width="2"/><text x="28" y="40">同期</text><text x="68" y="40">宛先</text><text x="120" y="40" style="fill:var(--board-deep)">データ</text><text x="172" y="40">検査</text></svg>',
-   p:'ビットはバラで送られず、「同期パターン・宛先・データ本体・誤り検査」のひとまとまりで送られます。PCは1ミリ秒ごとにキーボードに「何かある?」と聞き、キーボードがこの形で答えます。',
-   k:'本当の波形は<b>なめらか</b>'},
-  {n:'実際の電圧波形',f:'<svg viewBox="0 0 200 70"><path class="w" d="M10 35h180" stroke-dasharray="3 4"/><path class="g" d="M10 55 C25 55 25 15 40 15 S55 55 70 55 S85 15 100 15 S115 55 130 55 S145 15 160 15 S175 55 190 55"/><text x="100" y="66">しきい値より上なら1、下なら0</text></svg>',
-   p:'配線を走る電圧は角ばっておらず、なだらかで、ノイズも乗っています。受け取り側はしきい値で0か1に読み直し、きれいな信号に整え直します。',
-   k:'整えた信号が<b>③ PC</b>に入る'}
- ]},
- {t:'③ PC 内部',cap:'③ PCの中を、下から順に',cab:false,L:[
-  {n:'USBコントローラ',f:'<svg viewBox="0 0 200 70"><path class="g" d="M10 35h50"/><rect class="bf" x="60" y="15" width="80" height="40" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="100" y="33" style="font-size:10px;fill:var(--silk)">USB host</text><text x="100" y="47">受信バッファ</text><path class="w" d="M140 35h50"/></svg>',
-   p:'マザーボード上のチップが波形を受け取り、パケットを解いて、中身のスキャンコードを小さな記憶場所(バッファ)に置きます。',
-   k:'置いたら<b>CPUに知らせる</b>'},
-  {n:'割り込み',f:'<svg viewBox="0 0 200 70"><rect class="bf" x="20" y="20" width="50" height="30" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="45" y="39">USB</text><path class="g" d="M70 35h60M122 29l8 6-8 6"/><rect class="bf" x="130" y="12" width="56" height="46" rx="4" stroke="var(--trace)" stroke-width="2"/><text x="158" y="39" style="font-size:12px;fill:var(--silk)">CPU</text><text x="100" y="28">IRQ</text></svg>',
-   p:'CPUにつながる1本の線の電圧を上げます。CPUは今の作業を一時中断し、「入力が来たときに実行する場所」へ飛びます。',
-   k:'飛び先は<b>OSのドライバ</b>'},
-  {n:'OS(ドライバ)',f:'<svg viewBox="0 0 200 70"><text x="40" y="38" style="font-size:12px">0x1E</text><path class="g" d="M65 35h30M88 29l7 6-7 6"/><rect class="bf" x="98" y="18" width="40" height="34" rx="4" stroke="var(--silk-dim)" stroke-width="2"/><text x="118" y="40">配列表</text><path class="g" d="M138 35h25"/><text x="178" y="40" style="font-size:16px;fill:var(--trace)">A</text></svg>',
-   p:'ドライバがバッファを読み、キー番号をキー配列表で文字に変換し、いま前面にあるアプリに渡します。ここで初めて「A」という文字になります。',
-   k:'文字は<b>メモリ</b>に書かれる'},
-  {n:'メモリ(DRAM)',f:'<svg viewBox="0 0 200 70"><g class="w"><rect x="20" y="20" width="14" height="30" rx="2"/><rect x="42" y="20" width="14" height="30" rx="2"/><rect x="64" y="20" width="14" height="30" rx="2"/><rect x="86" y="20" width="14" height="30" rx="2"/><rect x="108" y="20" width="14" height="30" rx="2"/><rect x="130" y="20" width="14" height="30" rx="2"/><rect x="152" y="20" width="14" height="30" rx="2"/><rect x="174" y="20" width="14" height="30" rx="2"/></g><rect class="gf" x="42" y="20" width="14" height="30" rx="2"/><rect class="gf" x="174" y="20" width="14" height="30" rx="2"/><text x="100" y="64">0 1 0 0 0 0 0 1 = A</text></svg>',
-   p:'アプリが文字をメモリに書きます。8個のコンデンサのうち、1にあたるものだけに電荷をためる。これがハードウェア上で「電荷が動く」瞬間です。',
-   k:'次は<b>画面用メモリ</b>へ'},
-  {n:'画面用メモリ',f:'<svg viewBox="0 0 200 70"><g class="w"><path d="M55 10h90v50H55zM55 22h90M55 34h90M55 46h90M67 10v50M79 10v50M91 10v50M103 10v50M115 10v50M127 10v50"/></g><g class="gf"><rect x="91" y="10" width="12" height="12"/><rect x="79" y="22" width="12" height="12"/><rect x="103" y="22" width="12" height="12"/><rect x="79" y="34" width="36" height="12"/><rect x="67" y="46" width="12" height="14"/><rect x="115" y="46" width="12" height="14"/></g></svg>',
-   p:'アプリは「A」の形を画素の並びに変え、画面用のメモリ(フレームバッファ)に書きます。1画素ごとに明るさの数値が入ります。',
-   k:'数値が<b>ディスプレイ</b>の電圧になる'},
-  {n:'ディスプレイ',f:'<svg viewBox="0 0 200 70"><rect class="w" x="60" y="8" width="80" height="54" rx="4"/><text x="100" y="45" style="font-size:30px;fill:var(--trace)">A</text><path class="g" d="M150 20l12-8M150 35h14M150 50l12 8"/></svg>',
-   p:'画素ごとの数値が電圧になり、液晶の向きや有機ELの明るさを変えます。電気が光に戻り、あなたの目に「A」が届きます。',
-   k:'ここで<b>一周</b>。指 → 電気 → 光'}
- ]}
-];
-var cur=-1,lv=0;
 var $=function(s){return document.querySelector(s)};
-var inner=$('#inner'),stack=$('#stack'),hots=[].slice.call(document.querySelectorAll('.hot'));
-function render(){
-  var st=S[cur];$('#ttl').textContent=st.t;$('#sub').textContent='下から '+(lv+1)+' / '+st.L.length+' 層';
-  $('#cap').textContent=st.cap;$('#cab').classList.toggle('on',st.cab);
-  hots.forEach(function(h,i){h.classList.toggle('on',i===cur)});
-  stack.innerHTML='';
-  st.L.forEach(function(L,i){
-    var d=document.createElement('div');d.className='layer'+(i===lv?' open':'')+(i>lv?' dim':'');
-    var idx=i===0?'内部①':String(i+1);
-    d.innerHTML='<div class="bar"><span class="n">'+idx+'</span><span>'+L.n+'</span></div><div class="body">'+L.f.replace('<svg','<svg class="fig"')+'<p>'+L.p+'</p><div class="link">Link ↑ '+L.k+'</div></div>';
-    d.addEventListener('click',function(){lv=i;render()});
-    stack.appendChild(d)});
-  $('#prev').disabled=lv===0;
-  var last=lv===st.L.length-1;$('#next').textContent=last?(cur<2?'次の '+['②','③'][cur]+' へ':'最初の ① に戻る'):'奥へ ↑';
-  inner.hidden=false;
+var screen=$('#screen'),cur=screen.querySelector('.cur'),cnt=$('#cnt');
+var capn=$('#capn'),capt=$('#capt'),track=$('#track'),pulses=$('#pulses');
+var slow=false;
+
+/* ---- 画面上キーボードを組み立てる ---- */
+document.querySelectorAll('#kbd .row').forEach(function(row){
+  (row.dataset.keys||'').split('').forEach(function(ch){
+    var b=document.createElement('button');b.className='k';b.type='button';b.textContent=ch.toUpperCase();b.dataset.k=ch;row.appendChild(b);
+  });
+  if(row.dataset.tail==='bs'){var bs=document.createElement('button');bs.className='k w';bs.type='button';bs.textContent='⌫';bs.dataset.k='Backspace';row.appendChild(bs)}
+  if(row.dataset.tail==='sp'){var sp=document.createElement('button');sp.className='k sp';sp.type='button';sp.textContent='space';sp.dataset.k=' ';row.appendChild(sp)}
+});
+var keyBtn={};document.querySelectorAll('.k').forEach(function(b){keyBtn[b.dataset.k]=b;b.addEventListener('click',function(){press(b.dataset.k)})});
+
+/* ---- メモリのセル 8個 ---- */
+var mem=$('#mem'),cells=[];
+for(var i=0;i<8;i++){var r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  r.setAttribute('x',28+i*8.5);r.setAttribute('y',296);r.setAttribute('width',6);r.setAttribute('height',10);r.setAttribute('class','cell');mem.appendChild(r);cells.push(r)}
+
+/* ---- HID の実際のキー番号 ---- */
+function scan(k){
+  if(k===' ')return 0x2C;if(k==='Backspace')return 0x2A;
+  var c=k.charCodeAt(0);
+  if(c>=97&&c<=122)return 4+(c-97);
+  if(c===48)return 0x27;if(c>=49&&c<=57)return 0x1E+(c-49);
+  return 0;
 }
-hots.forEach(function(h,i){function go(){cur=i;lv=0;render();inner.scrollIntoView({behavior:'smooth',block:'nearest'})}
-  h.addEventListener('click',go);h.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}})});
-$('#prev').addEventListener('click',function(){if(lv>0){lv--;render()}});
-$('#next').addEventListener('click',function(){if(lv<S[cur].L.length-1){lv++;render()}else{cur=(cur+1)%3;lv=0;render();$('#map').scrollIntoView({behavior:'smooth',block:'start'})}});
+function bin(n){var s=n.toString(2);while(s.length<8)s='0'+s;return s}
+function hex(n){return '0x'+n.toString(16).toUpperCase().replace(/^(.)$/,'0$1')}
+function label(k){return k===' '?'␣':k==='Backspace'?'⌫':k.toUpperCase()}
+function wavePath(bits){var d='M228 '+(bits[0]==='1'?186:198);for(var i=0;i<8;i++){var y=bits[i]==='1'?186:198;d+=' V'+y+' h8'}return d}
+var ROWCOL={};'1234567890'.split('').forEach(function(c,i){ROWCOL[c]=[0,i%4]});'qwertyuiop'.split('').forEach(function(c,i){ROWCOL[c]=[1,i%4]});
+'asdfghjkl'.split('').forEach(function(c,i){ROWCOL[c]=[2,i%4]});'zxcvbnm'.split('').forEach(function(c,i){ROWCOL[c]=[2,(i+1)%4]});ROWCOL[' ']=[2,2];ROWCOL.Backspace=[0,3];
+
+/* ---- 1回の打鍵 = 電気が回路を一周する ---- */
+var N=9,T=[0,.11,.22,.36,.48,.58,.70,.82,.92,1]; /* 各ノードに着く時刻(割合) */
+function press(k){
+  var sc=scan(k);if(!sc)return;
+  var b=keyBtn[k];if(b){b.classList.add('down');setTimeout(function(){b.classList.remove('down')},160)}
+  var dur=slow?4200:1300, code=k==='Backspace'?8:k.charCodeAt(0), bits=bin(code), ch=label(k);
+  var steps=[
+    function(){$('#v0').textContent='ON';capn.textContent='①';capt.textContent='指の力で金属片が触れ、配線がつながった。ここで力が電気に変わる'},
+    function(){var rc=ROWCOL[k]||[1,1];$('#gr').setAttribute('y1',58+rc[0]*8);$('#gr').setAttribute('y2',58+rc[0]*8);$('#gc').setAttribute('x1',146+rc[1]*14);$('#gc').setAttribute('x2',146+rc[1]*14);
+      capn.textContent='②';capt.textContent='行'+(rc[0]+1)+'と列'+(rc[1]+1)+'が導通。格子の交点1つ = キー1つ'},
+    function(){$('#v2').textContent='scan: '+hex(sc);$('#v2b').textContent=bin(sc);capn.textContent='③';capt.textContent='マイコンが行を順に調べて交点を見つけ、キー番号 '+hex(sc)+' にした'},
+    function(){$('#wv').setAttribute('d',wavePath(bin(sc)));capn.textContent='④';capt.textContent='番号が電圧の高低の波になり、2本の信号線をPCへ走る'},
+    function(){$('#v4b').textContent='['+hex(sc)+']';capn.textContent='⑤';capt.textContent='PCのUSBチップが波を受け取り、番号をバッファに置いた'},
+    function(){$('#v5').textContent='割り込み!';$('#v5b').textContent=hex(sc)+' → "'+ch+'"';capn.textContent='⑥';capt.textContent='CPUに「入力あり」の信号。OSがキー番号を文字 "'+ch+'" に変えた'},
+    function(){for(var i=0;i<8;i++)cells[i].setAttribute('class','cell'+(bits[i]==='1'?' b1':''));$('#v6').textContent=bits;capn.textContent='⑦';capt.textContent='文字コード '+bits+' をメモリに書く。1 のセルにだけ電荷がたまる'},
+    function(){$('#v7').textContent=ch;capn.textContent='⑧';capt.textContent='"'+ch+'" の形を画素の並びにして画面メモリへ'},
+    function(){capn.textContent='⑨';capt.textContent='画素の数値が電圧になり、光になる'},
+    function(){$('#v0').textContent='OFF';$('#v5').textContent='待機中';output(k);capn.textContent='✓';capt.textContent='モニターに "'+ch+'" が出た。指 → 電気 → 光'}
+  ];
+  /* 光の玉を走らせる */
+  var c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('r',6);c.setAttribute('class','pulse');
+  var am=document.createElementNS('http://www.w3.org/2000/svg','animateMotion');am.setAttribute('dur',dur+'ms');am.setAttribute('fill','freeze');am.setAttribute('path',track.getAttribute('d'));
+  c.appendChild(am);pulses.appendChild(c);
+  if(am.beginElement)am.beginElement();
+  setTimeout(function(){c.remove()},dur+80);
+  /* ノードと配線を順に光らせる */
+  for(var i=0;i<N;i++)(function(i){
+    setTimeout(function(){
+      var n=$('#n'+i);n.classList.add('on');steps[i]();
+      var w=$('#w'+i);if(w)w.classList.add('on');
+      setTimeout(function(){n.classList.remove('on');n.classList.add('done')},Math.max(220,dur*.1));
+      if(w)setTimeout(function(){w.classList.remove('on')},Math.max(300,dur*.14));
+    },T[i]*dur);
+  })(i);
+  setTimeout(steps[9],dur);
+}
+function output(k){
+  if(k==='Backspace'){var last=cur.previousSibling;if(last)last.remove()}
+  else{var s=document.createElement('span');s.className='new';s.textContent=k;screen.insertBefore(s,cur)}
+  cnt.textContent=(screen.childNodes.length-1)+' 文字';
+}
+
+/* ---- 物理キーボード ---- */
+document.addEventListener('keydown',function(e){
+  if(e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+  var k=e.key;if(k==='Backspace'){e.preventDefault();press(k);return}
+  if(k.length===1&&/[a-z0-9 ]/i.test(k)){e.preventDefault();press(k.toLowerCase())}
+});
+$('#slow').addEventListener('click',function(){slow=!slow;this.setAttribute('aria-pressed',String(slow))});
+$('#clr').addEventListener('click',function(){while(cur.previousSibling)cur.previousSibling.remove();cnt.textContent='0 文字';$('#v7').textContent=''});
 })();
 </script>
 </body>
