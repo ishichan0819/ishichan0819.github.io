@@ -15,4 +15,5 @@ https://ishichan0819.github.io/
 - [Optical OFDM: 狭い帯域で速く送る](https://ishichan0819.github.io/ofdm/) — 帯域が数MHzしかないLEDで速く送る光OFDMのアクティビティ。OOKのアイパターン、エルミート対称、DCO/ACO-OFDMのBER比較、ビット割り当て
 - [AWS 基盤パズル](https://ishichan0819.github.io/aws-platform/) — ランダムなお題(全39問)に合わせてAWSのサービスをつなぎ、プラットフォームエンジニアリングを学ぶパズル。解答例と、参考にしたAWS公式資料・各社の事例つき
 - [競プロ アルゴリズム図鑑](https://ishichan0819.github.io/algo/) — AtCoder 茶色から青色を目指す 12 のアルゴリズム。ステップ実行できる図と C++ / Python の実装
+  - [競プロ 5分ドリル](https://ishichan0819.github.io/algo/drill.html) — 図鑑の12のアルゴリズムを、読む・穴埋め・並べる・組み立ての4段階で自分で書けるまで練習するスマホ向けドリル (Python / C++、復習つき、ホーム画面に追加してオフラインでも使える)
 - [タルとハシゴ](https://ishichan0819.github.io/barrel/) — 斜めの足場とハシゴをのぼり、樽を飛び越えててっぺんを目指すレトロ風アクションゲーム

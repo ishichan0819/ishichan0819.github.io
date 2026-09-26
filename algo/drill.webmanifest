@@ -1,0 +1,16 @@
+{
+  "name": "競プロ 5分ドリル",
+  "short_name": "5分ドリル",
+  "description": "競技プログラミングのアルゴリズムを、読む・穴埋め・並べる・組み立ての4段階で自分で書けるようにするドリル",
+  "start_url": "./drill.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0B0E17",
+  "theme_color": "#171C2B",
+  "lang": "ja",
+  "icons": [
+    {"src": "drill-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "drill-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "drill-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
