@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>室内VLC — 部屋じゅうに光を届ける</title>
+<meta name="description" content="天井のLED照明から、部屋のあちこちにある受信機へ光でデータを届ける室内可視光通信のシミュレータ。照度とSNRの地図、壁の反射による遅延の広がり、人の影とハンドオーバーを試す。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;--rule:#C9D0DE;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1040px;margin:0 auto;padding:28px 18px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:42em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim);text-align:right}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.95rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:8px 0 2px}
+.lab b{color:var(--silk);font-weight:400;font-family:var(--dot)}
+input[type=range]{width:100%;accent-color:var(--led)}
+select{font:inherit;font-family:var(--dot);padding:6px 8px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk)}
+.btn{font:inherit;font-weight:700;min-height:36px;padding:4px 14px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn[aria-pressed="true"]{background:var(--silk);color:var(--room)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:4px 16px;margin-top:12px;align-items:start}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim);min-height:1.5em}
+.note b{color:var(--led);font-weight:700}
+
+/* 地図 + 読み取り */
+.room{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:799px){.room{grid-template-columns:1fr}}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.mt{font-family:var(--dot);font-size:.95rem;color:var(--silk-dim)}
+.sel{font-family:var(--dot);font-size:.78rem;color:var(--silk-dim)}
+.sel b{color:var(--silk);font-weight:400}
+.seg{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--edge);border-radius:8px;overflow:hidden;vertical-align:middle}
+.seg button{font:inherit;font-size:.8rem;line-height:1.3;min-height:34px;padding:4px 11px;background:transparent;color:var(--silk-dim);border:0;border-left:1px solid var(--edge);cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--led);color:#1A1200;font-weight:700}
+.seg.cy button[aria-pressed="true"]{background:var(--wave);color:#00222C}
+canvas.map{display:block;width:100%;height:auto;aspect-ratio:1/1;border-radius:8px;background:#060A13;touch-action:none;cursor:crosshair}
+canvas.map.grab{cursor:grab}
+canvas.map.drag{cursor:grabbing}
+.legend{margin-top:10px}
+.lg-bar{height:10px;border-radius:5px;position:relative}
+.lg-bar .mk{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--bad)}
+.lg-bar .rng{position:absolute;top:-4px;bottom:-4px;border:2px solid var(--ok);border-radius:5px}
+.lg-t{position:relative;height:1.4em;margin-top:2px;font-family:var(--dot);font-size:.7rem;color:var(--silk-dim)}
+.lg-t span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.lg-t span:first-child{transform:none}
+.lg-t span:last-child{transform:translateX(-100%)}
+.lg-n{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.75rem;color:var(--silk-dim);margin-top:2px}
+.hatch{display:inline-block;width:16px;height:11px;border:1px solid var(--bad);vertical-align:-1px;
+  background:repeating-linear-gradient(135deg,rgba(255,107,122,.9) 0 1.5px,rgba(255,107,122,.1) 1.5px 5px)}
+.fovk{display:inline-block;width:16px;height:0;border-top:2px dashed var(--wave);vertical-align:3px}
+.hint{font-size:.72rem;color:var(--silk-dim);margin-top:6px;line-height:1.5}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:.85rem;align-items:baseline}
+.kv dt{color:var(--silk-dim)}
+.kv dd{margin:0;text-align:right;font-family:var(--dot);font-size:.95rem}
+.tag{display:inline-block;font-family:var(--dot);font-size:.7rem;line-height:1.5;padding:0 6px;border-radius:5px;border:1px solid;margin-left:6px;vertical-align:1px}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.ng{color:var(--bad);border-color:var(--bad)}
+.sub{font-family:var(--dot);font-size:.8rem;color:var(--silk-dim);margin:12px 0 6px;border-top:1px solid var(--edge);padding-top:8px}
+.contrib{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center;font-size:.78rem;font-family:var(--dot)}
+.contrib .bar{height:8px;border-radius:4px;background:var(--edge);overflow:hidden}
+.contrib .bar i{display:block;height:100%;background:var(--wave)}
+.contrib .srv{color:var(--led)}
+.contrib .srv+.bar i{background:var(--led)}
+.contrib .n{color:var(--silk-dim);text-align:right;min-width:4.6em}
+.contrib .n.x{color:var(--bad)}
+.lobe{display:block;width:120px;height:auto;margin:2px 0 0}
+.lobe .lb{fill:rgba(255,197,61,.22);stroke:var(--led);stroke-width:1.5}
+.lobe .hp{fill:none;stroke:var(--silk-dim);stroke-width:1;stroke-dasharray:3 3}
+.lobe circle{fill:var(--led)}
+.arw{display:inline-block;transition:transform .1s}
+.try{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;font-size:.8rem;color:var(--silk-dim)}
+.try button{font:inherit;font-size:.8rem;min-height:32px;padding:3px 12px;border-radius:999px;border:1.5px dashed var(--silk-dim);background:transparent;color:var(--silk);cursor:pointer}
+.try button:hover{border-color:var(--led);color:var(--led)}
+.try button.rs{border-style:solid;border-color:var(--edge);color:var(--silk-dim)}
+canvas.ir{display:block;width:100%;height:150px;border-radius:8px;background:#060A13;border:1px solid var(--edge)}
+.split{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--edge);margin:10px 0 4px}
+.split i{display:block;height:100%}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.ho{font-family:var(--dot);font-size:.8rem;color:var(--led);min-height:1.5em;margin-top:6px}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+details.math{margin-top:22px;border:1px solid var(--rule);border-radius:10px;padding:10px 14px;font-size:.9rem}
+details.math summary{cursor:pointer;font-family:var(--dot);font-size:1rem}
+details.math h3{font-size:.95rem;margin:14px 0 4px}
+details.math p{margin:.3em 0;color:var(--muted)}
+.eq{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-size:1.02rem;margin:4px 0 4px 1em;overflow-x:auto;white-space:nowrap}
+.params{border-collapse:collapse;font-size:.85rem;margin-top:6px;width:100%}
+.params td{border-top:1px solid var(--rule);padding:3px 8px 3px 0;vertical-align:top}
+.params td:last-child{font-family:var(--dot);white-space:nowrap}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px}
+@media (prefers-reduced-motion:reduce){.arw{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../visible-light/">光で文字を送る(OOK)</a> · <a href="../csk/">色で文字を送る(CSK)</a></p>
+<h1>部屋じゅうに光を届ける</h1>
+<p class="lede">前の2ページでは、LEDと受光器がまっすぐ向かい合っていました。実際の可視光通信では、天井の照明が部屋を照らしながら、机の上のあちこちにある受信機(スマホやPC)へデータを届けます。<b>照明として十分に明るい場所なら、通信もできる</b>のでしょうか? 5m × 5m × 天井3m の部屋を上から見た地図で確かめます。</p>
+
+<h2>① 照明の地図と、通信の地図</h2>
+<p class="lede">天井のLED照明(●)をドラッグで動かし、地図をクリックして受信機(■)を置いてください。地図の上の切り替えで、机の高さ(0.85m)での<b>照度</b>(照明としての明るさ)と<b>SNR</b>(通信としての信号の強さ)を見比べます。赤い斜線は、照明なら暗すぎ・まぶしすぎ、通信なら誤りが多すぎる場所です。</p>
+<div class="panel" id="s1"></div>
+
+<h2>② 壁の反射が速さを決める</h2>
+<p class="lede">光は壁でも跳ね返ります。反射光は遠回りするぶん遅れて届き、前のビットの光が次のビットに重なります(符号間干渉)。受信機に届く光を時間順に並べたのが右のグラフ(インパルス応答)。遅れの広がり D<sub>rms</sub> が大きいほど速く送れず、上限の目安は 1/(10·D<sub>rms</sub>) です。地図は場所ごとの「速さの上限」です。</p>
+<div class="panel" id="s2"></div>
+
+<h2>③ 人が立つと影ができる</h2>
+<p class="lede">光は人の体を通り抜けません。人をドラッグして、受信機とLEDの間に入れてみてください。すべてのLEDが同じデータを送る<b>放送型</b>と、LEDごとに別の受信機へ送る<b>セル型</b>を切り替えられます。セル型では受信機はいちばん強く届くLEDにつなぎ、ほかのLEDの光は干渉(じゃま)になります。</p>
+<div class="panel" id="s3"></div>
+
+<p class="after">見えたこと
+<ul>
+  <li><b>照明の明るさと通信の届き方は別もの</b>。照度は机に届く光の量で決まるが、通信は受信機の視野(FOV)に入ったLEDの光しか使えない。</li>
+  <li><b>視野角はトレードオフ</b>。狭めるとレンズで光を集められて信号は強くなり、反射も拾いにくくなる。そのかわり、どのLEDも見えない死角ができる。</li>
+  <li><b>光の量は十分でも、速さは反射で頭打ちになる</b>。遠回りした光が遅れて届き、部屋の隅や壁ぎわほど遅れの広がりが大きい。</li>
+  <li><b>影には複数のLEDで備える</b>。1灯だと人の影でリンクが切れるが、放送型で同じデータを送る複数灯なら別のLEDが補う。</li>
+  <li><b>セル型は干渉との戦い</b>。LEDごとに別のデータを送れば部屋全体で運べる量は増えるが、光が重なる境目では通信できない。受信機が境目をまたぐと、つなぎ先が切り替わる(ハンドオーバー)。</li>
+</ul>
+</p>
+
+<details class="math">
+<summary>計算に使った式とパラメータ</summary>
+<p>Komine & Nakagawa (2004) の室内モデルに沿って計算しています。LEDは天井(高さ3m)で真下向き、受信機は机の高さ0.85m。</p>
+<h3>LEDの配光(ランバート放射)</h3>
+<div class="eq">m = −ln 2 / ln(cos Φ<sub>½</sub>)　　(Φ<sub>½</sub>: 半値角)</div>
+<h3>照度(机の上、水平面)</h3>
+<div class="eq">E = Σ I(0) cos<sup>m</sup>φ · cos ψ / d²</div>
+<h3>直接光のチャネル利得(視野の中だけ)</h3>
+<div class="eq">H(0) = (m+1)A / (2πd²) · cos<sup>m</sup>φ · T<sub>s</sub> · g(ψ) · cos ψ,　g(ψ) = n² / sin²Ψ<sub>c</sub>　(0 ≤ ψ ≤ Ψ<sub>c</sub>)</div>
+<h3>壁での1回反射(②)</h3>
+<div class="eq">dH = (m+1)A / (2π² d<sub>1</sub>² d<sub>2</sub>²) · ρ dA<sub>w</sub> · cos<sup>m</sup>φ · cos α · cos β · T<sub>s</sub> · g(ψ) · cos ψ,　遅れ t = (d<sub>1</sub>+d<sub>2</sub>) / c</div>
+<p>壁を 0.25m 角(地図)/ 0.05m 角(受信機の点)に分割。天井・床の反射と2回以上の反射は入れていません。</p>
+<h3>SNR と誤り率(OOK)</h3>
+<div class="eq">SNR = (γP<sub>r</sub>)² / (σ²<sub>shot</sub> + σ²<sub>thermal</sub>),　BER = Q(√SNR)</div>
+<div class="eq">σ²<sub>shot</sub> = 2qγP<sub>r</sub>B + 2qI<sub>bg</sub>I<sub>2</sub>B</div>
+<div class="eq">σ²<sub>thermal</sub> = (8πkT<sub>k</sub>/G) ηA I<sub>2</sub>B² + (16π²kT<sub>k</sub>Γ/g<sub>m</sub>) η²A² I<sub>3</sub>B³</div>
+<p>BER ≤ 10⁻⁶ になるのは SNR ≥ 13.5 dB。これを「通信できる」の基準にしています。</p>
+<h3>遅延広がり(②)</h3>
+<div class="eq">τ̄ = Σ t<sub>i</sub>h<sub>i</sub> / Σ h<sub>i</sub>,　D<sub>rms</sub> = √( Σ (t<sub>i</sub> − τ̄)² h<sub>i</sub> / Σ h<sub>i</sub> ),　速さの上限の目安 R ≈ 1 / (10·D<sub>rms</sub>)</div>
+<h3>セル型の SINR(③)</h3>
+<div class="eq">SINR = (γP<sub>s</sub>)² / (σ²<sub>shot</sub> + σ²<sub>thermal</sub> + (γ Σ<sub>i≠s</sub> P<sub>i</sub>)²)　(P<sub>s</sub>: いちばん強いLED)</div>
+<h3>パラメータ</h3>
+<table class="params">
+<tr><td>部屋 / 受信面の高さ</td><td>5 × 5 × 3 m / 0.85 m</td></tr>
+<tr><td>LEDアレイ1台</td><td>60 × 60 = 3600 個、1個 20 mW・0.73 cd</td></tr>
+<tr><td>半値角 Φ<sub>½</sub>(標準)</td><td>70°</td></tr>
+<tr><td>受光面積 A / 視野角 Ψ<sub>c</sub>(標準)</td><td>1 cm² / 60°</td></tr>
+<tr><td>フィルタ透過率 T<sub>s</sub> / レンズ屈折率 n</td><td>1.0 / 1.5</td></tr>
+<tr><td>受光感度 γ</td><td>0.53 A/W</td></tr>
+<tr><td>背景光電流 I<sub>bg</sub> / I<sub>2</sub> / I<sub>3</sub></td><td>5100 μA / 0.562 / 0.0868</td></tr>
+<tr><td>G / η / Γ / g<sub>m</sub> / T<sub>k</sub></td><td>10 / 112 pF/cm² / 1.5 / 30 mS / 295 K</td></tr>
+<tr><td>壁の反射率 ρ(標準)</td><td>0.8</td></tr>
+<tr><td>人</td><td>半径 0.25 m、高さ 1.7 m の円柱</td></tr>
+</table>
+<p>灯数を変えても部屋全体の光の量(4台ぶん)は同じにしています。半値角を変えたときもLED1台の全光束は同じで、中心光度 I(0) が変わります。LED自体の応答速度(蛍光体を使う白色LEDでは数MHz程度)は考えていません。</p>
+</details>
+<p class="ref">参考: T. Komine and M. Nakagawa, “Fundamental analysis for visible-light communication system using LED lights,” IEEE Trans. Consumer Electronics, vol. 50, no. 1, pp. 100–107, 2004.</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+/* ==== 部屋・LED・受光器 (Komine & Nakagawa 2004 の室内モデル) ==== */
+var RAD=Math.PI/180,W=5,H=3,HR=0.85,HH=H-HR,C=0.299792458; /* 光速 [m/ns] */
+var PT1=20e-3*3600,I01=0.73*3600;          /* LEDアレイ1台: 光出力 [W], 中心光度 [cd] */
+var AR=1e-4,TS=1,NREF=1.5,GAM=0.53;         /* 受光面積 [m²], フィルタ透過率, レンズ屈折率, 感度 [A/W] */
+var QE=1.602e-19,KB=1.381e-23,TK=295,IBG=5100e-6,I2=0.562,I3=0.0868,GOL=10,ETA=112e-12/1e-4,GF=1.5,GM=30e-3;
+var SNR_OK=13.5,LUX_LO=300,LUX_HI=1500,PR=0.25,PH=1.7,BIN=0.5,IRN=100;
+var RATES=[1,2,5,10,20,50,100,200,500,1000];
+var LAYOUT={1:[[2.5,2.5]],2:[[1.25,2.5],[3.75,2.5]],4:[[1.25,1.25],[3.75,1.25],[1.25,3.75],[3.75,3.75]],9:[]};
+[5/6,2.5,25/6].forEach(function(y){[5/6,2.5,25/6].forEach(function(x){LAYOUT[9].push([x,y])})});
+function mOf(h){return -Math.LN2/Math.log(Math.cos(h*RAD))}
+var M70=mOf(70);
+function clone(a){return a.map(function(p){return p.slice()})}
+function sum(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s}
+
+/* 灯数を変えても全体の光の量は4台ぶん。半値角を変えても全光束は同じ(中心光度が変わる) */
+function derive(P){
+  var m=mOf(P.half),n=P.leds.length,s=Math.sin(P.fov*RAD),t=P.tilt*RAD,a=P.az*RAD;
+  return {m:m,pt:4*PT1/n*P.dim,i0:4*I01/n*P.dim*(m+1)/(M70+1),g:NREF*NREF/(s*s),cf:Math.cos(P.fov*RAD),B:RATES[P.ri]*1e6,
+    nr:[Math.sin(t)*Math.cos(a),Math.sin(t)*Math.sin(a),Math.cos(t)]};
+}
+function noise(P,B){return 2*QE*GAM*P*B+2*QE*IBG*I2*B+8*Math.PI*KB*TK/GOL*ETA*AR*I2*B*B+16*Math.PI*Math.PI*KB*TK*GF/GM*ETA*ETA*AR*AR*I3*B*B*B}
+/* 受信点(x,y,HR) → LED(lx,ly,H) の線分が人の円柱を通るか */
+function blocked(lx,ly,x,y,pp){
+  if(!pp)return false;
+  var dx=lx-x,dy=ly-y,fx=x-pp[0],fy=y-pp[1],a=dx*dx+dy*dy,b=2*(fx*dx+fy*dy),c=fx*fx+fy*fy-PR*PR;
+  if(c<=0)return true;
+  var disc=b*b-4*a*c;if(a<1e-12||disc<0)return false;
+  var t=(-b-Math.sqrt(disc))/(2*a);
+  return t>=0&&t<=1&&HR+t*HH<PH;
+}
+/* 直接光: pw[i]=LED i からの受信電力 [W], st[i]=0 届く / 1 視野の外 / 2 人の影。戻り値は机の上の照度 [lx] */
+function los(P,D,x,y,pw,st){
+  var E=0,nr=D.nr;pw.length=st.length=P.leds.length;
+  for(var i=0;i<P.leds.length;i++){
+    var L=P.leds[i],dx=L[0]-x,dy=L[1]-y,d2=dx*dx+dy*dy+HH*HH,d=Math.sqrt(d2),c=HH/d,cm=Math.pow(c,D.m);
+    if(blocked(L[0],L[1],x,y,P.person)){pw[i]=0;st[i]=2;continue}
+    E+=D.i0*cm*c/d2;
+    var cp=(nr[0]*dx+nr[1]*dy+nr[2]*HH)/d;
+    if(cp<=0||cp<D.cf){pw[i]=0;st[i]=1;continue}
+    pw[i]=D.pt*(D.m+1)*AR/(2*Math.PI*d2)*cm*TS*D.g*cp;st[i]=0;
+  }
+  return E;
+}
+/* SNR [dB]。セル型はいちばん強いLEDが信号、残りは干渉 */
+function link(pw,B,cell){
+  var tot=0,mx=0,srv=-1;
+  for(var i=0;i<pw.length;i++){tot+=pw[i];if(pw[i]>mx){mx=pw[i];srv=i}}
+  if(tot<=0)return {db:-Infinity,srv:-1};
+  var s=cell?mx:tot,it=cell?tot-mx:0;
+  return {db:10*Math.log10(Math.pow(GAM*s,2)/(noise(tot,B)+Math.pow(GAM*it,2))),srv:srv};
+}
+function erfc(x){var z=Math.abs(x),t=1/(1+0.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));return x>=0?r:2-r}
+function ber(db){return isFinite(db)?0.5*erfc(Math.sqrt(Math.pow(10,db/10)/2)):0.5}
+
+/* ---- 壁の1回反射 ---- */
+function patches(s){
+  var nx=Math.round(W/s),nz=Math.round(H/s),n=nx*nz*4,o={n:n,nx:nx,s:s,dA:s*s,x:new Float64Array(n),y:new Float64Array(n),z:new Float64Array(n),wx:new Float64Array(n),wy:new Float64Array(n),w:new Uint8Array(n),col:new Uint16Array(n)},k=0;
+  function add(x,y,z,wx,wy,w,c){o.x[k]=x;o.y[k]=y;o.z[k]=z;o.wx[k]=wx;o.wy[k]=wy;o.w[k]=w;o.col[k]=c;k++}
+  for(var i=0;i<nx;i++)for(var j=0;j<nz;j++){var u=(i+.5)*s,z=(j+.5)*s;add(0,u,z,1,0,0,i);add(W,u,z,-1,0,1,i);add(u,0,z,0,1,2,i);add(u,W,z,0,-1,3,i)}
+  return o;
+}
+var PM=patches(0.25),PF=patches(0.05);
+/* LED → 壁パッチ: 壁に入る光 × 反射率 と、その距離 */
+function reflPrep(P,D,Q){
+  var nl=P.leds.length,n=Q.n,F=new Float64Array(nl*n),T=new Float64Array(nl*n);
+  if(P.rho>0)for(var i=0;i<nl;i++){var L=P.leds[i];for(var j=0;j<n;j++){
+    var fx=L[0]-Q.x[j],fy=L[1]-Q.y[j],fz=H-Q.z[j],d2=fx*fx+fy*fy+fz*fz,d=Math.sqrt(d2),ca=(Q.wx[j]*fx+Q.wy[j]*fy)/d,k=i*n+j;
+    if(ca>0){F[k]=D.pt*(D.m+1)/(2*Math.PI*Math.PI*d2)*P.rho*Q.dA*Math.pow(fz/d,D.m)*ca;T[k]=d/C}}}
+  return {F:F,T:T};
+}
+/* 直接光 + 反射光の Σh, Σh·t, Σh·t²。bins/cols/lsl があれば時間ごと・壁の位置ごと・直接光の一覧も集める */
+function spread(P,D,Q,R,x,y,pw,st,A,bins,cols,lsl){
+  var i,j,k,h,t,s0=0,s1=0,s2=0,lp=0,rp=0,nl=P.leds.length;
+  los(P,D,x,y,pw,st);
+  for(i=0;i<nl;i++)if(pw[i]>0){var L=P.leds[i];t=Math.sqrt((L[0]-x)*(L[0]-x)+(L[1]-y)*(L[1]-y)+HH*HH)/C;h=pw[i];s0+=h;s1+=h*t;s2+=h*t*t;lp+=h;if(lsl)lsl.push([t,h,i])}
+  if(P.rho>0){
+    var g=AR*TS*D.g,cf=D.cf,nr=D.nr,F=R.F,T=R.T,n=Q.n;
+    for(j=0;j<n;j++){
+      var ex=Q.x[j]-x,ey=Q.y[j]-y,ez=Q.z[j]-HR,d2=ex*ex+ey*ey+ez*ez,d=Math.sqrt(d2),cp=(nr[0]*ex+nr[1]*ey+nr[2]*ez)/d;
+      if(cp<=0||cp<cf)continue;
+      var cb=-(Q.wx[j]*ex+Q.wy[j]*ey)/d;if(cb<=0)continue;
+      var w=cb*cp/d2*g,td=d/C,cs=0;
+      for(i=0;i<nl;i++){k=i*n+j;if(F[k]<=0)continue;h=F[k]*w;t=T[k]+td;s0+=h;s1+=h*t;s2+=h*t*t;rp+=h;cs+=h;
+        if(bins){var b=Math.floor(t/BIN);if(b<IRN)bins[b]+=h}}
+      if(cols)cols[Q.w[j]*Q.nx+Q.col[j]]+=cs;
+    }
+  }
+  A.s0=s0;A.los=lp;A.ref=rp;
+  if(s0>0){A.mu=s1/s0;A.d=Math.sqrt(Math.max(0,s2/s0-A.mu*A.mu))}else{A.mu=A.d=0}
+  A.rate=s0<=0?0:A.d>0.1?100/A.d:1000; /* [Mb/s] 1/(10·D_rms)。1 Gb/s で頭打ち */
+  return A;
+}
+
+/* ==== 表示の道具 ==== */
+function lut(st){var o=new Uint8ClampedArray(768);for(var i=0;i<256;i++){var t=i/255,k=0;while(k<st.length-2&&t>st[k+1][0])k++;var a=st[k],b=st[k+1],u=(t-a[0])/(b[0]-a[0]);for(var c=0;c<3;c++)o[i*3+c]=Math.round(a[1][c]+(b[1][c]-a[1][c])*u)}return o}
+var LUT={amber:lut([[0,[12,16,28]],[.3,[84,46,8]],[.65,[232,152,32]],[1,[255,246,206]]]),cyan:lut([[0,[12,16,28]],[.3,[10,62,94]],[.65,[42,178,216]],[1,[228,252,255]]])};
+function grad(l){var s=[];for(var i=0;i<=10;i++){var k=Math.round(i*25.5)*3;s.push('rgb('+l[k]+','+l[k+1]+','+l[k+2]+') '+(i*10)+'%')}return 'linear-gradient(90deg,'+s.join(',')+')'}
+var SCALE={
+  lux:{lut:'amber',t:function(v){return v/1800},ticks:[[0,'0'],[300,'300'],[750,'750'],[1500,'1500'],[1800,'lx']],ok:[LUX_LO,LUX_HI],hatch:'照明に向かない (300 lx 未満 / 1500 lx 超)'},
+  snr:{lut:'cyan',t:function(v){return v/90},ticks:[[0,'0'],[SNR_OK,'13.5'],[30,'30'],[60,'60'],[90,'90 dB']],mark:SNR_OK,hatch:'通信できない (13.5 dB 未満 = 誤り率 10⁻⁶ 超)'},
+  rate:{lut:'cyan',t:function(v){return v>0?Math.log(v/10)/Math.log(20):0},ticks:[[10,'10'],[20,'20'],[50,'50'],[100,'100'],[200,'200 Mb/s']],mark:function(S){return S.P.target},hatch:function(S){return '目標の '+S.P.target+' Mb/s を出せない'}}
+};
+function pc(v){return (Math.max(0,Math.min(1,v))*100).toFixed(1)+'%'}
+function tag(ok,t){return '<span class="tag '+(ok?'ok':'ng')+'">'+t+'</span>'}
+function dbm(p){return p>0?(10*Math.log10(p*1e3)).toFixed(1)+' dBm':'届かない'}
+var SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+function sup(n){return String(n).split('').map(function(c){return SUP[c]}).join('')}
+function fmtBer(b){if(b>=0.5)return '0.5 (当てずっぽう)';if(b<1e-15)return '10⁻¹⁵ 未満';var e=Math.floor(Math.log10(b)),m=b/Math.pow(10,e);return m.toFixed(1)+'×10'+sup(e)}
+function fmtRate(r){return r>=1000?(r/1000)+' Gb/s':r+' Mb/s'}
+function pct(v){return (v*100).toFixed(0)+'%'}
+function contrib(pw,st,srv){var tot=sum(pw);return pw.map(function(p,i){var s=st[i];
+  return '<span'+(i===srv?' class="srv"':'')+'>LED '+(i+1)+(i===srv?' ★':'')+'</span><div class="bar"><i style="width:'+(tot>0?p/tot*100:0).toFixed(1)+'%"></i></div>'+
+    '<span class="n'+(s?' x':'')+'">'+(s===2?'人の影':s===1?'視野の外':pct(p/tot))+'</span>'}).join('')}
+function lobe(svg,m,half){
+  var d='';for(var a=-90;a<=90;a+=3){var r=52*Math.pow(Math.max(0,Math.cos(a*RAD)),m);d+=(a>-90?'L':'M')+(60+r*Math.sin(a*RAD)).toFixed(1)+' '+(5+r*Math.cos(a*RAD)).toFixed(1)}
+  svg.querySelector('.lb').setAttribute('d',d+'Z');
+  var hx=(56*Math.sin(half*RAD)).toFixed(1),hy=(5+56*Math.cos(half*RAD)).toFixed(1);
+  svg.querySelector('.hp').setAttribute('d','M60 5L'+(60-hx)+' '+hy+'M60 5L'+(60+ +hx)+' '+hy);
+}
+function azName(a){return {0:'地図の右',90:'地図の下',180:'地図の左',270:'地図の上'}[a]||a+'°'}
+
+/* ---- 操作部品 ---- */
+var CT={
+  layout:'<div><span class="lab">照明の数 (部屋全体の光の量は同じ)</span><div class="seg c-lay" role="group" aria-label="照明の数">'+[1,2,4,9].map(function(n){return '<button type="button" data-n="'+n+'">'+n+'灯</button>'}).join('')+'</div></div>',
+  half:'<div><label class="lab">LEDの光の広がり (半値角): <b class="v-half"></b><input type="range" class="c-half" min="10" max="85" step="1"></label><svg class="lobe" viewBox="0 0 120 62" aria-hidden="true"><path class="lb"/><path class="hp"/><circle cx="60" cy="5" r="3.5"/></svg></div>',
+  fov:'<label class="lab">受信機の視野角 (FOV): <b class="v-fov"></b><input type="range" class="c-fov" min="5" max="90" step="1"></label>',
+  tilt:'<label class="lab">受信機の傾き: <b class="v-tilt"></b><input type="range" class="c-tilt" min="0" max="80" step="5"></label><label class="lab">傾ける向き: <b class="v-az"></b><input type="range" class="c-az" min="0" max="345" step="15"></label>',
+  dim:'<label class="lab">照明の明るさ (調光): <b class="v-dim"></b><input type="range" class="c-dim" min="5" max="100" step="5"></label>',
+  rate:'<label class="lab">送る速さ (帯域 B): <b class="v-rate"></b><input type="range" class="c-rate" min="0" max="'+(RATES.length-1)+'" step="1"></label>',
+  rho:'<label class="lab">壁の反射率 ρ: <b class="v-rho"></b><input type="range" class="c-rho" min="0" max="0.95" step="0.05"></label>',
+  target:'<label class="lab">目標の速さ <select class="c-tgt">'+[10,20,30,40,50,100].map(function(v){return '<option value="'+v+'">'+v+' Mb/s</option>'}).join('')+'</select></label>',
+  cell:'<div><span class="lab">送り方</span><div class="seg c-cell" role="group" aria-label="送り方"><button type="button" data-k="0">放送型</button><button type="button" data-k="1">セル型</button></div></div>',
+  person:'<div><span class="lab">人</span><button type="button" class="btn c-person"></button></div>'
+};
+
+/* ==== 1つの実験パネル ==== */
+function Section(root,cfg){
+  var S={N:cfg.N,raf:0,fd:true,cd:true};
+  var q=function(s){return root.querySelector(s)};
+  root.innerHTML=
+    '<div class="ph"><span class="t">'+cfg.title+'</span><span class="s">'+cfg.sub+'</span></div>'+
+    '<div class="room"><div class="side">'+
+      '<div class="mh">'+(cfg.modes?'<div class="seg cy c-mode" role="group" aria-label="地図に表示するもの">'+cfg.modes.map(function(m){return '<button type="button" data-k="'+m[0]+'">'+m[1]+'</button>'}).join('')+'</div>':'<span class="mt"></span>')+
+      '<span class="sel">選択中: <b class="selv"></b></span></div>'+
+      '<canvas class="map" tabindex="0" aria-label="部屋を上から見た地図。ドラッグで照明や受信機を動かす。矢印キーで選択中のものを動かし、Nキーで選択を切り替える。"></canvas>'+
+      '<div class="legend"><div class="lg-bar"></div><div class="lg-t"></div></div>'+
+      '<div class="lg-n"><span><span class="hatch"></span> <span class="lg-h"></span></span><span><span class="fovk"></span> 受信機の視野が天井に届く範囲</span></div>'+
+      '<div class="hint">ドラッグ: 照明(●)'+(cfg.person?'・人':'')+'・受信機(■) / キー: 矢印で動かす (Shiftで大きく)・N で選択を切り替え</div>'+
+    '</div><div class="side">'+cfg.side+'</div></div>'+
+    '<div class="ctl">'+cfg.controls.map(function(c){return CT[c]}).join('')+'</div>'+
+    '<div class="try"><span>試す:</span>'+cfg.tries.map(function(t,i){return '<button type="button" data-i="'+i+'">'+t[0]+'</button>'}).join('')+'<button type="button" class="rs" data-i="-1">元に戻す</button></div>'+
+    '<div class="note"></div>';
+  var cv=q('canvas.map'),ctx=cv.getContext('2d'),note=q('.note');
+  function reset(){
+    S.P=cfg.P();S.lay=S.P.lay;S.P.leds=clone(LAYOUT[S.lay]);S.rx=cfg.rx.slice();S.mode=cfg.modes?cfg.modes[0][0]:'';
+    S.sel={k:'rx'};S.ho=0;S.srv=-1;S.hoMsg='';S.lastPerson=S.P.person;note.innerHTML=cfg.note;
+  }
+  function setLay(n){S.lay=n;S.P.leds=clone(LAYOUT[n]);if(S.sel.k==='led')S.sel={k:'rx'};S.ho=0;S.srv=-1;S.hoMsg=''}
+  S.setLay=setLay;
+  function changed(){S.D=derive(S.P);sync();invalidate(true)}
+
+  /* 操作 → パラメータ */
+  function on(sel,ev,fn){var e=q(sel);if(e)e.addEventListener(ev,fn)}
+  function segBtn(e){return e.target.closest('button')}
+  on('.c-mode','click',function(e){var b=segBtn(e);if(b){S.mode=b.dataset.k;changed()}});
+  on('.c-lay','click',function(e){var b=segBtn(e);if(b){setLay(+b.dataset.n);changed()}});
+  on('.c-cell','click',function(e){var b=segBtn(e);if(b){S.P.cell=b.dataset.k==='1';S.ho=0;S.srv=-1;S.hoMsg='';changed()}});
+  on('.c-half','input',function(){S.P.half=+this.value;changed()});
+  on('.c-fov','input',function(){S.P.fov=+this.value;changed()});
+  on('.c-tilt','input',function(){S.P.tilt=+this.value;changed()});
+  on('.c-az','input',function(){S.P.az=+this.value;changed()});
+  on('.c-dim','input',function(){S.P.dim=this.value/100;changed()});
+  on('.c-rate','input',function(){S.P.ri=+this.value;changed()});
+  on('.c-rho','input',function(){S.P.rho=+this.value;changed()});
+  on('.c-tgt','change',function(){S.P.target=+this.value;changed()});
+  on('.c-person','click',function(){
+    if(S.P.person){S.lastPerson=S.P.person;S.P.person=null;if(S.sel.k==='person')S.sel={k:'rx'}}
+    else S.P.person=(S.lastPerson||cfg.person).slice();
+    changed();
+  });
+  on('.try','click',function(e){var b=segBtn(e);if(!b)return;var i=+b.dataset.i;reset();
+    if(i>=0){var t=cfg.tries[i];t[1](S);note.innerHTML=t[2]}changed()});
+
+  /* パラメータ → 表示 */
+  function press(sel,fn){var e=q(sel);if(e)[].forEach.call(e.children,function(b){b.setAttribute('aria-pressed',String(fn(b)))})}
+  function val(c,v,txt){var e=q('.c-'+c);if(!e)return;e.value=v;var o=q('.v-'+c);if(o)o.innerHTML=txt}
+  function sync(){
+    var P=S.P;
+    press('.c-mode',function(b){return b.dataset.k===S.mode});
+    press('.c-lay',function(b){return +b.dataset.n===S.lay});
+    press('.c-cell',function(b){return (b.dataset.k==='1')===!!P.cell});
+    val('half',P.half,P.half+'° <span style="color:var(--silk-dim)">(m = '+S.D.m.toFixed(2)+')</span>');
+    if(q('.lobe'))lobe(q('.lobe'),S.D.m,P.half);
+    val('fov',P.fov,P.fov+'°');
+    val('tilt',P.tilt,P.tilt+'°');
+    val('az',P.az,'<span class="arw" style="transform:rotate('+P.az+'deg)">→</span> '+azName(P.az));
+    val('dim',Math.round(P.dim*100),Math.round(P.dim*100)+'%');
+    val('rate',P.ri,fmtRate(RATES[P.ri]));
+    val('rho',P.rho,P.rho.toFixed(2));
+    val('tgt',P.target,'');
+    var pb=q('.c-person');if(pb){pb.setAttribute('aria-pressed',String(!!P.person));pb.textContent=P.person?'どかす':'置く'}
+    var mt=q('.mt');if(mt&&cfg.mapTitle)mt.innerHTML=cfg.mapTitle(S);
+  }
+
+  /* ---- 地図 ---- */
+  var N=S.N,vals=new Float64Array(N*N),fail=new Uint8Array(N*N),cells=new Int8Array(N*N);
+  function mk(w,h){var c=document.createElement('canvas');c.width=w;c.height=h;return c}
+  var off=mk(N,N),moff=mk(N,N),heat=mk(1,1),tmp=mk(1,1),px=0,pad=0,rs=0,dpr=1,hatch=null;
+  function X(v){return pad+v/W*rs}
+  function resize(){
+    dpr=Math.min(2,window.devicePixelRatio||1);
+    var w=Math.round(cv.getBoundingClientRect().width*dpr);if(!w||w===px)return;
+    px=w;cv.width=cv.height=w;pad=Math.round(12*dpr);rs=w-2*pad;heat.width=heat.height=tmp.width=tmp.height=rs;hatch=null;S.cd=true;invalidate();
+  }
+  if(window.ResizeObserver)new ResizeObserver(resize).observe(cv);else window.addEventListener('resize',resize);
+  function invalidate(field){if(field)S.fd=true;if(!S.raf)S.raf=requestAnimationFrame(draw)}
+  S.invalidate=invalidate;
+
+  function legend(){
+    var sc=SCALE[S.scale],bar=q('.lg-bar'),h='',mk2=typeof sc.mark==='function'?sc.mark(S):sc.mark;
+    bar.style.background=grad(LUT[sc.lut]);
+    if(sc.ok)h+='<span class="rng" style="left:'+pc(sc.t(sc.ok[0]))+';width:'+pc(sc.t(sc.ok[1])-sc.t(sc.ok[0]))+'"></span>';
+    if(mk2!=null)h+='<span class="mk" style="left:'+pc(sc.t(mk2))+'"></span>';
+    bar.innerHTML=h;
+    q('.lg-t').innerHTML=sc.ticks.map(function(k){return '<span style="left:'+pc(sc.t(k[0]))+'">'+k[1]+'</span>'}).join('');
+    q('.lg-h').textContent=typeof sc.hatch==='function'?sc.hatch(S):sc.hatch;
+  }
+  function mkHatch(c){
+    var s=Math.round(7*dpr),h=mk(s,s),x=h.getContext('2d');
+    x.fillStyle='rgba(255,107,122,.12)';x.fillRect(0,0,s,s);
+    x.strokeStyle='rgba(255,107,122,.9)';x.lineWidth=1.3*dpr;x.beginPath();
+    x.moveTo(-1,s+1);x.lineTo(s+1,-1);x.moveTo(-1,1);x.lineTo(1,-1);x.moveTo(s-1,s+1);x.lineTo(s+1,s-1);x.stroke();
+    return c.createPattern(h,'repeat');
+  }
+  /* 値の格子 → 色の画像 + 赤斜線 (+ セルの境目) */
+  function compose(){
+    var sc=SCALE[S.scale],L=LUT[sc.lut],oc=off.getContext('2d'),mc=moff.getContext('2d'),img=oc.createImageData(N,N),mi=mc.createImageData(N,N),d=img.data,md=mi.data;
+    for(var k=0;k<N*N;k++){var t=sc.t(vals[k]);t=t>0?(t<1?t:1):0;var c=Math.round(t*255)*3;d[k*4]=L[c];d[k*4+1]=L[c+1];d[k*4+2]=L[c+2];d[k*4+3]=255;md[k*4+3]=fail[k]?255:0}
+    oc.putImageData(img,0,0);mc.putImageData(mi,0,0);
+    var hc=heat.getContext('2d');hc.imageSmoothingEnabled=true;hc.imageSmoothingQuality='high';hc.clearRect(0,0,rs,rs);hc.drawImage(off,0,0,rs,rs);
+    var tc=tmp.getContext('2d');tc.globalCompositeOperation='source-over';tc.clearRect(0,0,rs,rs);tc.imageSmoothingEnabled=true;tc.drawImage(moff,0,0,rs,rs);
+    if(!hatch)hatch=mkHatch(tc);
+    tc.globalCompositeOperation='source-in';tc.fillStyle=hatch;tc.fillRect(0,0,rs,rs);tc.globalCompositeOperation='source-over';
+    hc.drawImage(tmp,0,0);
+    if(S.cellsOn){
+      var cw=rs/N;hc.strokeStyle='rgba(238,242,250,.7)';hc.lineWidth=1.3*dpr;hc.beginPath();
+      for(var j=0;j<N;j++)for(var i=0;i<N;i++){k=j*N+i;
+        if(i<N-1&&cells[k]!==cells[k+1]){hc.moveTo((i+1)*cw,j*cw);hc.lineTo((i+1)*cw,(j+1)*cw)}
+        if(j<N-1&&cells[k]!==cells[k+N]){hc.moveTo(i*cw,(j+1)*cw);hc.lineTo((i+1)*cw,(j+1)*cw)}}
+      hc.stroke();
+    }
+  }
+  function draw(){
+    S.raf=0;if(!px)return;
+    if(S.fd){S.fd=false;S.cellsOn=false;cfg.field(S,vals,fail,cells);S.cd=true;legend()}
+    if(S.cd){S.cd=false;compose()}
+    var pr=cfg.probe(S,q);
+    ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#060A13';ctx.fillRect(0,0,px,px);
+    ctx.drawImage(heat,pad,pad);
+    ctx.strokeStyle='rgba(238,242,250,.09)';ctx.lineWidth=1;ctx.beginPath();
+    for(var m=1;m<W;m++){ctx.moveTo(X(m),pad);ctx.lineTo(X(m),pad+rs);ctx.moveTo(pad,X(m));ctx.lineTo(pad+rs,X(m))}
+    ctx.stroke();
+    if(pr.cols)wallBands(pr.cols);
+    ctx.strokeStyle='#3A4668';ctx.lineWidth=1.5*dpr;ctx.strokeRect(pad,pad,rs,rs);
+    footprint();rays(pr);if(S.P.person)person();leds();receiver();ring();
+    q('.selv').textContent=S.sel.k==='rx'?'受信機':S.sel.k==='led'?'照明 LED '+(S.sel.i+1):'人';
+  }
+  /* 受信機の視野の円錐が天井(高さ3m)を切る範囲 */
+  function footprint(){
+    var n=S.D.nr,ps=S.P.fov*RAD,a=Math.abs(n[2])<0.99?[0,0,1]:[1,0,0];
+    var u=[n[1]*a[2]-n[2]*a[1],n[2]*a[0]-n[0]*a[2],n[0]*a[1]-n[1]*a[0]],ul=Math.hypot(u[0],u[1],u[2]);u=[u[0]/ul,u[1]/ul,u[2]/ul];
+    var v=[n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0]];
+    ctx.save();ctx.beginPath();ctx.rect(pad,pad,rs,rs);ctx.clip();ctx.beginPath();
+    for(var k=0;k<=96;k++){
+      var th=k/96*2*Math.PI,cs=Math.cos(th)*Math.sin(ps),sn=Math.sin(th)*Math.sin(ps),d=[0,1,2].map(function(i){return n[i]*Math.cos(ps)+u[i]*cs+v[i]*sn}),x,y;
+      if(d[2]>0.02&&HH/d[2]<40){x=S.rx[0]+d[0]*HH/d[2];y=S.rx[1]+d[1]*HH/d[2]}
+      else{var hl=Math.hypot(d[0],d[1])||1;x=S.rx[0]+d[0]/hl*40;y=S.rx[1]+d[1]/hl*40}
+      if(k)ctx.lineTo(X(x),X(y));else ctx.moveTo(X(x),X(y));
+    }
+    ctx.closePath();ctx.fillStyle='rgba(94,231,255,.07)';ctx.fill();
+    ctx.setLineDash([6*dpr,5*dpr]);ctx.strokeStyle='rgba(94,231,255,.8)';ctx.lineWidth=1.5*dpr;ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+  function rays(pr){
+    var mx=Math.max.apply(null,pr.pw.concat([1e-30]));
+    S.P.leds.forEach(function(L,i){
+      var s=pr.st[i];ctx.beginPath();ctx.moveTo(X(S.rx[0]),X(S.rx[1]));ctx.lineTo(X(L[0]),X(L[1]));
+      if(s===0){ctx.setLineDash([]);ctx.lineWidth=(pr.srv===i?3:2)*dpr;ctx.strokeStyle=pr.srv===i?'rgba(255,197,61,.95)':'rgba(94,231,255,'+(0.3+0.65*pr.pw[i]/mx).toFixed(2)+')'}
+      else{ctx.setLineDash([4*dpr,4*dpr]);ctx.lineWidth=1.5*dpr;ctx.strokeStyle=s===2?'rgba(255,107,122,.95)':'rgba(154,166,194,.4)'}
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+  function wallBands(cols){
+    var mx=Math.max.apply(null,Array.prototype.slice.call(cols));if(!(mx>0))return;
+    var nx=PF.nx,s=PF.s,bt=pad-3*dpr;
+    for(var w=0;w<4;w++)for(var c=0;c<nx;c++){var a=Math.sqrt(cols[w*nx+c]/mx);if(a<0.03)continue;
+      var p0=X(c*s),p1=X((c+1)*s);ctx.fillStyle='rgba(94,231,255,'+a.toFixed(2)+')';
+      if(w===0)ctx.fillRect(pad-bt,p0,bt,p1-p0);else if(w===1)ctx.fillRect(pad+rs,p0,bt,p1-p0);
+      else if(w===2)ctx.fillRect(p0,pad-bt,p1-p0,bt);else ctx.fillRect(p0,pad+rs,p1-p0,bt)}
+  }
+  function leds(){
+    S.P.leds.forEach(function(L,i){
+      var x=X(L[0]),y=X(L[1]),g=ctx.createRadialGradient(x,y,0,x,y,24*dpr);
+      g.addColorStop(0,'rgba(255,197,61,.55)');g.addColorStop(1,'rgba(255,197,61,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,24*dpr,0,7);ctx.fill();
+      ctx.beginPath();ctx.arc(x,y,9*dpr,0,7);ctx.fillStyle='#FFC53D';ctx.fill();ctx.lineWidth=2*dpr;ctx.strokeStyle='#FFE08A';ctx.stroke();
+      ctx.fillStyle='#1A1200';ctx.font=(11*dpr)+'px DotGothic16, monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(i+1),x,y+0.5*dpr);
+    });
+  }
+  function receiver(){
+    var x=X(S.rx[0]),y=X(S.rx[1]),r=6*dpr;
+    if(S.P.tilt>0){var a=S.P.az*RAD,l=(8+22*Math.sin(S.P.tilt*RAD))*dpr;ctx.strokeStyle='#5EE7FF';ctx.lineWidth=2*dpr;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);ctx.stroke();
+      ctx.beginPath();ctx.arc(x+Math.cos(a)*l,y+Math.sin(a)*l,2.5*dpr,0,7);ctx.fillStyle='#5EE7FF';ctx.fill()}
+    ctx.fillStyle='#0A101B';ctx.fillRect(x-r,y-r,2*r,2*r);ctx.strokeStyle='#5EE7FF';ctx.lineWidth=2.5*dpr;ctx.strokeRect(x-r,y-r,2*r,2*r);
+  }
+  function person(){
+    var p=S.P.person,x=X(p[0]),y=X(p[1]),r=PR/W*rs;
+    ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fillStyle='rgba(6,10,19,.7)';ctx.fill();ctx.setLineDash([3*dpr,3*dpr]);ctx.strokeStyle='rgba(238,242,250,.7)';ctx.lineWidth=1.2*dpr;ctx.stroke();ctx.setLineDash([]);
+    ctx.font=Math.round(r*1.5)+'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#EEF2FA';ctx.fillText('🧍',x,y+r*.08);
+  }
+  function ring(){
+    if(document.activeElement!==cv&&!drag)return;
+    var o=posOf(S.sel);if(!o)return;
+    ctx.beginPath();ctx.arc(X(o[0]),X(o[1]),(S.sel.k==='person'?PR/W*rs+6*dpr:17*dpr),0,7);ctx.setLineDash([3*dpr,3*dpr]);ctx.strokeStyle='#EEF2FA';ctx.lineWidth=1.5*dpr;ctx.stroke();ctx.setLineDash([]);
+  }
+
+  /* ---- ドラッグとキーボード ---- */
+  var drag=null;
+  function toRoom(e){var r=cv.getBoundingClientRect();return [((e.clientX-r.left)*dpr-pad)/rs*W,((e.clientY-r.top)*dpr-pad)/rs*W]}
+  function posOf(s){return s.k==='rx'?S.rx:s.k==='led'?S.P.leds[s.i]:S.P.person}
+  function hit(p,touch){
+    var tol=(touch?26:16)*dpr/rs*W,best=null,bd=Infinity;
+    function tryIt(s,o,t){var d=Math.hypot(o[0]-p[0],o[1]-p[1]);if(d<t&&d<bd){bd=d;best=s}}
+    tryIt({k:'rx'},S.rx,tol);
+    S.P.leds.forEach(function(L,i){tryIt({k:'led',i:i},L,tol)});
+    if(S.P.person)tryIt({k:'person'},S.P.person,Math.max(tol,PR));
+    return best;
+  }
+  function place(s,p){
+    var o=posOf(s);if(!o)return;
+    o[0]=Math.max(.05,Math.min(W-.05,p[0]));o[1]=Math.max(.05,Math.min(W-.05,p[1]));
+    if(s.k==='person')S.lastPerson=o;
+    invalidate(s.k!=='rx');
+  }
+  cv.addEventListener('pointerdown',function(e){
+    var p=toRoom(e),h=hit(p,e.pointerType==='touch');
+    S.sel=h||{k:'rx'};if(!h)place(S.sel,p);
+    drag=S.sel;try{cv.setPointerCapture(e.pointerId)}catch(_){}cv.classList.add('drag');e.preventDefault();
+    try{cv.focus({preventScroll:true})}catch(_){cv.focus()}
+    invalidate();
+  });
+  cv.addEventListener('pointermove',function(e){var p=toRoom(e);if(drag)place(drag,p);else cv.classList.toggle('grab',!!hit(p,e.pointerType==='touch'))});
+  function end(){drag=null;cv.classList.remove('drag');invalidate()}
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('focus',function(){invalidate()});cv.addEventListener('blur',function(){invalidate()});
+  cv.addEventListener('keydown',function(e){
+    var st=e.shiftKey?.25:.05,d={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[e.key];
+    if(d){var o=posOf(S.sel);place(S.sel,[o[0]+d[0],o[1]+d[1]]);e.preventDefault()}
+    else if(e.key==='n'||e.key==='N'){
+      var list=[{k:'rx'}];S.P.leds.forEach(function(_,i){list.push({k:'led',i:i})});if(S.P.person)list.push({k:'person'});
+      var idx=list.findIndex(function(s){return s.k===S.sel.k&&s.i===S.sel.i});S.sel=list[(idx+1)%list.length];invalidate();e.preventDefault();
+    }
+  });
+
+  reset();S.D=derive(S.P);sync();resize();
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){invalidate()});
+  return S;
+}
+
+/* ==== ① 照明の地図と通信の地図 ==== */
+Section(document.getElementById('s1'),{
+  N:120,title:'天井のLED → 机の上の受信機',sub:'直接光のみ / OOK',
+  modes:[['lux','照度 (照明)'],['snr','SNR (通信)']],
+  P:function(){return {lay:4,half:70,fov:60,tilt:0,az:0,dim:1,ri:6,rho:0,person:null,cell:false}},
+  rx:[2.1,3.1],
+  controls:['layout','half','fov','tilt','dim','rate'],
+  side:'<div class="h"><span>受信機</span><span class="o-pos"></span></div>'+
+    '<dl class="kv"><dt>照度 (机の上)</dt><dd class="o-lux"></dd><dt>受信電力</dt><dd class="o-pr"></dd><dt>SNR</dt><dd class="o-snr"></dd><dt>誤り率 (OOK)</dt><dd class="o-ber"></dd></dl>'+
+    '<div class="sub">LEDごとの受信電力の割合</div><div class="contrib o-con"></div>'+
+    '<div class="sub">部屋全体 (机の高さ)</div>'+
+    '<dl class="kv"><dt>照度 最小 / 平均 / 最大</dt><dd class="o-lx3"></dd><dt>均斉度 (最小 ÷ 平均)</dt><dd class="o-uni"></dd><dt>照明に向く範囲</dt><dd class="o-lok"></dd><dt>通信できる範囲</dt><dd class="o-cok"></dd></dl>',
+  note:'はじめは標準的な設定(4灯・半値角70°・視野角60°)。照明としても通信としても部屋じゅうOKです。下の「試す」で条件を変えてみてください。',
+  tries:[
+    ['視野角を 20° にする',function(S){S.P.fov=20;S.mode='snr'},'照度の地図は変わりません(照度は受信機に関係しない)が、<b>通信の地図には大きな穴</b>があきます。視野角20°だと、LEDが受信機の真上から半径約80cm以内にないと見えません。見えている場所では、レンズで光を集める効果(n²/sin²Ψc)でSNRはむしろ上がります。'],
+    ['1灯にまとめる',function(S){S.setLay(1)},'部屋全体の光の量は同じでも、1灯にまとめると<b>真下はまぶしく、隅は暗く</b>なります。9灯に分けるとむらが減ります。'],
+    ['光を絞る (半値角 20°)',function(S){S.P.half=20},'スポットライトのように光を絞ると、<b>LEDの真下だけが明るく</b>、LEDの間や部屋の隅が暗くなります。SNRの地図にも同じ模様が出ます。'],
+    ['暗くして 1 Gb/s で送る',function(S){S.P.dim=0.05;S.P.ri=9;S.mode='snr'},'照明を5%まで落とし、1 Gb/s で送ります。受信電力が減るうえ、速く送るほど受信回路の熱雑音が増える(帯域の2〜3乗)ので、<b>部屋の隅から通信できなく</b>なります。明るい照明は、それだけで強い送信機です。'],
+    ['受信機を 45° 傾ける',function(S){S.P.tilt=45;S.mode='snr'},'受信機(スマホなど)を地図の右へ45°傾けました。視野が右へずれるので、<b>右の壁ぎわでは天井のLEDが視野の外</b>に出て通信できません。持ち方ひとつで届き方が変わります。']
+  ],
+  field:function(S,vals,fail){
+    var N=S.N,P=S.P,D=S.D,pw=[],st=[],lmin=Infinity,lmax=0,ls=0,lok=0,cok=0,lux=S.mode==='lux';
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){
+      var E=los(P,D,(i+.5)/N*W,(j+.5)/N*W,pw,st),r=link(pw,D.B,false),k=j*N+i,lo=E>=LUX_LO&&E<=LUX_HI,co=r.db>=SNR_OK;
+      if(E<lmin)lmin=E;if(E>lmax)lmax=E;ls+=E;if(lo)lok++;if(co)cok++;
+      vals[k]=lux?E:r.db;fail[k]=lux?!lo:!co;
+    }
+    S.scale=lux?'lux':'snr';S.st={lmin:lmin,lmax:lmax,lavg:ls/N/N,lok:lok/N/N,cok:cok/N/N};
+  },
+  probe:function(S,q){
+    var P=S.P,pw=[],st=[],E=los(P,S.D,S.rx[0],S.rx[1],pw,st),r=link(pw,S.D.B,false),ok=r.db>=SNR_OK,T=S.st;
+    q('.o-pos').textContent='('+S.rx[0].toFixed(2)+', '+S.rx[1].toFixed(2)+') m';
+    q('.o-lux').innerHTML=Math.round(E)+' lx'+tag(E>=LUX_LO&&E<=LUX_HI,E<LUX_LO?'暗い':E>LUX_HI?'まぶしい':'OK');
+    q('.o-pr').textContent=dbm(sum(pw));
+    q('.o-snr').innerHTML=(isFinite(r.db)?r.db.toFixed(1)+' dB':'—')+tag(ok,ok?'OK':'NG');
+    q('.o-ber').textContent=fmtBer(ber(r.db));
+    q('.o-con').innerHTML=contrib(pw,st,-1);
+    q('.o-lx3').textContent=Math.round(T.lmin)+' / '+Math.round(T.lavg)+' / '+Math.round(T.lmax)+' lx';
+    q('.o-uni').textContent=(T.lmin/T.lavg).toFixed(2);
+    q('.o-lok').innerHTML=pct(T.lok)+tag(T.lok>0.999,T.lok>0.999?'全域':'むらあり');
+    q('.o-cok').innerHTML=pct(T.cok)+tag(T.cok>0.999,T.cok>0.999?'全域':'死角あり');
+    return {pw:pw,st:st,srv:-1};
+  }
+});
+
+/* ==== ② 壁の反射と速さ ==== */
+(function(){
+  var IR;
+  function drawIR(cv,bins,ls,A){
+    var dpr=Math.min(2,window.devicePixelRatio||1),w=Math.round(cv.getBoundingClientRect().width*dpr),h=Math.round(150*dpr);if(!w)return;
+    if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+    var c=cv.getContext('2d'),l=34*dpr,r=10*dpr,t=12*dpr,b=22*dpr,pw=w-l-r,ph=h-t-b,T=IRN*BIN,DB=40,mx=0,i;
+    for(i=0;i<IRN;i++)if(bins[i]>mx)mx=bins[i];ls.forEach(function(s){if(s[1]>mx)mx=s[1]});
+    function xt(v){return l+v/T*pw}
+    function yv(v){var d=v>0?10*Math.log10(v/mx):-99;return t+Math.min(DB,-d)/DB*ph}
+    c.fillStyle='#060A13';c.fillRect(0,0,w,h);
+    c.font=(10*dpr)+'px DotGothic16, monospace';c.fillStyle='#9AA6C2';c.strokeStyle='rgba(238,242,250,.09)';c.lineWidth=1;
+    c.textAlign='right';c.textBaseline='middle';
+    for(var db=0;db>=-DB;db-=10){var y=t+(-db)/DB*ph;c.beginPath();c.moveTo(l,y);c.lineTo(l+pw,y);c.stroke();c.fillText(db+'',l-5*dpr,y)}
+    c.textAlign='center';c.textBaseline='top';
+    for(var tt=0;tt<=T;tt+=10){c.fillText(tt+(tt===T?' ns':''),Math.min(xt(tt),w-14*dpr),t+ph+5*dpr)}
+    c.textAlign='left';c.fillText('dB',3*dpr,1*dpr);
+    if(!(mx>0)){c.textAlign='center';c.textBaseline='middle';c.fillStyle='#FF6B7A';c.font=(13*dpr)+'px DotGothic16, monospace';c.fillText('光が届いていない',l+pw/2,t+ph/2);return}
+    c.fillStyle='rgba(238,242,250,.08)';c.fillRect(xt(A.mu-A.d),t,xt(A.mu+A.d)-xt(A.mu-A.d),ph);
+    c.setLineDash([3*dpr,3*dpr]);c.strokeStyle='rgba(238,242,250,.6)';c.beginPath();c.moveTo(xt(A.mu),t);c.lineTo(xt(A.mu),t+ph);c.stroke();c.setLineDash([]);
+    var bw=pw/IRN;c.fillStyle='rgba(94,231,255,.85)';
+    for(i=0;i<IRN;i++)if(bins[i]>0){var yb=yv(bins[i]);c.fillRect(l+i*bw,yb,Math.max(1,bw-dpr),t+ph-yb)}
+    var groups={};
+    ls.forEach(function(s){var x=xt(s[0]),y=yv(s[1]);c.strokeStyle='#FFC53D';c.lineWidth=2.5*dpr;c.beginPath();c.moveTo(x,t+ph);c.lineTo(x,y);c.stroke();
+      c.beginPath();c.arc(x,y,3*dpr,0,7);c.fillStyle='#FFC53D';c.fill();
+      var g=Math.round(x/(10*dpr));(groups[g]=groups[g]||{x:x,y:y,n:[]}).n.push(s[2]+1);groups[g].y=Math.min(groups[g].y,y)});
+    c.fillStyle='#FFC53D';c.textAlign='left';c.textBaseline='bottom';
+    c.textBaseline='top';
+    Object.keys(groups).forEach(function(k){var g=groups[k];c.fillText('LED '+g.n.join(','),g.x+5*dpr,g.y+2*dpr)});
+    c.fillStyle='#EEF2FA';c.textAlign='right';c.fillText('平均',xt(A.mu)-3*dpr,t+ph-12*dpr);
+  }
+  Section(document.getElementById('s2'),{
+    N:40,title:'直接光 + 壁で1回跳ね返った光',sub:'遅延広がり D<sub>rms</sub> と速さの上限',
+    mapTitle:function(){return '速さの上限 1/(10·D<sub>rms</sub>) の地図'},
+    P:function(){return {lay:4,half:70,fov:60,tilt:0,az:0,dim:1,ri:6,rho:0.8,target:40,person:null,cell:false}},
+    rx:[0.9,2.2],
+    controls:['layout','fov','rho','target'],
+    side:'<div class="h"><span>受信機に届く光 (時間順)</span><span class="o-pos"></span></div>'+
+      '<canvas class="ir" aria-label="インパルス応答のグラフ。黄色は直接光、水色は壁からの反射光"></canvas>'+
+      '<div class="split"><i class="o-sl" style="background:var(--led)"></i><i class="o-sr" style="background:var(--wave)"></i></div>'+
+      '<div class="lg-n"><span><span class="sw" style="background:var(--led)"></span>直接光 <b class="o-los"></b> (数字はLED番号)</span><span><span class="sw" style="background:var(--wave)"></span>反射光 <b class="o-ref"></b></span></div>'+
+      '<dl class="kv" style="margin-top:8px"><dt>平均の遅れ (点線)</dt><dd class="o-mu"></dd><dt>遅延広がり D<sub>rms</sub></dt><dd class="o-d"></dd><dt>速さの上限の目安</dt><dd class="o-r"></dd></dl>'+
+      '<div class="sub">部屋全体</div><dl class="kv"><dt>目標の速さを出せる範囲</dt><dd class="o-cov"></dd></dl>',
+    note:'受信機(■)を動かすと、右のグラフが変わります。<b>黄色の棒</b>はLEDからまっすぐ届く光、<b>水色</b>は壁で1回跳ね返ってきた光。地図のふちの水色の帯は、どの壁から反射が来ているかを表します。地図ではLEDの真下も上限が低めです。近いLEDと遠いLEDとで、光の着く時刻がずれるためです。',
+    tries:[
+      ['壁を黒くする (ρ = 0)',function(S){S.P.rho=0},'反射がなくなっても D<sub>rms</sub> は 0 になりません。<b>距離の違う複数のLEDから届く光も、到着時刻がずれる</b>からです。1灯にすると、ずれは消えます。'],
+      ['視野角を 90° に広げる',function(S){S.P.fov=90},'視野を広げると、遠くの壁からの遅い反射まで拾うので D<sub>rms</sub> が大きくなり、<b>速さの上限が下がります</b>。'],
+      ['視野角を 30° に絞る',function(S){S.P.fov=30},'視野を30°に絞ると反射をあまり拾わず速く送れますが、<b>部屋の真ん中ではLEDも壁も視野に入らず</b>、光が届きません。隅では反射光だけで受けている場所もあります。'],
+      ['受信機を部屋の隅へ',function(S){S.rx=[0.25,0.25]},'部屋の隅では、すぐそばの2枚の壁からの反射が強く、<b>反射光の割合が部屋の中央よりずっと大きく</b>なります。そのぶん D<sub>rms</sub> も大きくなります。']
+    ],
+    field:function(S,vals,fail){
+      var N=S.N,P=S.P,D=S.D,pw=[],st=[],A={},ok=0;
+      S.RM=reflPrep(P,D,PM);S.RF=reflPrep(P,D,PF);
+      for(var j=0;j<N;j++)for(var i=0;i<N;i++){spread(P,D,PM,S.RM,(i+.5)/N*W,(j+.5)/N*W,pw,st,A);var k=j*N+i;vals[k]=A.rate;fail[k]=A.rate<P.target;if(!fail[k])ok++}
+      S.scale='rate';S.st={cov:ok/N/N};
+    },
+    probe:function(S,q){
+      var P=S.P,pw=[],st=[],A={},bins=new Float64Array(IRN),cols=new Float64Array(4*PF.nx),ls=[];
+      spread(P,S.D,PF,S.RF,S.rx[0],S.rx[1],pw,st,A,bins,cols,ls);
+      IR=IR||q('canvas.ir');drawIR(IR,bins,ls,A);
+      var fl=A.s0>0?A.los/A.s0:0,fr=A.s0>0?A.ref/A.s0:0,ok=A.rate>=P.target;
+      q('.o-pos').textContent='('+S.rx[0].toFixed(2)+', '+S.rx[1].toFixed(2)+') m';
+      q('.o-sl').style.width=pc(fl);q('.o-sr').style.width=pc(fr);
+      q('.o-los').textContent=pct(fl);q('.o-ref').textContent=pct(fr);
+      q('.o-mu').textContent=A.s0>0?A.mu.toFixed(2)+' ns':'—';
+      q('.o-d').textContent=A.s0>0?A.d.toFixed(2)+' ns':'—';
+      q('.o-r').innerHTML=(A.s0<=0?'届かない':A.rate>=1000?'1 Gb/s 以上':A.rate.toFixed(0)+' Mb/s')+tag(ok,ok?'OK':'NG');
+      q('.o-cov').innerHTML=pct(S.st.cov);
+      return {pw:pw,st:st,srv:-1,cols:cols};
+    }
+  });
+})();
+
+/* ==== ③ 人の影と、放送型 / セル型 ==== */
+Section(document.getElementById('s3'),{
+  N:120,title:'人の影と、つなぎ先の切り替え',sub:'直接光のみ / B = 100 Mb/s',person:[1.75,1.45],
+  mapTitle:function(S){return S.P.cell?'SINR の地図 (セル型)':'SNR の地図 (放送型)'},
+  P:function(){return {lay:4,half:70,fov:60,tilt:0,az:0,dim:1,ri:6,rho:0,person:[1.75,1.45],cell:false}},
+  rx:[2.0,1.6],
+  controls:['cell','person','layout','fov'],
+  side:'<div class="h"><span>受信機</span><span class="o-pos"></span></div>'+
+    '<dl class="kv"><dt class="o-snrl">SNR</dt><dd class="o-snr"></dd><dt>つなぎ先</dt><dd class="o-srv"></dd><dt>ハンドオーバー</dt><dd class="o-ho"></dd></dl>'+
+    '<div class="ho"></div>'+
+    '<div class="sub">LEDごとの受信電力の割合</div><div class="contrib o-con"></div>'+
+    '<div class="sub">部屋全体</div><dl class="kv"><dt>通信できる範囲</dt><dd class="o-cok"></dd></dl>',
+  note:'いまは人が LED 1 の光をさえぎっています(赤い点線)。それでも<b>ほかの3灯から同じデータが届く</b>ので、通信は続いています。',
+  tries:[
+    ['1灯だと?',function(S){S.setLay(1);S.P.person=[2.17,1.9];S.lastPerson=S.P.person},'照明が1灯だけだと、<b>人の影に入ったとたんに通信が切れます</b>(赤い斜線)。人をドラッグすると、影がLEDの反対側に伸びるのがわかります。'],
+    ['セル型にする',function(S){S.P.cell=true},'LEDごとに別のデータを送り、受信機はいちばん強いLEDにつなぎます。半値角70°のLEDは光が広く重なるので、<b>どこにいても隣のLEDが強い干渉</b>になり、ほとんどの場所で通信できません。'],
+    ['セル型 + 視野角 35°',function(S){S.P.cell=true;S.P.fov=35;S.P.person=null},'視野角を絞ると隣のLEDが視野から外れ、<b>LEDの下ごとに「セル」</b>ができます(白い線が境目)。受信機を境目の向こうへドラッグすると、つなぎ先が切り替わります(ハンドオーバー)。境目の近くでは通信できません。']
+  ],
+  field:function(S,vals,fail,cells){
+    var N=S.N,P=S.P,D=S.D,pw=[],st=[],ok=0;
+    for(var j=0;j<N;j++)for(var i=0;i<N;i++){los(P,D,(i+.5)/N*W,(j+.5)/N*W,pw,st);var r=link(pw,D.B,P.cell),k=j*N+i;vals[k]=r.db;fail[k]=!(r.db>=SNR_OK);cells[k]=r.srv;if(!fail[k])ok++}
+    S.scale='snr';S.cellsOn=!!P.cell;S.st={cok:ok/N/N};
+  },
+  probe:function(S,q){
+    var P=S.P,pw=[],st=[];los(P,S.D,S.rx[0],S.rx[1],pw,st);
+    var r=link(pw,S.D.B,P.cell),ok=r.db>=SNR_OK,tot=sum(pw);
+    if(P.cell&&r.srv>=0){if(S.srv>=0&&r.srv!==S.srv){S.ho++;S.hoMsg='LED '+(S.srv+1)+' → LED '+(r.srv+1)+' に切り替え'}S.srv=r.srv}
+    q('.o-pos').textContent='('+S.rx[0].toFixed(2)+', '+S.rx[1].toFixed(2)+') m';
+    q('.o-snrl').textContent=P.cell?'SINR':'SNR';
+    q('.o-snr').innerHTML=(isFinite(r.db)?r.db.toFixed(1)+' dB':'—')+tag(ok,ok?'OK':'NG');
+    q('.o-srv').textContent=tot<=0?'なし':P.cell?'LED '+(r.srv+1):'届く全LED (同じデータ)';
+    q('.o-ho').textContent=P.cell?S.ho+' 回':'—';
+    q('.ho').textContent=P.cell?S.hoMsg:'';
+    q('.o-con').innerHTML=contrib(pw,st,P.cell?r.srv:-1);
+    q('.o-cok').innerHTML=pct(S.st.cok);
+    return {pw:pw,st:st,srv:P.cell?r.srv:-1};
+  }
+});
+})();
+</script>
+</body>
+</html>

@@ -11,5 +11,6 @@ https://ishichan0819.github.io/
   - [内部をのぞく](https://ishichan0819.github.io/computer-basics/naibu-wo-nozoku.html) — キーボードを打つと内部の回路を電気が走り、モニターに文字が出るアクティビティ
 - [Visible Light: 光で文字を送る](https://ishichan0819.github.io/visible-light/) — LEDの点滅で文字を送って復号する、可視光通信(Li-Fi)のアクティビティ
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
+- [Indoor VLC: 部屋じゅうに光を届ける](https://ishichan0819.github.io/indoor-vlc/) — 天井のLED照明から部屋のあちこちへ光でデータを届ける室内可視光通信のシミュレータ。照度とSNRの地図、壁の反射による遅延の広がり、人の影とハンドオーバー
 - [競プロ アルゴリズム図鑑](https://ishichan0819.github.io/algo/) — AtCoder 茶色から青色を目指す 12 のアルゴリズム。ステップ実行できる図と C++ / Python の実装
 - [タルとハシゴ](https://ishichan0819.github.io/barrel/) — 斜めの足場とハシゴをのぼり、樽を飛び越えててっぺんを目指すレトロ風アクションゲーム
