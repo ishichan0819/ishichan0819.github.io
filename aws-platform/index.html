@@ -58,7 +58,12 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .board{position:relative;background:#0A0F1A;border:1px solid var(--edge);border-radius:12px;overflow:hidden;min-height:200px;
   background-image:radial-gradient(rgba(238,242,250,.07) 1px,transparent 1px);background-size:22px 22px}
 .board svg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
-.board svg .hit{pointer-events:stroke;cursor:pointer}
+.board svg .hit,.board svg .flow-hit{pointer-events:stroke;cursor:pointer}
+.board svg .flow-badge{pointer-events:all;cursor:pointer}
+.zones{position:absolute;inset:0;pointer-events:none}
+.zone{position:absolute;left:8px;right:8px;border:1px dashed rgba(154,166,194,.28);border-radius:12px;background:rgba(19,28,46,.38)}
+.zone .zone-title{position:absolute;top:4px;left:12px;font-family:var(--dot);font-size:.68rem;color:var(--silk-dim)}
+.board svg .flow-hit:hover{stroke:rgba(255,197,61,.18)}
 .blk{position:absolute;height:74px;display:flex;flex-direction:column;justify-content:center;gap:0;text-align:left;padding:5px 8px 5px 13px;border-radius:10px;
   border:1.5px solid #2B3654;background:#131C2E;color:var(--silk);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;
   transition:left .4s ease,top .4s ease,width .4s ease,box-shadow .12s,border-color .12s,opacity .2s;z-index:1}
@@ -71,6 +76,8 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .blk.sel{border-color:var(--led);box-shadow:0 0 0 3px rgba(255,197,61,.35);z-index:2}
 .blk.drag{transition:box-shadow .12s;cursor:grabbing;z-index:3}
 .blk.x{opacity:.5}
+.blk.dim{opacity:.38}
+.blk.focus{border-color:var(--led);box-shadow:0 0 0 2px rgba(255,197,61,.3)}
 .blk.hasb .ct{padding-right:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .blk .bdg{position:absolute;right:5px;top:4px;font-family:var(--dot);font-size:.58rem;line-height:1.4;padding:0 5px;border-radius:4px;border:1px solid}
 .blk .bdg.x{color:var(--bad);border-color:var(--bad);background:#1A0E14}
@@ -78,6 +85,19 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.72rem;color:var(--silk-dim);margin-top:8px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .hint{font-size:.74rem;color:var(--silk-dim);margin-top:4px;line-height:1.6}
+.flow{margin-top:10px;background:var(--room-deep);border:1px solid var(--edge);border-radius:10px;padding:10px}
+.flow-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.flow-head b{font-family:var(--dot);font-weight:400;color:var(--led)}
+.flow-head span{font-size:.75rem;color:var(--silk-dim)}
+.flow-filters{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.flow-filters button{font:inherit;font-size:.75rem;color:var(--silk-dim);background:transparent;border:1px solid var(--edge);border-radius:999px;padding:3px 10px;cursor:pointer}
+.flow-filters button.active{color:#1A1200;background:var(--led);border-color:var(--led)}
+.flow-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:5px}
+.flow-list button{font:inherit;text-align:left;line-height:1.45;color:var(--silk);background:#131C2E;border:1px solid var(--edge);border-radius:8px;padding:7px 9px;cursor:pointer}
+.flow-list button:hover,.flow-list button.active{border-color:var(--led)}
+.flow-list .flow-no{font-family:var(--dot);color:var(--led);margin-right:6px}
+.flow-list .flow-why{display:block;color:var(--silk-dim);font-size:.73rem;margin-top:2px}
+.flow-list .flow-why strong{color:var(--ok);font-weight:400}
 .conns{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:1.6em}
 .conns .c{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;background:var(--room-deep);border:1px solid var(--edge);border-radius:999px;padding:1px 4px 1px 10px}
 .conns .c.ok{border-color:var(--ok)}.conns .c.bad{border-color:var(--bad)}.conns .c.neu{border-color:var(--silk-dim)}
@@ -120,8 +140,8 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 <p class="lede">プラットフォームエンジニアリングは、開発者が安全に速く届けられる「道」を社内に用意する仕事です。ここでは、よくある課題(お題)に対して AWS のサービスや道具のブロックを線でつなぎ、基盤を組み立てます。<b>お題は全39問。ページを開くたびに、まだ出ていないお題からランダムに選ばれます。</b></p>
 <div class="how">
   <div><b>1. お題を読む</b>会社の状況と要件を読んで、どのブロックが必要か考えます。使わない「ひっかけ」のブロックも混ざっています。</div>
-  <div><b>2. ブロックをつなぐ</b>ブロックをタップして選び、つなぎたい相手をタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。</div>
-  <div><b>3. 答え合わせ</b>要件ごとの達成度と、余計な線の理由がわかります。解答例では線ごとの理由と、参考にした AWS 公式資料や各社の事例を確認できます。</div>
+  <div><b>2. ブロックをつなぐ</b>役割別の領域にあるブロックを2つタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。</div>
+  <div><b>3. 答え合わせ</b>要件ごとの達成度を確認。解答例は矢印付きの構成図で、要件ごとの経路と線の意味を追えます。</div>
 </div>
 
 <section class="panel" id="game" aria-label="お題">
@@ -136,12 +156,13 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
     <span class="cnt" id="cnt"></span>
     <button class="btn sub" id="hint" type="button">ヒント (−5点)</button>
     <button class="btn sub" id="clear" type="button">線を全部消す</button>
-    <button class="btn sub" id="shuffle" type="button">並べ直す</button>
+    <button class="btn sub" id="shuffle" type="button">役割ごとに並べ直す</button>
     <button class="btn pri" id="check" type="button">答え合わせ</button>
   </div>
-  <div class="board" id="board"><svg id="lines" aria-hidden="true"></svg></div>
+  <div class="board" id="board" aria-label="構成図。ブロックを選んで線をつなぐ"><div class="zones" id="zones" aria-hidden="true"></div><svg id="lines" aria-hidden="true"></svg></div>
   <div class="legend" id="legend"></div>
-  <div class="hint">ブロックを2つ続けてタップ(またはEnter)すると線が引けます。同じ2つをもう一度つなぐか、線をタップすると消えます。選択を外すには空いている所をタップ(Esc)。</div>
+  <div class="hint" id="board-hint">役割別の領域は配置の目安で、正解の接続を示しません。ブロックを2つ続けてタップ(またはEnter)すると線が引けます。選択を外すには空いている所をタップ(Esc)。</div>
+  <div class="flow" id="flow" aria-label="解答例の経路" hidden></div>
   <div class="conns" id="conns" aria-label="つないだ線"></div>
   <div class="live" id="live" aria-live="polite"></div>
   <div class="result" id="result" hidden></div>
@@ -938,7 +959,7 @@ function key(a,b){return a<b?a+'|'+b:b+'|'+a}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
 var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 var NUM='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
-var board=$('#board'),svg=$('#lines'),live=$('#live'),result=$('#result');
+var board=$('#board'),svg=$('#lines'),zones=$('#zones'),flow=$('#flow'),live=$('#live'),result=$('#result');
 var BH=74,GX=18,GY=40,PAD=14;
 var S={};
 
@@ -963,7 +984,7 @@ function load(i){
   sc.nodes.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'need'})});
   sc.alt.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'alt',note:n[4]})});
   sc.bad.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'bad',why:n[4]})});
-  S={i:i,sc:sc,nodes:shuffle(nodes),byId:{},pos:{},E:{},sel:null,graded:false,answer:false,hints:[],res:null,userPos:null,stale:false};
+  S={i:i,sc:sc,nodes:shuffle(nodes),byId:{},pos:{},zones:[],E:{},sel:null,graded:false,answer:false,hints:[],res:null,userPos:null,stale:false,focusReq:null,focusEdge:null};
   S.nodes.forEach(function(n){S.byId[n.id]=n});
   S.req={};sc.edges.forEach(function(e,j){S.req[key(e[0],e[1])]=j});
   S.ok={};sc.ok.forEach(function(e){S.ok[key(e[0],e[1])]=1});
@@ -986,12 +1007,21 @@ function load(i){
 /* ==== 配置 ==== */
 function dims(){var W=board.clientWidth||320,cols=W>=920?5:W>=720?4:W>=480?3:2;return {W:W,cols:cols,bw:Math.floor((W-PAD*2-GX*(cols-1))/cols)}}
 function layoutGrid(){
-  var d=dims();S.bw=d.bw;S.divY=null;
-  S.nodes.forEach(function(n,i){var c=i%d.cols,r=Math.floor(i/d.cols);S.pos[n.id]={fx:(PAD+c*(d.bw+GX))/d.W,y:PAD+r*(BH+GY)}});
+  var d=dims(),groups={},order=['ext','net','compute','int','data','ai','devops','oss','sec','ops'],y=PAD;
+  S.bw=d.bw;S.divY=null;S.zones=[];
+  S.nodes.forEach(function(n){(groups[n.cat]=groups[n.cat]||[]).push(n)});
+  order.forEach(function(cat){
+    var list=groups[cat];if(!list||!list.length)return;
+    var rows=Math.ceil(list.length/d.cols),h=28+rows*(BH+17)+6;
+    S.zones.push({cat:cat,y:y,h:h});
+    list.forEach(function(n,i){var c=i%d.cols,r=Math.floor(i/d.cols);S.pos[n.id]={fx:(PAD+c*(d.bw+GX))/d.W,y:y+25+r*(BH+17)}});
+    y+=h+12;
+  });
 }
 /* 解答例の配置: 矢印の向きに沿って左→右(狭い画面では上→下)に並べる */
 function layoutAnswer(){
   var d=dims(),W=d.W,sc=S.sc,need=S.nodes.filter(function(n){return n.kind==='need'}).map(function(n){return n.id}),others=S.nodes.filter(function(n){return n.kind!=='need'}).map(function(n){return n.id});
+  S.zones=[];
   /* 輪になっている矢印(検知→対応→監視 など)は、戻る向きの1本を除いて層を決める */
   var adj={},indeg={},stt={},back={};need.forEach(function(id){adj[id]=[];indeg[id]=0});
   sc.edges.forEach(function(e){adj[e[0]].push(e[1]);indeg[e[1]]++});
@@ -1024,18 +1054,32 @@ function layoutAnswer(){
   var bw2=S.bw,cols=Math.max(1,Math.floor((W-PAD*2+GX)/(bw2+GX)));
   others.forEach(function(id,k){var c=k%cols,r=Math.floor(k/cols);S.pos[id]={fx:(PAD+c*(bw2+GX))/W,y:y+r*(BH+GY)}});
 }
-function fitHeight(){var mx=0;for(var k in S.pos)mx=Math.max(mx,S.pos[k].y+BH);board.style.height=Math.max(200,mx+PAD)+'px'}
+function fitHeight(){var mx=0;for(var k in S.pos)mx=Math.max(mx,S.pos[k].y+BH);S.zones.forEach(function(z){mx=Math.max(mx,z.y+z.h)});board.style.height=Math.max(200,mx+PAD)+'px'}
 function rect(id){var p=S.pos[id],W=board.clientWidth;return {x:p.fx*W,y:p.y,w:S.bw,h:BH}}
 
 /* ==== 描画 ==== */
 function center(r){return [r.x+r.w/2,r.y+r.h/2]}
 function clip(r,tx,ty){var c=center(r),dx=tx-c[0],dy=ty-c[1];if(!dx&&!dy)return c;var t=Math.min(dx?(r.w/2+4)/Math.abs(dx):1e9,dy?(r.h/2+4)/Math.abs(dy):1e9);return [c[0]+dx*t,c[1]+dy*t]}
 function seg(a,b){var ra=rect(a),rb=rect(b),cb=center(rb),ca=center(ra);return [clip(ra,cb[0],cb[1]),clip(rb,ca[0],ca[1])]}
+/* 解答例では直交する線を使い、始点と矢印の向きを明確にする。 */
+function route(a,b){
+  var ra=rect(a),rb=rect(b),ca=center(ra),cb=center(rb),dx=cb[0]-ca[0],dy=cb[1]-ca[1],x1,y1,x2,y2,m;
+  if(Math.abs(dx)>Math.abs(dy)*.7&&Math.abs(dx)>(ra.w+rb.w)/2+12){
+    x1=dx>0?ra.x+ra.w+3:ra.x-3;y1=ca[1];x2=dx>0?rb.x-3:rb.x+rb.w+3;y2=cb[1];m=(x1+x2)/2;
+    return {d:'M'+x1+' '+y1+' L'+m+' '+y1+' L'+m+' '+y2+' L'+x2+' '+y2,x:m,y:(y1+y2)/2};
+  }
+  x1=ca[0];y1=dy>=0?ra.y+ra.h+3:ra.y-3;x2=cb[0];y2=dy>=0?rb.y-3:rb.y+rb.h+3;m=(y1+y2)/2;
+  return {d:'M'+x1+' '+y1+' L'+x1+' '+m+' L'+x2+' '+m+' L'+x2+' '+y2,x:(x1+x2)/2,y:m};
+}
+function edgeFocused(e,j){return S.focusEdge!=null?S.focusEdge===j:S.focusReq==null||S.focusReq===e[2]}
 function render(){
   var W=board.clientWidth;fitHeight();var H=board.clientHeight;
+  zones.innerHTML=S.zones.map(function(z){return '<div class="zone" style="top:'+z.y+'px;height:'+z.h+'px"><span class="zone-title">'+esc(CAT[z.cat][0])+'</span></div>'}).join('');
+  var focusedNodes={},filtering=S.answer&&(S.focusReq!=null||S.focusEdge!=null);
+  if(filtering)S.sc.edges.forEach(function(e,j){if(edgeFocused(e,j)){focusedNodes[e[0]]=1;focusedNodes[e[1]]=1}});
   S.nodes.forEach(function(n){var r=rect(n.id),el=n.el;el.style.left=r.x+'px';el.style.top=r.y+'px';el.style.width=r.w+'px';
     var nb=S.sel&&S.sel!==n.id&&S.E[key(S.sel,n.id)];
-    el.className='blk'+(S.sel===n.id?' sel':'')+(nb?' nb':'')+(S.answer&&n.kind==='bad'?' x':'')+(el.classList.contains('drag')?' drag':'');
+    el.className='blk'+(S.sel===n.id?' sel':'')+(nb?' nb':'')+(S.answer&&n.kind==='bad'?' x':'')+(filtering&&!focusedNodes[n.id]?' dim':'')+(filtering&&focusedNodes[n.id]?' focus':'')+(el.classList.contains('drag')?' drag':'');
     el.setAttribute('aria-pressed',String(S.sel===n.id));
     var cnt=0;for(var k in S.E){var ab=k.split('|');if(ab[0]===n.id||ab[1]===n.id)cnt++}
     el.setAttribute('aria-label',n.label+'、'+n.role+'、線 '+cnt+' 本'+(S.sel===n.id?'、選択中':''));
@@ -1051,10 +1095,10 @@ function render(){
     o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" '+st+' stroke-linecap="round"/>';
     o+='<line class="hit" data-k="'+k+'" x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="transparent" stroke-width="16"><title>クリックで消す</title></line>';
   }
-  if(S.answer){S.sc.edges.forEach(function(e,j){var kk=key(e[0],e[1]),has=!!S.E[kk];p=seg(e[0],e[1]);var col=has?'#5CE39A':'#FFC53D';
-    o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="'+col+'" stroke-width="2.6" '+(has?'':'stroke-dasharray="7 5" ')+'marker-end="url(#ah-'+(has?'ok':'miss')+')"/>';
-    if(has)o+='<line class="hit" data-k="'+kk+'" x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="transparent" stroke-width="16"/>';
-    var mx=(p[0][0]+p[1][0])/2,my=(p[0][1]+p[1][1])/2;o+='<circle cx="'+mx+'" cy="'+my+'" r="10" fill="#0A0F1A" stroke="'+col+'" stroke-width="1.5"/><text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="11" fill="'+col+'">'+(j+1)+'</text>'})}
+  if(S.answer){S.sc.edges.forEach(function(e,j){var kk=key(e[0],e[1]),has=!!S.E[kk],path=route(e[0],e[1]),col=has?'#5CE39A':'#FFC53D',active=edgeFocused(e,j),opacity=active?1:.14;
+    o+='<path d="'+path.d+'" fill="none" stroke="'+col+'" stroke-width="'+(S.focusEdge===j?'3.6':'2.6')+'" stroke-linecap="round" stroke-linejoin="round" opacity="'+opacity+'" '+(has?'':'stroke-dasharray="7 5" ')+'marker-end="url(#ah-'+(has?'ok':'miss')+')"/>';
+    o+='<path class="flow-hit" data-j="'+j+'" d="'+path.d+'" fill="none" stroke="transparent" stroke-width="18"><title>'+esc(S.byId[e[0]].label+' → '+S.byId[e[1]].label+'。'+e[3])+'</title></path>';
+    o+='<circle class="flow-badge" data-j="'+j+'" cx="'+path.x+'" cy="'+path.y+'" r="'+(S.focusEdge===j?12:10)+'" fill="#0A0F1A" stroke="'+col+'" stroke-width="1.5" opacity="'+opacity+'"/><text class="flow-badge" data-j="'+j+'" x="'+path.x+'" y="'+(path.y+4)+'" text-anchor="middle" font-size="11" fill="'+col+'" opacity="'+opacity+'">'+(j+1)+'</text>'})}
   else S.hints.forEach(function(j){var e=S.sc.edges[j];if(S.E[key(e[0],e[1])])return;p=seg(e[0],e[1]);var mx=(p[0][0]+p[1][0])/2,my=(p[0][1]+p[1][1])/2;
     o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="#FFC53D" stroke-width="2" stroke-dasharray="3 5" opacity=".9"/><circle cx="'+mx+'" cy="'+my+'" r="9" fill="#0A0F1A" stroke="#FFC53D"/><text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="11" fill="#FFC53D">?</text>'});
   svg.innerHTML=o;
@@ -1064,6 +1108,7 @@ function render(){
   var cs=Object.keys(S.E).map(function(k){var ab=k.split('|'),cl=S.graded&&S.cls?S.cls[k]:'';return '<span class="c '+(cl||'')+'">'+esc(S.byId[ab[0]].label)+' — '+esc(S.byId[ab[1]].label)+'<button type="button" data-k="'+k+'" aria-label="この線を消す">×</button></span>'});
   $('#conns').innerHTML=cs.length?cs.join(''):'<span class="empty">まだ線がありません。ブロックを2つ続けてタップしてください。</span>';
   renderReqs();
+  renderFlow();
 }
 function reqStatus(){var st=S.sc.req.map(function(){return {n:0,h:0}});S.sc.edges.forEach(function(e){var s=st[e[2]];s.n++;if(S.E[key(e[0],e[1])])s.h++});return st}
 function renderReqs(){
@@ -1071,6 +1116,18 @@ function renderReqs(){
   $('#reqs').innerHTML=S.sc.req.map(function(r,i){var s='';if(st){var x=st[i];s=x.h===x.n?'<span class="st ok">✓ 達成</span>':x.h?'<span class="st part">△ '+x.h+'/'+x.n+'</span>':'<span class="st ng">✗ 未達</span>'}
     var nums=S.answer?' <span style="color:var(--silk-dim);font-size:.78rem">('+S.sc.edges.map(function(e,j){return e[2]===i?(j+1):null}).filter(function(v){return v}).join(', ')+')</span>':'';
     return '<li><span class="no">'+(i+1)+'</span><span>'+esc(r)+nums+'</span>'+s+'</li>'}).join('');
+}
+function renderFlow(){
+  flow.hidden=!S.answer;
+  if(!S.answer){flow.innerHTML='';$('#board-hint').textContent='役割別の領域は配置の目安で、正解の接続を示しません。ブロックを2つ続けてタップ(またはEnter)すると線が引けます。選択を外すには空いている所をタップ(Esc)。';return}
+  $('#board-hint').textContent='矢印は通信・データ・設定・権限などが伝わる向きです。番号付きの線、または下の接続を選ぶとその流れを強調できます。解答例の矢印は接続の意味を表し、ネットワークの境界を示すものではありません。';
+  var filters='<button type="button" data-req="all" class="'+(S.focusReq==null?'active':'')+'" aria-pressed="'+(S.focusReq==null)+'">全体</button>';
+  S.sc.req.forEach(function(r,i){filters+='<button type="button" data-req="'+i+'" class="'+(S.focusReq===i?'active':'')+'" aria-pressed="'+(S.focusReq===i)+'">要件 '+(i+1)+'</button>'});
+  var list=S.sc.edges.map(function(e,j){if(S.focusReq!=null&&e[2]!==S.focusReq)return '';
+    var has=!!S.E[key(e[0],e[1])];
+    return '<button type="button" data-edge="'+j+'" class="'+(S.focusEdge===j?'active':'')+'" aria-pressed="'+(S.focusEdge===j)+'"><span class="flow-no">'+(j+1)+'</span>'+esc(S.byId[e[0]].label)+' → '+esc(S.byId[e[1]].label)+'<span class="flow-why"><strong>'+(has?'接続済み':'未接続')+'</strong> ・ '+esc(e[3])+'</span></button>'
+  }).join('');
+  flow.innerHTML='<div class="flow-head"><b>構成図の流れ</b><span>要件を選ぶと関連する矢印だけを強調します。線の番号を選ぶと接続の意味を読めます。</span></div><div class="flow-filters">'+filters+'</div><div class="flow-list">'+list+'</div>';
 }
 
 /* ==== 操作 ==== */
@@ -1095,8 +1152,13 @@ board.addEventListener('pointerup',endDrag);board.addEventListener('pointercance
 board.addEventListener('click',function(e){
   var b=e.target.closest('.blk');
   if(b){if(suppress){suppress=false;return}tap(b.dataset.id);return}
+  var f=e.target.closest('.flow-hit, .flow-badge');if(f){var j=+f.dataset.j;S.focusEdge=S.focusEdge===j?null:j;render();return}
   var h=e.target.closest('.hit');if(h){var ab=h.dataset.k.split('|');toggle(ab[0],ab[1]);return}
   if(S.sel!=null){S.sel=null;render()}
+});
+flow.addEventListener('click',function(e){
+  var req=e.target.closest('[data-req]');if(req){S.focusReq=req.dataset.req==='all'?null:+req.dataset.req;S.focusEdge=null;render();return}
+  var edge=e.target.closest('[data-edge]');if(edge){var j=+edge.dataset.edge;S.focusEdge=S.focusEdge===j?null:j;render()}
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.sel!=null){S.sel=null;render()}});
 $('#conns').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var ab=b.dataset.k.split('|');toggle(ab[0],ab[1])});
@@ -1123,8 +1185,8 @@ result.addEventListener('click',function(e){
   else if(b.dataset.a==='retry'){result.hidden=true;setAnswer(false)}
 });
 function setAnswer(on){
-  if(on&&!S.answer){S.userPos=JSON.parse(JSON.stringify(S.pos));S.userBw=S.bw;S.answer=true;S.sel=null;layoutAnswer()}
-  else if(!on&&S.answer){S.answer=false;if(S.userPos){S.pos=S.userPos;S.bw=dims().bw}S.divY=null}
+  if(on&&!S.answer){S.userPos=JSON.parse(JSON.stringify(S.pos));S.userZones=JSON.parse(JSON.stringify(S.zones));S.userBw=S.bw;S.answer=true;S.sel=null;S.focusReq=null;S.focusEdge=null;layoutAnswer()}
+  else if(!on&&S.answer){S.answer=false;if(S.userPos){S.pos=S.userPos;S.zones=S.userZones;S.bw=dims().bw}S.divY=null;S.focusReq=null;S.focusEdge=null}
   renderResult();render();
 }
 var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){if(S.answer)layoutAnswer();else{var d=dims();S.bw=d.bw;for(var k in S.pos){var W=board.clientWidth;S.pos[k].fx=Math.min(S.pos[k].fx,(W-S.bw-2)/W)}}render()},120)});
