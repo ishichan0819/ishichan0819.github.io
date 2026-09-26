@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>光OFDM — 狭い帯域で速く送る</title>
+<meta name="description" content="帯域が数MHzしかない照明用LEDで速く送る光OFDMのアクティビティ。OOKのアイパターン、エルミート対称、DCO-OFDMとACO-OFDM、サブキャリアごとのビット割り当てを動かして確かめる。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;--rule:#C9D0DE;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;--vio:#B79CFF;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1040px;margin:0 auto;padding:28px 18px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:42em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim);text-align:right}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.9rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.row2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;align-items:start}
+.row2.eq{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:799px){.row2,.row2.eq{grid-template-columns:1fr}}
+.mt{margin-top:12px}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:8px 0 2px}
+.lab b{color:var(--silk);font-weight:400;font-family:var(--dot)}
+input[type=range]{width:100%;accent-color:var(--led)}
+input[type=range]:disabled{opacity:.35}
+.btn{font:inherit;font-weight:700;font-size:.85rem;min-height:36px;padding:4px 14px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn:disabled{opacity:.4;cursor:default}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 16px;margin-top:12px;align-items:start}
+.seg{display:inline-flex;flex-wrap:wrap;border:1.5px solid var(--edge);border-radius:8px;overflow:hidden;vertical-align:middle}
+.seg button{font:inherit;font-size:.8rem;line-height:1.3;min-height:34px;padding:4px 11px;background:transparent;color:var(--silk-dim);border:0;border-left:1px solid var(--edge);cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--led);color:#1A1200;font-weight:700}
+canvas.plot{display:block;width:100%;border-radius:8px;background:#060A13;border:1px solid var(--edge)}
+canvas.plot.click{cursor:pointer;touch-action:manipulation}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:0;font-size:.85rem;align-items:baseline}
+.kv dt{color:var(--silk-dim)}
+.kv dd{margin:0;text-align:right;font-family:var(--dot);font-size:.95rem}
+.tag{display:inline-block;font-family:var(--dot);font-size:.7rem;line-height:1.5;padding:0 6px;border-radius:5px;border:1px solid;margin-left:6px;vertical-align:1px}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.tag.ng{color:var(--bad);border-color:var(--bad)}
+.tag.mid{color:var(--led);border-color:var(--led)}
+.big{font-family:var(--dot);font-size:1.5rem;line-height:1.3;margin:8px 0 2px}
+.big.ok{color:var(--ok)}.big.ng{color:var(--bad)}.big.mid{color:var(--led)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}
+.st{background:var(--room-deep);border:1px solid var(--edge);border-radius:10px;padding:8px 10px}
+.st .k{font-size:.72rem;color:var(--silk-dim);line-height:1.4}
+.st .v{font-family:var(--dot);font-size:1.15rem;line-height:1.4}
+.st .v small{font-size:.7rem;color:var(--silk-dim)}
+.lg-n{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.75rem;color:var(--silk-dim);margin-top:6px;align-items:center}
+.sw{display:inline-block;width:12px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+.ln{display:inline-block;width:16px;height:0;border-top:2px solid;vertical-align:3px;margin-right:4px}
+.ln.d{border-top-style:dashed}
+.try{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;font-size:.8rem;color:var(--silk-dim)}
+.try button{font:inherit;font-size:.8rem;min-height:32px;padding:3px 12px;border-radius:999px;border:1.5px dashed var(--silk-dim);background:transparent;color:var(--silk);cursor:pointer}
+.try button:hover{border-color:var(--led);color:var(--led)}
+.try button.rs{border-style:solid;border-color:var(--edge);color:var(--silk-dim)}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim);min-height:1.5em}
+.note b{color:var(--led);font-weight:700}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.hint{font-size:.72rem;color:var(--silk-dim);margin-top:6px;line-height:1.5}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+details.math{margin-top:22px;border:1px solid var(--rule);border-radius:10px;padding:10px 14px;font-size:.9rem}
+details.math summary{cursor:pointer;font-family:var(--dot);font-size:1rem}
+details.math h3{font-size:.95rem;margin:14px 0 4px}
+details.math p{margin:.3em 0;color:var(--muted)}
+.eq{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-size:1.02rem;margin:4px 0 4px 1em;overflow-x:auto;white-space:nowrap}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../visible-light/">光で文字を送る(OOK)</a> · <a href="../csk/">色で文字を送る(CSK)</a> · <a href="../indoor-vlc/">室内VLC</a></p>
+<h1>狭い帯域で速く送る</h1>
+<p class="lede">照明用の白色LEDは、明るさをすばやく変えるのが苦手です。蛍光体を使う白色LEDの帯域(応答できる速さ)は数MHz程度しかありません。それでも研究では、同じようなLEDで数百Mb/sが出ています。主役は Wi-Fi や地デジでも使われる <b>OFDM</b>。ただし光には「実数で、マイナスがない」という制約があり、そのままでは使えません。4つの実験で、その工夫をたどります。</p>
+
+<!-- ① -->
+<h2>① OOKを速くすると、目が閉じる</h2>
+<p class="lede">LEDは急に明るさを変えられず、ゆっくり追いかけます。ビットを速くすると、前のビットの名残が次のビットに重なり(符号間干渉)、0と1を見分けられなくなります。2ビットぶんの波形を何本も重ね描きした<b>アイパターン</b>の「目」の開き具合で確かめます。</p>
+<div class="panel" id="s1">
+  <div class="ph"><span class="t">OOK → LED(ゆっくり応答) → 受光器</span><span class="s">NRZ / 一次の低域通過</span></div>
+  <div class="row2">
+    <div class="side">
+      <div class="h"><span>送った0/1 (うすい線) と LEDの光 (水色)</span></div>
+      <canvas class="plot" id="w1" style="height:140px" aria-label="送ったビット列とLEDの光の波形"></canvas>
+      <div class="h mt"><span>アイパターン (2ビットぶんを重ね描き)</span><span>緑 = いちばん開いている瞬間</span></div>
+      <canvas class="plot" id="eye1" style="height:220px" aria-label="アイパターン"></canvas>
+    </div>
+    <div class="side">
+      <dl class="kv">
+        <dt>1ビットの長さ</dt><dd id="o1t"></dd>
+        <dt>LEDの時定数 τ = 1/(2πf<sub>3dB</sub>)</dt><dd id="o1tau"></dd>
+        <dt>目の開き</dt><dd id="o1open"></dd>
+      </dl>
+      <div class="big" id="o1v"></div>
+      <div class="hint">目の開きは、1を送ったときのいちばん暗い値と、0を送ったときのいちばん明るい値の差(1ビットの振れ幅に対する割合)。雑音に対する余裕を表します。</div>
+    </div>
+  </div>
+  <div class="ctl">
+    <label class="lab">送る速さ: <b id="v1r"></b><input type="range" id="c1r" min="0" max="11" step="1"></label>
+    <label class="lab">LEDの帯域 f<sub>3dB</sub>: <b id="v1f"></b><input type="range" id="c1f" min="0" max="8" step="1"></label>
+    <label class="lab">受信の雑音: <b id="v1n"></b><input type="range" id="c1n" min="0" max="3" step="1"></label>
+  </div>
+  <div class="try" id="t1"></div>
+  <div class="note" id="n1"></div>
+</div>
+
+<!-- ② -->
+<h2>② 周波数で分けて並べる: OFDM とエルミート対称</h2>
+<p class="lede">OFDMは、速い1本の流れを、ゆっくりした多数の<b>サブキャリア</b>(周波数の違う波)に分けて同時に送ります。各サブキャリアに QPSK などの信号点を1つずつ載せ、逆FFT(IFFT)でまとめて足し合わせたものが送信波形です。ただしIFFTの出力はふつう複素数。LEDが出せるのは実数(明るさ)だけです。そこで、k番目と N−k番目に鏡写し(複素共役)の値を置く<b>エルミート対称</b>を使います。</p>
+<div class="panel" id="s2">
+  <div class="ph"><span class="t">サブキャリアの信号点 → IFFT → 送信波形</span><span class="s">N = 16</span></div>
+  <div class="side">
+    <div class="h"><span>サブキャリア k = 0 … 15 (クリックで選ぶ / ←→キー)</span><span id="o2s"></span></div>
+    <canvas class="plot click" id="strip2" style="height:82px" tabindex="0" aria-label="16個のサブキャリアとそれぞれの信号点。クリックまたは左右キーで選ぶ"></canvas>
+  </div>
+  <div class="row2 mt">
+    <div class="side">
+      <div class="h"><span>送信波形 (1シンボル)</span><span id="o2w"></span></div>
+      <canvas class="plot" id="w2" style="height:220px" aria-label="IFFTで作った送信波形"></canvas>
+      <div class="lg-n"><span><span class="ln" style="border-color:var(--led)"></span>実部 (明るさにできる)</span><span><span class="ln" style="border-color:var(--vio)"></span>虚部 (光では出せない)</span><span><span class="ln d" id="lg2c" style="border-color:var(--wave)"></span>選んだサブキャリアの波</span><span><span class="sw" style="background:rgba(255,107,122,.35)"></span>マイナス</span></div>
+    </div>
+    <div class="side">
+      <div class="h"><span>選んだサブキャリアの信号点</span><span id="o2k"></span></div>
+      <canvas class="plot click" id="ed2" style="height:190px" tabindex="0" aria-label="選んだサブキャリアの信号点。クリックまたは矢印キーで動かす"></canvas>
+      <div class="row"><button class="btn" id="z2" type="button">このサブキャリアを使わない (0)</button></div>
+      <dl class="kv mt">
+        <dt>データを運ぶサブキャリア</dt><dd id="o2n"></dd>
+        <dt>虚部のいちばん大きい値</dt><dd id="o2im"></dd>
+        <dt>実部のいちばん低い値</dt><dd id="o2min"></dd>
+        <dt>ピーク対平均電力比 (PAPR)</dt><dd id="o2p"></dd>
+      </dl>
+    </div>
+  </div>
+  <div class="ctl">
+    <div><span class="lab">エルミート対称</span><div class="seg" id="c2h" role="group" aria-label="エルミート対称"><button type="button" data-v="1">あり</button><button type="button" data-v="0">なし</button></div></div>
+    <div><span class="lab">信号点</span><div class="seg" id="c2m" role="group" aria-label="信号点の数"><button type="button" data-v="4">QPSK</button><button type="button" data-v="16">16QAM</button></div></div>
+    <div><span class="lab">&nbsp;</span><button class="btn" id="r2" type="button">並べ替える (ランダム)</button></div>
+  </div>
+  <div class="try" id="t2"></div>
+  <div class="note" id="n2"></div>
+</div>
+
+<!-- ③ -->
+<h2>③ マイナスをなくす: DCO-OFDM と ACO-OFDM</h2>
+<p class="lede">OFDMの波形は0を中心に上下に振れます。LEDの明るさはマイナスにできないので、2つのやり方があります。<b>DCO-OFDM</b>は波形全体を底上げ(DCバイアス)して、それでもはみ出た下側を切ります。<b>ACO-OFDM</b>は奇数番目のサブキャリアだけにデータを載せ、マイナス側をすべて切り落とします。切り落としで生まれるゆがみが偶数番目にだけ落ち、データが無傷で残るという工夫です。</p>
+<div class="panel" id="s3">
+  <div class="ph"><span class="t">OFDM波形 → マイナスをなくす → LED → 雑音 → FFT</span><span class="s">N = 64 / 60シンボルぶん</span></div>
+  <div class="side">
+    <div class="h"><span>LEDに流す波形 (1シンボル)</span><span id="o3w"></span></div>
+    <canvas class="plot" id="w3" style="height:170px" aria-label="LEDに流す波形"></canvas>
+    <div class="lg-n"><span><span class="ln" style="border-color:rgba(238,242,250,.45)"></span>切る前の波形</span><span><span class="sw" style="background:rgba(255,197,61,.7)"></span>LEDの明るさ</span><span><span class="sw" style="background:var(--bad)"></span>切り取られた部分</span></div>
+  </div>
+  <div class="row2 eq mt">
+    <div class="side">
+      <div class="h"><span>受信した信号点</span><span id="o3ber"></span></div>
+      <canvas class="plot" id="k3" style="height:250px" aria-label="受信した信号点の散らばり"></canvas>
+      <div class="lg-n"><span><span class="sw" style="background:var(--wave)"></span>正しく判定</span><span><span class="sw" style="background:var(--bad)"></span>誤り</span></div>
+    </div>
+    <div class="side">
+      <div class="h"><span>サブキャリアごとの成分 (データ = 0 dB)</span></div>
+      <canvas class="plot" id="sp3" style="height:250px" aria-label="サブキャリアごとのデータとゆがみの大きさ"></canvas>
+      <div class="lg-n"><span><span class="sw" style="background:var(--wave)"></span>データ</span><span><span class="sw" style="background:var(--bad)"></span>切り取りによるゆがみ</span><span><span class="ln d" style="border-color:var(--silk-dim)"></span>雑音</span></div>
+    </div>
+  </div>
+  <div class="stats" id="o3st"></div>
+  <div class="ctl">
+    <div><span class="lab">方式</span><div class="seg" id="c3m" role="group" aria-label="方式"><button type="button" data-v="dco">DCO (底上げ)</button><button type="button" data-v="aco">ACO (奇数だけ)</button></div></div>
+    <div><span class="lab">信号点</span><div class="seg" id="c3q" role="group" aria-label="信号点の数"><button type="button" data-v="4">QPSK</button><button type="button" data-v="16">16QAM</button><button type="button" data-v="64">64QAM</button></div></div>
+    <label class="lab">DCバイアス β (σの何倍): <b id="v3b"></b><input type="range" id="c3b" min="0" max="4" step="0.1"></label>
+    <label class="lab">Eb/N0 (電気、DC込み): <b id="v3e"></b><input type="range" id="c3e" min="0" max="40" step="1"></label>
+  </div>
+  <div class="try" id="t3"></div>
+  <div class="note" id="n3"></div>
+
+  <div class="side mt">
+    <div class="h"><span>BER曲線: 同じ速さで DCO と ACO を比べる</span><span id="o3lab"></span></div>
+    <canvas class="plot" id="b3" style="height:250px" aria-label="Eb/N0に対するビット誤り率の曲線"></canvas>
+    <div class="ctl">
+      <div><span class="lab">比べる組み合わせ (同じビット数/シンボル)</span><div class="seg" id="c3p" role="group" aria-label="比べる組み合わせ"><button type="button" data-v="4">遅め: DCO QPSK と ACO 16QAM</button><button type="button" data-v="16">速め: DCO 16QAM と ACO 256QAM</button></div></div>
+      <div><span class="lab">&nbsp;</span><button class="btn pri" id="go3" type="button">計算する (DCOは上の β を使う)</button></div>
+    </div>
+    <div class="note" id="n3lab"></div>
+  </div>
+</div>
+
+<!-- ④ -->
+<h2>④ 帯域いっぱいに詰め込む: ビット割り当て</h2>
+<p class="lede">LEDは高い周波数ほど弱くなるので、低い周波数のサブキャリアはSNRが高く、高い周波数は低くなります。OFDMならサブキャリアごとに信号点の数を変えられます(<b>ビット割り当て</b>)。SNRが高いところには256QAM、低いところにはQPSK、ほとんど届かないところは使わない。誤り訂正で直せる限界として使われる BER 3.8×10⁻³ を目安に、LEDの帯域の何倍まで速くできるかを見ます。</p>
+<div class="panel" id="s4">
+  <div class="ph"><span class="t">LEDの周波数特性 → サブキャリアごとのSNR → ビット割り当て</span><span class="s">N = 128 (データ63本) / 目標 BER 3.8×10⁻³</span></div>
+  <div class="row2">
+    <div class="side">
+      <div class="h"><span>サブキャリアごとのSNR (棒の高さ) と載せたビット数 (色)</span></div>
+      <canvas class="plot" id="c4" style="height:280px" aria-label="サブキャリアごとのSNRと割り当てたビット数"></canvas>
+      <div class="lg-n" id="lg4"></div>
+    </div>
+    <div class="side">
+      <div class="k" style="font-size:.8rem;color:var(--silk-dim)">合計の速さ</div>
+      <div class="big" id="o4r"></div>
+      <dl class="kv mt">
+        <dt>LEDの帯域の何倍か</dt><dd id="o4x"></dd>
+        <dt>同じLEDで OOK (目の開き50%)</dt><dd id="o4ook"></dd>
+        <dt>平均の BER</dt><dd id="o4ber"></dd>
+        <dt>使うサブキャリア</dt><dd id="o4n"></dd>
+      </dl>
+      <div class="hint">速さ = Σ(ビット数) × サブキャリア間隔。サイクリックプレフィックスや誤り訂正の冗長ぶんは差し引いていません。</div>
+    </div>
+  </div>
+  <div class="ctl">
+    <label class="lab">LEDの帯域 f<sub>3dB</sub>: <b id="v4f"></b><input type="range" id="c4f" min="0" max="9" step="1"></label>
+    <label class="lab">使う帯域 B: <b id="v4b"></b><input type="range" id="c4b" min="0" max="8" step="1"></label>
+    <label class="lab">低い周波数での SNR: <b id="v4s"></b><input type="range" id="c4s" min="10" max="50" step="1"></label>
+    <div><span class="lab">割り当て</span><div class="seg" id="c4m" role="group" aria-label="ビット割り当て"><button type="button" data-v="2">全部QPSK</button><button type="button" data-v="4">全部16QAM</button><button type="button" data-v="6">全部64QAM</button><button type="button" data-v="ad">SNRに合わせる</button></div></div>
+  </div>
+  <div class="try" id="t4"></div>
+  <div class="note" id="n4"></div>
+</div>
+
+<p class="after">見えたこと
+<ul>
+  <li><b>LEDは遅い</b>。OOKを速くすると、LEDの応答が追いつかず目が閉じる。3 MHzのLEDでは十数Mb/sが目安。</li>
+  <li><b>OFDMは周波数ごとに分けて並べる</b>。光では実数が必要なので、エルミート対称で鏡写しを置く。そのぶんデータを運べるサブキャリアは半分になる。</li>
+  <li><b>マイナスには2つの解き方</b>。DCOは底上げ(照明の明るさにもなる)で周波数を有効に使えるが、電力の多くをDCに使う。ACOは奇数だけを使ってゆがみを偶数に逃がし、電力効率がよいが運べるビットは半分以下。</li>
+  <li><b>SNRに合わせてビットを割り当てる</b>と、LEDの帯域の何十倍もの速さが出る。帯域の外でも、SNRが残っている限りビットを載せられる。</li>
+  <li><b>ここでは入れていないもの</b>: サイクリックプレフィックス、同期、チャネル推定、LEDの上側の飽和(非線形性)、部屋の反射による遅れ(<a href="../indoor-vlc/" style="color:inherit">室内VLCの②</a>)。</li>
+</ul>
+</p>
+
+<details class="math">
+<summary>計算に使った式とパラメータ</summary>
+<h3>LEDの応答 (①④)</h3>
+<div class="eq">H(f) = 1 / (1 + j f / f<sub>3dB</sub>),　τ = 1 / (2π f<sub>3dB</sub>)</div>
+<p>①では 1ビットを40サンプルに分け、y[n] = a·y[n−1] + (1−a)·x[n]、a = e<sup>−2π f<sub>3dB</sub> T<sub>s</sub></sup> で計算しています。</p>
+<h3>OFDM とエルミート対称 (②)</h3>
+<div class="eq">x[n] = (1/√N) Σ<sub>k=0</sub><sup>N−1</sup> X[k] e<sup>j2πkn/N</sup>,　X[N−k] = X[k]*,　X[0] = X[N/2] = 0　⇒　x[n] は実数</div>
+<h3>DCO-OFDM と ACO-OFDM (③)</h3>
+<div class="eq">DCO: x<sub>DCO</sub>[n] = max(0, x[n] + β·σ<sub>x</sub>)　→　受信側では X[k] が Φ(β) 倍 + ゆがみ</div>
+<div class="eq">ACO: X[k] = 0 (k が偶数),　x<sub>ACO</sub>[n] = max(0, x[n])　→　奇数番目は X[k]/2、ゆがみは偶数番目だけ</div>
+<div class="eq">E<sub>b</sub>(電気) = E[x<sub>c</sub>²]·N / (1シンボルのビット数),　雑音の分散 = N<sub>0</sub>/2 (サンプルごと)</div>
+<p>Φ はガウス分布の累積分布関数。信号点はグレイ符号の正方形QAM。BER曲線はモンテカルロ法で、誤りが150ビットたまるか40万ビット送るまで数えています。</p>
+<h3>ビット割り当て (④)</h3>
+<div class="eq">SNR<sub>k</sub> = SNR<sub>0</sub> · |H(f<sub>k</sub>)|²,　f<sub>k</sub> = k·Δf,　Δf = B / (N/2)</div>
+<div class="eq">BER ≈ (4/b)(1 − 2<sup>−b/2</sup>) · Q( √(3·SNR / (2<sup>b</sup> − 1)) )　(b ビット/信号点、b = 1 は Q(√(2·SNR)))</div>
+<div class="eq">速さ R = Σ b<sub>k</sub>·Δf　(b<sub>k</sub> は BER ≤ 3.8×10⁻³ を満たす最大のビット数、最大8)</div>
+<p>正方形でない信号点(8QAMなど)にも同じ近似式を使っています。3.8×10⁻³ は冗長7%の硬判定誤り訂正で直せる目安としてよく使われる値です。</p>
+</details>
+<p class="ref">参考: J. Armstrong and A. J. Lowery, “Power efficient optical OFDM,” Electronics Letters, vol. 42, no. 6, pp. 370–372, 2006. / J. Armstrong and B. J. C. Schmidt, “Comparison of asymmetrically clipped optical OFDM and DC-biased optical OFDM in AWGN,” IEEE Communications Letters, vol. 12, no. 5, pp. 343–345, 2008.</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+/* ==== 共通 ==== */
+var AMB='#FFC53D',CYA='#5EE7FF',RED='#FF6B7A',VIO='#B79CFF',SILK='#EEF2FA',DIM='#9AA6C2',GRID='rgba(238,242,250,.09)',BG='#060A13',OK='#5CE39A';
+function $(s){return document.querySelector(s)}
+function fit(cv){
+  var d=Math.min(2,window.devicePixelRatio||1),r=cv.getBoundingClientRect(),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+  var c=cv.getContext('2d');c.setTransform(1,0,0,1,0,0);c.fillStyle=BG;c.fillRect(0,0,w,h);c.lineJoin='round';
+  return {c:c,w:w,h:h,d:d};
+}
+function font(c,px,d){c.font=(px*d)+'px DotGothic16, monospace'}
+function rng(seed){var a=seed>>>0;return function(){a=(a+0x6D2B79F5)>>>0;var t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+function gauss(r){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+/* 基数2のFFT (1/√N で正規化)。inv=true で逆変換 */
+function fft(re,im,inv){
+  var n=re.length,i,j,len,t;
+  for(i=1,j=0;i<n;i++){var b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+  for(len=2;len<=n;len<<=1){var ang=(inv?2:-2)*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),h=len>>1;
+    for(i=0;i<n;i+=len){var cr=1,ci=0;for(j=0;j<h;j++){var a=i+j,bb=a+h,vr=re[bb]*cr-im[bb]*ci,vi=re[bb]*ci+im[bb]*cr;
+      re[bb]=re[a]-vr;im[bb]=im[a]-vi;re[a]+=vr;im[a]+=vi;t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}
+  var s=1/Math.sqrt(n);for(i=0;i<n;i++){re[i]*=s;im[i]*=s}
+}
+function erfc(x){var z=Math.abs(x),t=1/(1+0.5*z),r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));return x>=0?r:2-r}
+function Qf(x){return 0.5*erfc(x/Math.SQRT2)}
+function Phi(x){return 1-Qf(x)}
+/* 正方形QAM: 各軸 L 段、位置 p (0…L−1) にグレイ符号 gray(p) のビットを割り当てる */
+function QAM(M){var L=Math.round(Math.sqrt(M));return {M:M,L:L,b:Math.round(Math.log2(M)),nf:Math.sqrt(2*(M-1)/3)}}
+function lv(q,p){return (2*p-(q.L-1))/q.nf}
+function detp(q,v){var p=Math.round((v*q.nf+q.L-1)/2);return p<0?0:p>q.L-1?q.L-1:p}
+function gray(p){return p^(p>>1)}
+function popc(x){var c=0;while(x){c+=x&1;x>>=1}return c}
+function sup(n){var m={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};return String(n).split('').map(function(c){return m[c]}).join('')}
+function sci(v){if(!(v>0))return '0';var e=Math.floor(Math.log10(v));return (v/Math.pow(10,e)).toFixed(1)+'×10'+sup(e)}
+function tag(cls,t){return '<span class="tag '+cls+'">'+t+'</span>'}
+function segSet(el,v){[].forEach.call(el.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',String(b.dataset.v===String(v)))})}
+function segOn(el,fn){el.addEventListener('click',function(e){var b=e.target.closest('button');if(b)fn(b.dataset.v)})}
+function tries(el,list,note,reset,apply,redraw){
+  el.innerHTML='<span>試す:</span>'+list.map(function(t,i){return '<button type="button" data-i="'+i+'">'+t[0]+'</button>'}).join('')+'<button type="button" class="rs" data-i="-1">元に戻す</button>';
+  el.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var i=+b.dataset.i;reset();if(i>=0){apply(list[i][1]);note.innerHTML=list[i][2]}redraw()});
+}
+var DRAW=[];
+function onResize(){clearTimeout(onResize.t);onResize.t=setTimeout(function(){DRAW.forEach(function(f){f()})},80)}
+window.addEventListener('resize',onResize);
+
+/* ==== ① OOKとアイパターン ==== */
+/* LED(一次の低域通過)を通した OOK。1ビット S サンプル。戻り値: 波形と、目の開き(いちばん開く位相) */
+function eyeSim(R,fc,nz,nb){
+  var S=40,a=Math.exp(-2*Math.PI*fc/(R*S)),r=rng(7),rn=rng(99),bits=[],y=new Float32Array(nb*S),v=0.5,i,s;
+  for(i=0;i<nb;i++)bits.push(r()<.5?0:1);
+  for(i=0;i<nb;i++)for(s=0;s<S;s++){v=a*v+(1-a)*bits[i];y[i*S+s]=v+(nz?nz*gauss(rn):0)}
+  var best=-9,bs=0,b1=0,b0=0;
+  for(s=0;s<S;s++){var mn1=9,mx0=-9;for(i=8;i<nb;i++){var c=y[i*S+s];if(bits[i]){if(c<mn1)mn1=c}else if(c>mx0)mx0=c}
+    if(mn1-mx0>best){best=mn1-mx0;bs=s;b1=mn1;b0=mx0}}
+  return {y:y,bits:bits,S:S,open:best,phase:bs,lo1:b1,hi0:b0};
+}
+(function(){
+  var RS=[1,2,3,5,7,10,15,20,30,50,70,100],FS=[1,2,3,5,8,10,15,20,30],NZ=[0,0.03,0.06,0.1],NZN=['なし','小','中','大'];
+  var P,note=$('#n1'),w1=$('#w1'),eye=$('#eye1');
+  var NOTE='速さを上げていくと、LEDの応答が追いつかなくなって目が閉じていきます。蛍光体を使う白色LEDの帯域は数MHz程度しかありません。';
+  function reset(){P={ri:5,fi:2,nz:0};note.innerHTML=NOTE}
+  function draw(){
+    var R=RS[P.ri],fc=FS[P.fi],sim=eyeSim(R,fc,NZ[P.nz],200),S=sim.S,y=sim.y,bits=sim.bits;
+    $('#c1r').value=P.ri;$('#v1r').textContent=R+' Mb/s';$('#c1f').value=P.fi;$('#v1f').textContent=fc+' MHz';$('#c1n').value=P.nz;$('#v1n').textContent=NZN[P.nz];
+    /* 波形 */
+    var g=fit(w1),c=g.c,d=g.d,L=8*d,Rr=8*d,T=10*d,B=18*d,pw=g.w-L-Rr,ph=g.h-T-B,nb=24,i0=8;
+    function X(m){return L+m/(nb*S)*pw}function Y(v){return T+(1.15-v)/1.3*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();c.moveTo(L,Y(0));c.lineTo(L+pw,Y(0));c.moveTo(L,Y(1));c.lineTo(L+pw,Y(1));c.stroke();
+    c.strokeStyle='rgba(255,197,61,.55)';c.lineWidth=1.5*d;c.beginPath();
+    for(var i=0;i<nb;i++){var b=bits[i0+i];c.lineTo(X(i*S),Y(b));c.lineTo(X((i+1)*S),Y(b))}c.stroke();
+    c.strokeStyle=CYA;c.lineWidth=2*d;c.beginPath();for(var m=0;m<nb*S;m++){var yy=Y(y[i0*S+m]);if(m)c.lineTo(X(m),yy);else c.moveTo(X(m),yy)}c.stroke();
+    font(c,9,d);c.fillStyle=DIM;c.textAlign='center';c.textBaseline='top';
+    if(pw/nb>9*d)for(i=0;i<nb;i++)c.fillText(bits[i0+i],X((i+.5)*S),T+ph+4*d);
+    /* アイパターン */
+    g=fit(eye);c=g.c;d=g.d;L=26*d;Rr=10*d;T=12*d;B=20*d;pw=g.w-L-Rr;ph=g.h-T-B;
+    function EX(k){return L+k/(2*S)*pw}function EY(v){return T+(1.2-v)/1.4*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();[0,0.5,1].forEach(function(v){c.moveTo(L,EY(v));c.lineTo(L+pw,EY(v))});c.moveTo(EX(S/2),T);c.lineTo(EX(S/2),T+ph);c.moveTo(EX(1.5*S),T);c.lineTo(EX(1.5*S),T+ph);c.stroke();
+    font(c,9,d);c.fillStyle=DIM;c.textAlign='right';c.textBaseline='middle';c.fillText('1',L-6*d,EY(1));c.fillText('0',L-6*d,EY(0));
+    c.textAlign='center';c.textBaseline='top';c.fillText('← 1ビット →',EX(S),T+ph+5*d);
+    c.strokeStyle='rgba(94,231,255,.16)';c.lineWidth=1.3*d;
+    for(i=8;i<bits.length-2;i++){c.beginPath();for(var k=0;k<2*S;k++){var idx=(i-0.5)*S+k,v=y[Math.round(idx)];if(k)c.lineTo(EX(k),EY(v));else c.moveTo(EX(k),EY(v))}c.stroke()}
+    var px=EX(S/2+sim.phase),op=sim.open;
+    c.strokeStyle=op>0?OK:RED;c.lineWidth=2.5*d;c.setLineDash([]);
+    if(op>0){c.beginPath();c.moveTo(px,EY(sim.hi0));c.lineTo(px,EY(sim.lo1));c.stroke();c.beginPath();c.moveTo(px-6*d,EY(sim.hi0));c.lineTo(px+6*d,EY(sim.hi0));c.moveTo(px-6*d,EY(sim.lo1));c.lineTo(px+6*d,EY(sim.lo1));c.stroke()}
+    else{c.setLineDash([4*d,4*d]);c.lineWidth=1.5*d;c.beginPath();c.moveTo(px,T);c.lineTo(px,T+ph);c.stroke();c.setLineDash([])}
+    /* 数値 */
+    var tb=1000/R,tau=1000/(2*Math.PI*fc);
+    $('#o1t').textContent=(tb>=100?tb.toFixed(0):tb.toFixed(1))+' ns';
+    $('#o1tau').textContent=tau.toFixed(1)+' ns';
+    $('#o1open').textContent=op>0?(op*100).toFixed(0)+'%':'0% (閉じている)';
+    var v=$('#o1v');
+    if(op>=0.5){v.className='big ok';v.textContent='目は十分に開いている'}else if(op>0){v.className='big mid';v.textContent='閉じかけ'}else{v.className='big ng';v.textContent='目が閉じた: 0と1を見分けられない'}
+  }
+  function set(k,val){P[k]=+val;draw()}
+  $('#c1r').addEventListener('input',function(){set('ri',this.value)});
+  $('#c1f').addEventListener('input',function(){set('fi',this.value)});
+  $('#c1n').addEventListener('input',function(){set('nz',this.value)});
+  tries($('#t1'),[
+    ['10 Mb/s (3 MHz のLED)',{ri:5,fi:2},'1ビット(100 ns)は LEDの時定数(53 ns)の約2倍。LEDがほぼ明るさを変えきるので、目は開いています。'],
+    ['30 Mb/s',{ri:8,fi:2},'1ビット(33 ns)が LEDの時定数より短くなり、明るさを変えきる前に次のビットが来ます。0と1の波形が重なって<b>目が閉じます</b>。'],
+    ['30 Mb/s を 15 MHz のLEDで',{ri:8,fi:6},'受信側で青色の光だけを取り出すなどしてLEDの帯域を広げると、同じ速さでも目が開きます。それでも速くすれば、また閉じます。'],
+    ['閉じかけに雑音を足す',{ri:6,fi:2,nz:2},'目の開きは雑音に対する余裕です。閉じかけの目に雑音が加わると、0と1の境目がにじんで<b>誤りが出ます</b>。']
+  ],note,reset,function(o){for(var k in o)P[k]=o[k]},draw);
+  reset();DRAW.push(draw);draw();
+})();
+
+/* ==== ② エルミート対称 ==== */
+(function(){
+  var N=16,H=N/2,note=$('#n2'),strip=$('#strip2'),w2=$('#w2'),ed=$('#ed2'),P,r=rng(5);
+  var NOTE='サブキャリアをクリックして、右の信号点を動かしてみてください。k と 16−k は鏡写し(複素共役)なので、片方を動かすともう片方も動き、送信波形はいつも実数(紫の線が0)になります。';
+  function isData(k){return k>0&&k!==H&&(P.herm?k<H:true)}
+  function randPt(q){return [Math.floor(r()*q.L),Math.floor(r()*q.L)]}
+  function reset(){P={M:4,herm:true,sel:1,D:[]};r=rng(5);var q=QAM(P.M);for(var k=0;k<N;k++)P.D[k]=(k>0&&k!==H)?randPt(q):null;note.innerHTML=NOTE}
+  function X(){var q=QAM(P.M),re=new Float64Array(N),im=new Float64Array(N);
+    for(var k=1;k<N;k++){if(k===H)continue;var src=P.herm&&k>H?N-k:k,p=P.D[src];if(!p)continue;re[k]=lv(q,p[0]);im[k]=(P.herm&&k>H?-1:1)*lv(q,p[1])}
+    return {re:re,im:im}}
+  var PAL=['#5EE7FF','#5CE39A','#7AB8FF','#FF8AD8','#C6F16D','#4FD1C5','#E2E8F0'];
+  function hue(k){return PAL[(Math.min(k,N-k)-1)%PAL.length]}
+  /* 連続時間の波形 (負の周波数は k−N として扱う) */
+  function wave(Xs,only,T){var out={re:new Float64Array(T),im:new Float64Array(T)},s=1/Math.sqrt(N);
+    for(var t=0;t<T;t++){var tt=t/T*N,a=0,b=0;for(var k=0;k<N;k++){if(only!=null&&k!==only&&!(P.herm&&k===N-only))continue;var xr=Xs.re[k],xi=Xs.im[k];if(!xr&&!xi)continue;var f=k<=H?k:k-N,ph=2*Math.PI*f*tt/N,cs=Math.cos(ph),sn=Math.sin(ph);a+=xr*cs-xi*sn;b+=xr*sn+xi*cs}out.re[t]=a*s;out.im[t]=b*s}
+    return out}
+  function draw(){
+    var q=QAM(P.M),Xs=X();
+    segSet($('#c2h'),P.herm?1:0);segSet($('#c2m'),P.M);
+    /* サブキャリアの帯 */
+    var g=fit(strip),c=g.c,d=g.d,bw=g.w/N,pad=3*d,lh=16*d,bh=g.h-lh-2*pad;
+    for(var k=0;k<N;k++){
+      var x0=k*bw+pad,sz=Math.min(bw-2*pad,bh),cx=k*bw+bw/2,cy=pad+bh/2,used=k>0&&k!==H,mirror=P.herm&&k>H;
+      c.strokeStyle=k===P.sel?SILK:'#26304A';c.lineWidth=(k===P.sel?2:1)*d;c.setLineDash(mirror?[3*d,3*d]:[]);
+      c.strokeRect(cx-sz/2,cy-sz/2,sz,sz);c.setLineDash([]);
+      if(used){
+        c.fillStyle='rgba(154,166,194,.35)';for(var a=0;a<q.L;a++)for(var b=0;b<q.L;b++){c.beginPath();c.arc(cx+lv(q,a)*sz*.32,cy-lv(q,b)*sz*.32,Math.max(1,1*d),0,7);c.fill()}
+        if(Xs.re[k]||Xs.im[k]){c.fillStyle=hue(k);c.beginPath();c.arc(cx+Xs.re[k]*sz*.32,cy-Xs.im[k]*sz*.32,3.2*d,0,7);c.fill()}
+      }else{c.strokeStyle='rgba(154,166,194,.4)';c.lineWidth=1*d;c.beginPath();c.moveTo(cx-sz*.25,cy-sz*.25);c.lineTo(cx+sz*.25,cy+sz*.25);c.moveTo(cx+sz*.25,cy-sz*.25);c.lineTo(cx-sz*.25,cy+sz*.25);c.stroke()}
+      font(c,9,d);c.textAlign='center';c.textBaseline='top';c.fillStyle=used?(mirror?DIM:SILK):'rgba(154,166,194,.6)';
+      c.fillText(k+(mirror?'*':''),cx,pad+bh+3*d);
+    }
+    var sk=P.sel,mir=P.herm&&sk>H;
+    $('#o2s').textContent=P.herm?'* = 鏡写し(自動で決まる) / × = 使わない (0 と N/2)':'鏡写しなし: すべて自由';
+    $('#o2k').textContent='k = '+sk+(P.herm?'  ↔  鏡写し k = '+(N-sk):'');
+    /* 送信波形 */
+    var T=480,wv=wave(Xs,null,T),cw=wave(Xs,sk,T),smp=wave(Xs,null,N),mx=0,t;
+    for(t=0;t<T;t++)mx=Math.max(mx,Math.abs(wv.re[t]),Math.abs(wv.im[t]),Math.abs(cw.re[t]));mx=mx*1.1||1;
+    g=fit(w2);c=g.c;d=g.d;var L=10*d,Rr=10*d,Tp=10*d,Bt=18*d,pw=g.w-L-Rr,ph=g.h-Tp-Bt;
+    function WX(tt){return L+tt/N*pw}function WY(v){return Tp+(1-v/mx)/2*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();for(t=0;t<=N;t+=4){c.moveTo(WX(t),Tp);c.lineTo(WX(t),Tp+ph)}c.stroke();
+    c.fillStyle='rgba(255,107,122,.3)';c.beginPath();c.moveTo(WX(0),WY(0));for(t=0;t<T;t++)c.lineTo(WX(t/T*N),WY(Math.min(0,wv.re[t])));c.lineTo(WX(N),WY(0));c.closePath();c.fill();
+    c.strokeStyle='rgba(238,242,250,.5)';c.beginPath();c.moveTo(L,WY(0));c.lineTo(L+pw,WY(0));c.stroke();
+    function line(arr,col,lw,dash){c.strokeStyle=col;c.lineWidth=lw*d;c.setLineDash(dash||[]);c.beginPath();for(var t=0;t<T;t++){var yy=WY(arr[t]);if(t)c.lineTo(WX(t/T*N),yy);else c.moveTo(WX(t/T*N),yy)}c.stroke();c.setLineDash([])}
+    line(cw.re,hue(sk),1.6,[5*d,4*d]);
+    var imMax=0;for(t=0;t<N;t++)imMax=Math.max(imMax,Math.abs(smp.im[t]));
+    if(!P.herm||imMax>1e-9)line(wv.im,VIO,2);
+    line(wv.re,AMB,2.6);
+    c.fillStyle=AMB;for(t=0;t<N;t++){c.beginPath();c.arc(WX(t),WY(smp.re[t]),2.6*d,0,7);c.fill()}
+    font(c,9,d);c.fillStyle=DIM;c.textAlign='center';c.textBaseline='top';for(t=0;t<=N;t+=4)c.fillText('n='+t,Math.min(WX(t),g.w-14*d),Tp+ph+4*d);
+    $('#lg2c').style.borderColor=hue(sk);
+    /* 信号点エディタ */
+    g=fit(ed);c=g.c;d=g.d;var ecx=g.w/2,ecy=g.h/2,es=Math.min(g.w,g.h)*.34;
+    c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();c.moveTo(ecx-es*1.4,ecy);c.lineTo(ecx+es*1.4,ecy);c.moveTo(ecx,ecy-es*1.4);c.lineTo(ecx,ecy+es*1.4);c.stroke();
+    font(c,9,d);c.fillStyle=DIM;c.textAlign='left';c.textBaseline='top';c.fillText('実',ecx+es*1.4-10*d,ecy+3*d);c.fillText('虚',ecx+4*d,ecy-es*1.4);
+    for(var a2=0;a2<q.L;a2++)for(var b2=0;b2<q.L;b2++){c.strokeStyle='rgba(154,166,194,.6)';c.lineWidth=1.2*d;c.beginPath();c.arc(ecx+lv(q,a2)*es,ecy-lv(q,b2)*es,5*d,0,7);c.stroke()}
+    if(Xs.re[sk]||Xs.im[sk]){c.fillStyle=hue(sk);c.beginPath();c.arc(ecx+Xs.re[sk]*es,ecy-Xs.im[sk]*es,7*d,0,7);c.fill()}
+    if(mir){font(c,10,d);c.fillStyle=DIM;c.textAlign='center';c.textBaseline='bottom';c.fillText('鏡写し: k = '+(N-sk)+' を上下反転した点',ecx,g.h-4*d)}
+    ED={cx:ecx,cy:ecy,s:es,d:d};
+    /* 数値 */
+    var nd=0;for(var k2=1;k2<N;k2++)if(isData(k2)&&P.D[k2])nd++;
+    var mn=Infinity,p2=0,avg=0;for(t=0;t<N;t++){mn=Math.min(mn,smp.re[t]);p2=Math.max(p2,smp.re[t]*smp.re[t]);avg+=smp.re[t]*smp.re[t]}avg/=N;
+    $('#o2n').innerHTML=nd+' / '+N+(P.herm?'':tag('ng','でも複素数'));
+    $('#o2im').innerHTML=imMax<1e-9?'0'+tag('ok','実数'):imMax.toFixed(2)+tag('ng','光では出せない');
+    $('#o2min').innerHTML=mn.toFixed(2)+(mn<-1e-9?tag('ng','マイナス'):'');
+    $('#o2p').textContent=avg>1e-12?(10*Math.log10(p2/avg)).toFixed(1)+' dB':'—';
+    $('#z2').disabled=!P.D[P.herm&&sk>H?N-sk:sk];
+  }
+  var ED={};
+  function selectAt(k){if(k<1||k>=N||k===H)return;P.sel=k;draw()}
+  function editK(){return P.herm&&P.sel>H?N-P.sel:P.sel}
+  strip.addEventListener('click',function(e){var rc=strip.getBoundingClientRect();selectAt(Math.floor((e.clientX-rc.left)/rc.width*N))});
+  strip.addEventListener('keydown',function(e){var st=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!st)return;e.preventDefault();var k=P.sel;do{k=(k+st+N)%N}while(k===0||k===H);selectAt(k)});
+  ed.addEventListener('click',function(e){
+    var rc=ed.getBoundingClientRect(),x=((e.clientX-rc.left)*ED.d-ED.cx)/ED.s,y=-((e.clientY-rc.top)*ED.d-ED.cy)/ED.s,q=QAM(P.M);
+    var pI=detp(q,x),pQ=detp(q,y);if(P.herm&&P.sel>H)pQ=q.L-1-pQ;P.D[editK()]=[pI,pQ];draw();
+  });
+  ed.addEventListener('keydown',function(e){
+    var dx={ArrowLeft:-1,ArrowRight:1}[e.key]||0,dy={ArrowUp:1,ArrowDown:-1}[e.key]||0;if(!dx&&!dy)return;e.preventDefault();
+    var q=QAM(P.M),k=editK(),p=P.D[k]||[0,0];if(P.herm&&P.sel>H)dy=-dy;
+    P.D[k]=[Math.max(0,Math.min(q.L-1,p[0]+dx)),Math.max(0,Math.min(q.L-1,p[1]+dy))];draw();
+  });
+  $('#z2').addEventListener('click',function(){P.D[editK()]=null;draw()});
+  segOn($('#c2h'),function(v){P.herm=v==='1';if(!P.herm){var q=QAM(P.M);for(var k=H+1;k<N;k++)P.D[k]=randPt(q)}if(P.herm&&P.sel>H)P.sel=N-P.sel;draw()});
+  segOn($('#c2m'),function(v){P.M=+v;var q=QAM(P.M);for(var k=1;k<N;k++)if(k!==H)P.D[k]=randPt(q);draw()});
+  $('#r2').addEventListener('click',function(){var q=QAM(P.M);for(var k=1;k<N;k++)if(k!==H)P.D[k]=randPt(q);draw()});
+  tries($('#t2'),[
+    ['エルミート対称を外す',function(){P.herm=false;var q=QAM(P.M);for(var k=H+1;k<N;k++)P.D[k]=randPt(q)},'鏡写しをやめて、16個すべてに自由な値を置きました。IFFTの出力に<b>虚部(紫)</b>が現れます。LEDは明るさ(実数)しか出せないので、このままでは送れません。'],
+    ['サブキャリアを1つだけ',function(){for(var k=2;k<N;k++)P.D[k]=null;P.sel=1},'k = 1 だけにすると、波形は1周期のコサイン波になります。k と鏡写しの N−k の虚部が打ち消し合って、実数だけが残ります。右で信号点を動かすと、波の位相と振幅が変わります。'],
+    ['全部同じ値にそろえる',function(){var q=QAM(P.M);for(var k=1;k<N;k++)if(k!==H)P.D[k]=[q.L-1,q.L-1]},'全サブキャリアの位相がそろうと、一瞬だけ高い山ができます(<b>PAPR が大きい</b>)。OFDMの波形は山が高く、マイナス側にも大きく振れます。これが次の③の問題です。']
+  ],note,reset,function(f){f()},draw);
+  reset();DRAW.push(draw);draw();
+})();
+
+/* ==== ③ DCO-OFDM と ACO-OFDM ==== */
+var N3=64;
+function dataIdx(mode){var a=[];for(var k=1;k<N3/2;k++)if(mode==='dco'||k%2)a.push(k);return a}
+/* nsym シンボル送受信。full=true なら描画用に ゆがみ・散布図・波形 も返す */
+function run3(mode,M,beta,ebdb,nsym,r,full){
+  var q=QAM(M),idx=dataIdx(mode),nd=idx.length,sig=Math.sqrt(2*nd/N3),bias=mode==='dco'?beta*sig:0,K=mode==='dco'?Phi(beta):0.5;
+  var tx=[],xcs=[],E=0,dcs=0,clip=0,s,n,j,k,x0=null,xc0=null;
+  for(s=0;s<nsym;s++){
+    var re=new Float64Array(N3),im=new Float64Array(N3),t=[];
+    for(j=0;j<nd;j++){k=idx[j];var pI=Math.floor(r()*q.L),pQ=Math.floor(r()*q.L);t.push(pI,pQ);re[k]=lv(q,pI);im[k]=lv(q,pQ);re[N3-k]=re[k];im[N3-k]=-im[k]}
+    fft(re,im,true);
+    var xc=new Float64Array(N3);for(n=0;n<N3;n++){var v=re[n]+bias;if(v<0){clip++;v=0}xc[n]=v;E+=v*v;dcs+=v}
+    if(s===0){x0=Float64Array.from(re);xc0=xc}
+    tx.push(t);xcs.push(xc);
+  }
+  var bits=nd*q.b,Eb=E/nsym/bits,sn=Math.sqrt(Eb/(2*Math.pow(10,ebdb/10))),errs=0,pts=full?[]:null,dist=full?new Float64Array(N3/2+1):null;
+  for(s=0;s<nsym;s++){
+    var yr=new Float64Array(N3),yi=new Float64Array(N3);
+    if(full){for(n=0;n<N3;n++)yr[n]=xcs[s][n];fft(yr,yi,false);
+      for(k=1;k<=N3/2;k++){var di=idx.indexOf(k),dr=yr[k],dm=yi[k];if(di>=0){dr-=K*lv(q,tx[s][2*di]);dm-=K*lv(q,tx[s][2*di+1])}dist[k]+=dr*dr+dm*dm}
+      yr=new Float64Array(N3);yi=new Float64Array(N3)}
+    for(n=0;n<N3;n++)yr[n]=xcs[s][n]+sn*gauss(r);
+    fft(yr,yi,false);
+    for(j=0;j<nd;j++){k=idx[j];var zr=yr[k]/K,zi=yi[k]/K,dI=detp(q,zr),dQ=detp(q,zi),e=popc(gray(dI)^gray(tx[s][2*j]))+popc(gray(dQ)^gray(tx[s][2*j+1]));errs+=e;if(pts)pts.push(zr,zi,e)}
+  }
+  if(dist)for(k=0;k<dist.length;k++)dist[k]/=nsym;
+  return {q:q,idx:idx,nd:nd,sig:sig,bias:bias,K:K,Eb:Eb,sn:sn,errs:errs,bits:bits*nsym,pts:pts,dist:dist,x0:x0,xc0:xc0,
+    pAvg:E/(nsym*N3),dc:dcs/(nsym*N3),clip:clip/(nsym*N3)};
+}
+(function(){
+  var note=$('#n3'),P,LAB={id:0,res:null};
+  var NOTE='DCO(底上げしてから下を切る)と ACO(奇数番目だけ使って下を全部切る)を切り替えて比べてください。Eb/N0 は DC の電力も含めた「電気の」エネルギーで数えています。';
+  function reset(){P={mode:'dco',M:16,beta:2,eb:20,pair:P?P.pair:4};note.innerHTML=NOTE}
+  function draw(){
+    segSet($('#c3m'),P.mode);segSet($('#c3q'),P.M);segSet($('#c3p'),P.pair);
+    $('#c3b').value=P.beta;$('#c3b').disabled=P.mode!=='dco';$('#v3b').textContent=P.mode==='dco'?P.beta.toFixed(1):'— (ACOは0)';
+    $('#c3e').value=P.eb;$('#v3e').textContent=P.eb+' dB';
+    var R=run3(P.mode,P.M,P.beta,P.eb,60,rng(1234),true),q=R.q;
+    /* 波形 */
+    var g=fit($('#w3')),c=g.c,d=g.d,L=10*d,Rr=10*d,T=10*d,B=16*d,pw=g.w-L-Rr,ph=g.h-T-B,n;
+    var raw=[],lo=0,hi=0;for(n=0;n<N3;n++){raw.push(R.x0[n]+R.bias);lo=Math.min(lo,raw[n]);hi=Math.max(hi,raw[n])}
+    lo=Math.min(lo,-0.1*hi)-0.1;hi=hi*1.08+0.05;
+    function X(n){return L+(n+.5)/N3*pw}function Y(v){return T+(hi-v)/(hi-lo)*ph}
+    var bw=pw/N3;
+    for(n=0;n<N3;n++){var v=R.xc0[n];c.fillStyle='rgba(255,197,61,.7)';c.fillRect(X(n)-bw*.4,Y(v),bw*.8,Y(0)-Y(v));
+      if(raw[n]<0){c.fillStyle=RED;c.fillRect(X(n)-bw*.4,Y(0),bw*.8,Y(raw[n])-Y(0))}}
+    c.strokeStyle='rgba(238,242,250,.45)';c.lineWidth=1.5*d;c.beginPath();for(n=0;n<N3;n++){if(n)c.lineTo(X(n),Y(raw[n]));else c.moveTo(X(n),Y(raw[n]))}c.stroke();
+    c.strokeStyle='rgba(238,242,250,.6)';c.lineWidth=1;c.beginPath();c.moveTo(L,Y(0));c.lineTo(L+pw,Y(0));c.stroke();
+    font(c,9,d);c.textBaseline='bottom';c.textAlign='left';var zl='0 (消灯)',zw=c.measureText(zl).width;c.fillStyle='rgba(6,10,19,.85)';c.fillRect(L,Y(0)-14*d,zw+6*d,12*d);c.fillStyle=DIM;c.fillText(zl,L+3*d,Y(0)-3*d);
+    if(P.mode==='dco'){c.setLineDash([5*d,4*d]);c.strokeStyle=AMB;c.beginPath();c.moveTo(L,Y(R.bias));c.lineTo(L+pw,Y(R.bias));c.stroke();c.setLineDash([]);c.fillStyle=AMB;c.textAlign='right';c.fillText('バイアス',L+pw-2*d,Y(R.bias)-2*d)}
+    $('#o3w').textContent=P.mode==='dco'?'底上げ → 0未満を切る':'マイナスを全部切る';
+    /* 散布図 */
+    g=fit($('#k3'));c=g.c;d=g.d;var cx=g.w/2,cy=g.h/2,lim=(q.L-1)/q.nf*1.4,sc=Math.min(g.w,g.h)/2/lim*0.95;
+    c.strokeStyle=GRID;c.lineWidth=1;c.beginPath();c.moveTo(0,cy);c.lineTo(g.w,cy);c.moveTo(cx,0);c.lineTo(cx,g.h);c.stroke();
+    var pts=R.pts,rad=Math.max(1,(P.M>16?1.1:1.5)*d);
+    for(var i=0;i<pts.length;i+=3){var ex=cx+pts[i]*sc,ey=cy-pts[i+1]*sc;if(ex<0||ex>g.w||ey<0||ey>g.h)continue;c.fillStyle=pts[i+2]?'rgba(255,107,122,.9)':'rgba(94,231,255,.4)';c.fillRect(ex-rad,ey-rad,2*rad,2*rad)}
+    c.fillStyle=SILK;for(var a=0;a<q.L;a++)for(var b=0;b<q.L;b++){c.beginPath();c.arc(cx+lv(q,a)*sc,cy-lv(q,b)*sc,Math.max(1.5,1.6*d),0,7);c.fill()}
+    var ber=R.errs/R.bits;
+    $('#o3ber').innerHTML='誤り '+R.errs+' / '+R.bits+' ビット'+(R.errs?tag(ber<=3.8e-3?'mid':'ng','BER '+sci(ber)):tag('ok','誤りなし'));
+    /* サブキャリアごとの成分 */
+    g=fit($('#sp3'));c=g.c;d=g.d;L=30*d;Rr=8*d;T=10*d;B=20*d;pw=g.w-L-Rr;ph=g.h-T-B;
+    var top=5,bot=-50,K2=R.K*R.K,NK=N3/2;
+    function SX(k){return L+(k-.5)/NK*pw}function SY(db){return T+(top-Math.max(bot,Math.min(top,db)))/(top-bot)*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;font(c,9,d);c.fillStyle=DIM;c.textAlign='right';c.textBaseline='middle';
+    for(var db=0;db>=bot;db-=10){c.beginPath();c.moveTo(L,SY(db));c.lineTo(L+pw,SY(db));c.stroke();c.fillText(db,L-4*d,SY(db))}
+    var sbw=pw/NK;
+    for(var k=1;k<=NK;k++){var isD=R.idx.indexOf(k)>=0,dd=10*Math.log10(R.dist[k]/K2+1e-30);
+      if(isD){c.fillStyle='rgba(94,231,255,.8)';c.fillRect(SX(k)-sbw*.4,SY(0),sbw*.8,SY(bot)-SY(0))}
+      if(dd>bot){c.fillStyle=RED;c.fillRect(SX(k)-sbw*(isD?.18:.4),SY(dd),sbw*(isD?.36:.8),SY(bot)-SY(dd))}}
+    var ndb=10*Math.log10(R.sn*R.sn/K2);c.setLineDash([5*d,4*d]);c.strokeStyle=DIM;c.lineWidth=1.3*d;c.beginPath();c.moveTo(L,SY(ndb));c.lineTo(L+pw,SY(ndb));c.stroke();c.setLineDash([]);
+    c.textAlign='center';c.textBaseline='top';c.fillStyle=DIM;[1,8,16,24,32].forEach(function(k){c.fillText('k='+k,Math.min(SX(k),g.w-16*d),T+ph+5*d)});
+    /* 数値 */
+    var sd=0,cnt=0;R.idx.forEach(function(k){sd+=R.dist[k];cnt++});sd=10*Math.log10(sd/cnt/K2+1e-30);
+    var dcFrac=R.dc*R.dc/R.pAvg;
+    $('#o3st').innerHTML=[
+      ['1シンボルで送るビット',(R.nd*q.b)+' <small>('+R.nd+'本 × '+q.b+')</small>'],
+      ['平均の明るさ',(R.dc/R.sig).toFixed(2)+' <small>σ</small>'],
+      ['電力のうちDC(照明)ぶん',(dcFrac*100).toFixed(0)+'%'],
+      ['切り取られたサンプル',(R.clip*100).toFixed(1)+'%'],
+      ['データへのゆがみ',sd<-60?'なし':sd.toFixed(1)+' <small>dB</small>']
+    ].map(function(a){return '<div class="st"><div class="k">'+a[0]+'</div><div class="v">'+a[1]+'</div></div>'}).join('');
+    drawLab();
+  }
+  /* ---- BER曲線 ---- */
+  var EB=[];for(var e=0;e<=30;e+=2)EB.push(e);
+  function drawLab(){
+    var g=fit($('#b3')),c=g.c,d=g.d,L=40*d,Rr=12*d,T=12*d,B=22*d,pw=g.w-L-Rr,ph=g.h-T-B;
+    function X(e){return L+e/30*pw}function Y(lb){return T+(-Math.max(-5,Math.min(0,lb)))/5*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;font(c,9,d);c.fillStyle=DIM;c.textAlign='right';c.textBaseline='middle';
+    for(var p=0;p>=-5;p--){c.beginPath();c.moveTo(L,Y(p));c.lineTo(L+pw,Y(p));c.stroke();c.fillText('10'+sup(p),L-4*d,Y(p))}
+    c.textAlign='center';c.textBaseline='top';for(var e2=0;e2<=30;e2+=5){c.beginPath();c.moveTo(X(e2),T);c.lineTo(X(e2),T+ph);c.stroke();c.fillText(e2+(e2===30?' dB':''),Math.min(X(e2),g.w-16*d),T+ph+5*d)}
+    c.setLineDash([5*d,4*d]);c.strokeStyle=DIM;c.beginPath();c.moveTo(L,Y(-3));c.lineTo(L+pw,Y(-3));c.stroke();c.setLineDash([]);
+    c.textAlign='left';c.textBaseline='bottom';c.fillText('BER 10⁻³',L+4*d,Y(-3)-2*d);
+    var res=LAB.res;
+    if(!res){c.textAlign='center';c.textBaseline='middle';c.fillStyle=DIM;font(c,11,d);c.fillText('「計算する」を押すと描きます',L+pw/2,T+ph/2);return}
+    res.curves.forEach(function(cv){
+      c.strokeStyle=cv.col;c.fillStyle=cv.col;c.lineWidth=2*d;c.beginPath();var st=false;
+      cv.ber.forEach(function(b,i){if(b==null||b<=0){st=false;return}var x=X(EB[i]),y=Y(Math.log10(b));if(st)c.lineTo(x,y);else c.moveTo(x,y);st=true});c.stroke();
+      cv.ber.forEach(function(b,i){if(b==null||b<=0)return;c.beginPath();c.arc(X(EB[i]),Y(Math.log10(b)),2.6*d,0,7);c.fill()});
+    });
+    font(c,10,d);c.textAlign='right';c.textBaseline='top';
+    res.curves.forEach(function(cv,i){c.fillStyle=cv.col;c.fillText(cv.name,L+pw-4*d,T+4*d+i*15*d)});
+  }
+  function need(ber){for(var i=1;i<EB.length;i++){var a=ber[i-1],b=ber[i];if(a!=null&&b!=null&&a>1e-3&&b<=1e-3&&b>0){var la=Math.log10(a),lb=Math.log10(b);return EB[i-1]+(la+3)/(la-lb)*(EB[i]-EB[i-1])}if(a!=null&&b===0&&a>1e-3)return EB[i]}return null}
+  function runLab(){
+    var id=++LAB.id,m=+P.pair,beta=P.beta;
+    var curves=[{mode:'dco',M:m,beta:beta,col:AMB,name:'DCO '+(m===4?'QPSK':'16QAM')+' (β='+beta.toFixed(1)+')',ber:[]},{mode:'aco',M:m*m,beta:0,col:CYA,name:'ACO '+(m===4?'16QAM':'256QAM'),ber:[]}];
+    LAB.res={curves:curves};var ci=0,pi=0,acc={e:0,b:0},zeros=0;
+    $('#go3').disabled=true;$('#n3lab').textContent='計算中…';
+    function step(){
+      if(id!==LAB.id)return;
+      var t0=performance.now(),cv=curves[ci];
+      while(performance.now()-t0<25){
+        var r=run3(cv.mode,cv.M,cv.beta,EB[pi],40,Math.random,false);acc.e+=r.errs;acc.b+=r.bits;
+        if(acc.e>=150||acc.b>=4e5){
+          var b=acc.e/acc.b;cv.ber[pi]=b;acc={e:0,b:0};zeros=b===0?zeros+1:0;pi++;
+          if(pi>=EB.length||zeros>=1){for(;pi<EB.length;pi++)cv.ber[pi]=null;ci++;pi=0;zeros=0}
+          drawLab();$('#o3lab').textContent=ci<curves.length?curves[ci].name+' / '+EB[pi]+' dB':'';
+          if(ci>=curves.length){done();return}
+          cv=curves[ci];
+        }
+      }
+      setTimeout(step,0);
+    }
+    function done(){
+      $('#go3').disabled=false;$('#o3lab').textContent='';
+      var a=need(curves[0].ber),b=need(curves[1].ber);
+      function f(v){return v==null?'30 dB でも届かない':'約 '+v.toFixed(1)+' dB'}
+      var msg='BER 10⁻³ に必要な Eb/N0: <b>'+curves[0].name+' '+f(a)+'</b> / <b>'+curves[1].name+' '+f(b)+'</b>。';
+      if(a!=null&&b!=null)msg+=Math.abs(a-b)<0.8?' ほぼ互角です。':a<b?' この組み合わせでは DCO が有利。':' この組み合わせでは ACO が有利。';
+      msg+=m===4?' ACO は信号点を16個に増やしても、DCに電力を使わないぶん健闘します。速めの組み合わせも試してみてください。':' ACO は信号点が256個と細かくなるぶん、雑音に弱くなります。';
+      msg+=' DCO はバイアスが小さすぎると誤りが下げ止まり、大きすぎると電力の無駄で曲線が右にずれます。β を変えて計算し直してみてください。';
+      $('#n3lab').innerHTML=msg;
+    }
+    step();
+  }
+  segOn($('#c3m'),function(v){P.mode=v;draw()});
+  segOn($('#c3q'),function(v){P.M=+v;draw()});
+  segOn($('#c3p'),function(v){P.pair=+v;segSet($('#c3p'),P.pair)});
+  $('#c3b').addEventListener('input',function(){P.beta=+this.value;draw()});
+  $('#c3e').addEventListener('input',function(){P.eb=+this.value;draw()});
+  $('#go3').addEventListener('click',runLab);
+  tries($('#t3'),[
+    ['DCO: バイアスを下げる (β = 0.5)',{mode:'dco',beta:0.5,eb:35},'バイアスが小さいと、波形の下側が大きく切り取られます。ゆがみ(赤)がすべてのサブキャリアに広がり、雑音をほとんどなくしても<b>信号点がにじんだまま</b>です。'],
+    ['DCO: バイアスを上げる (β = 3.5)',{mode:'dco',beta:3.5,eb:16},'バイアスを上げると切り取りはなくなりますが、電力のほとんどが「底上げ」に使われます。同じ Eb/N0 でも信号に回る電力が減り、<b>雑音で信号点が広がります</b>。照明としては明るくなります。'],
+    ['ACO にする',{mode:'aco',eb:20},'奇数番目だけにデータを載せてマイナス側を全部切ると、ゆがみ(赤)は<b>偶数番目にだけ</b>落ち、データ(水色)は無傷です。そのかわり運べるビットは半分以下。平均の明るさも低くなります。'],
+    ['64QAM を DCO で',{mode:'dco',M:64,beta:2,eb:40},'信号点が多いほど、わずかなゆがみでも隣の点に化けます。雑音がほぼない(40 dB)のに誤りが残るのは、<b>切り取りのゆがみ</b>のせいです。バイアスを上げると減ります。']
+  ],note,function(){var pr=P.pair;reset();P.pair=pr},function(o){for(var k in o)P[k]=o[k]},draw);
+  reset();DRAW.push(draw);draw();
+  $('#n3lab').textContent='同じ速さ(1シンボルのビット数が同じ)になる組み合わせで、DCO と ACO の BER 曲線を比べます。ページを開くと自動で1回計算します。';
+  setTimeout(runLab,400);
+})();
+
+/* ==== ④ ビット割り当て ==== */
+(function(){
+  var N=128,ND=N/2-1,TGT=3.8e-3,FS=[1,2,3,5,8,10,15,20,30,50],BS=[5,10,20,30,50,70,100,150,200],note=$('#n4'),P;
+  var COL=['#2A3450','#3b528b','#31688e','#26828e','#1f9e89','#35b779','#6ece58','#b5de2b','#fde725'];
+  var QN=['使わない','BPSK','QPSK','8QAM','16QAM','32QAM','64QAM','128QAM','256QAM'];
+  var NOTE='低い周波数ほどSNRが高く、たくさんのビットを載せられます。LEDの帯域(点線)を超えた先でも、SNRが残っている限りビットを載せられるのが OFDM の強みです。';
+  $('#lg4').innerHTML=COL.map(function(c,b){return '<span><span class="sw" style="background:'+c+'"></span>'+(b?b+' '+QN[b]:QN[0])+'</span>'}).join('')+'<span><span class="sw" style="background:transparent;border:2px solid var(--bad)"></span>BERが目標より悪い</span>';
+  function berQ(b,snr){if(b===1)return Qf(Math.sqrt(2*snr));return 4/b*(1-Math.pow(2,-b/2))*Qf(Math.sqrt(3*snr/(Math.pow(2,b)-1)))}
+  var NEED=[0];for(var b=1;b<=8;b++){var lo=-10,hi=60;for(var it=0;it<50;it++){var mid=(lo+hi)/2;if(berQ(b,Math.pow(10,mid/10))>TGT)lo=mid;else hi=mid}NEED[b]=hi}
+  function ookLimit(fc){var lo=0.1,hi=2000;for(var i=0;i<30;i++){var m=Math.sqrt(lo*hi);if(eyeSim(m,fc,0,120).open>=0.5)lo=m;else hi=m}return lo}
+  var OOK={};
+  function reset(){P={fi:2,bi:3,snr:30,mode:'ad'};note.innerHTML=NOTE}
+  function draw(){
+    var fc=FS[P.fi],B=BS[P.bi],df=B/(N/2),s0=P.snr,rows=[],R=0,eb=0,nb=0,used=0,k;
+    $('#c4f').value=P.fi;$('#v4f').textContent=fc+' MHz';$('#c4b').value=P.bi;$('#v4b').textContent=B+' MHz';$('#c4s').value=s0;$('#v4s').textContent=s0+' dB';segSet($('#c4m'),P.mode);
+    for(k=1;k<=ND;k++){var f=k*df,sdb=s0-10*Math.log10(1+(f/fc)*(f/fc)),snr=Math.pow(10,sdb/10),bb;
+      if(P.mode==='ad'){bb=0;for(var t=8;t>=1;t--)if(sdb>=NEED[t]){bb=t;break}}else bb=+P.mode;
+      var be=bb?berQ(bb,snr):0;rows.push({f:f,sdb:sdb,b:bb,ber:be});R+=bb*df;eb+=bb*be;nb+=bb;if(bb)used++}
+    var avg=nb?eb/nb:0;
+    /* グラフ */
+    var g=fit($('#c4')),c=g.c,d=g.d,L=32*d,Rr=10*d,T=12*d,Bt=22*d,pw=g.w-L-Rr,ph=g.h-T-Bt,top=60,bot=-10;
+    function X(f){return L+f/B*pw}function Y(db){return T+(top-Math.max(bot,Math.min(top,db)))/(top-bot)*ph}
+    c.strokeStyle=GRID;c.lineWidth=1;font(c,9,d);c.fillStyle=DIM;c.textAlign='right';c.textBaseline='middle';
+    for(var db=0;db<=60;db+=20){c.beginPath();c.moveTo(L,Y(db));c.lineTo(L+pw,Y(db));c.stroke();c.fillText(db+'dB',L-4*d,Y(db))}
+    var bw=pw/(N/2);
+    rows.forEach(function(r){var x=X(r.f)-bw*.42,w=bw*.84,y=Y(r.sdb),y0=Y(bot);c.fillStyle=COL[r.b];c.fillRect(x,y,w,y0-y);
+      if(r.b&&r.ber>TGT){c.strokeStyle=RED;c.lineWidth=Math.max(1,1.2*d);c.strokeRect(x,y,w,y0-y)}});
+    c.textAlign='center';c.textBaseline='top';c.fillStyle=DIM;
+    var step=B<=10?1:B<=30?5:B<=70?10:B<=150?25:50;for(var fx=0;fx<=B+1e-9;fx+=step)c.fillText(fx+(fx+step>B?' MHz':''),Math.max(10*d,Math.min(X(fx),g.w-20*d)),T+ph+5*d);
+    if(fc<B){c.setLineDash([5*d,4*d]);c.strokeStyle=AMB;c.lineWidth=1.5*d;c.beginPath();c.moveTo(X(fc),T);c.lineTo(X(fc),T+ph);c.stroke();c.setLineDash([]);
+      c.fillStyle=AMB;c.textAlign='left';c.textBaseline='top';c.fillText('LEDの帯域 '+fc+' MHz',X(fc)+4*d,T+2*d)}
+    if(P.mode!=='ad'){var nd2=NEED[+P.mode];c.setLineDash([3*d,3*d]);c.strokeStyle=RED;c.lineWidth=1.3*d;c.beginPath();c.moveTo(L,Y(nd2));c.lineTo(L+pw,Y(nd2));c.stroke();c.setLineDash([]);
+      c.fillStyle=RED;c.textAlign='right';c.textBaseline='bottom';c.fillText(QN[+P.mode]+'に必要なSNR',L+pw-2*d,Y(nd2)-2*d)}
+    /* 数値 */
+    if(OOK[fc]==null)OOK[fc]=ookLimit(fc);
+    var ok=avg<=TGT;
+    $('#o4r').className='big '+(ok?'ok':'ng');$('#o4r').textContent=(R>=1000?(R/1000).toFixed(2)+' Gb/s':R.toFixed(0)+' Mb/s')+(ok?'':' (誤りすぎ)');
+    $('#o4x').textContent=(R/fc).toFixed(0)+' 倍';
+    $('#o4ook').textContent='約 '+OOK[fc].toFixed(0)+' Mb/s';
+    $('#o4ber').innerHTML=(avg?sci(avg):'0')+tag(ok?'ok':'ng',ok?'目標以下':'目標より悪い');
+    $('#o4n').textContent=used+' / '+ND;
+  }
+  function set(k,v){P[k]=+v;draw()}
+  $('#c4f').addEventListener('input',function(){set('fi',this.value)});
+  $('#c4b').addEventListener('input',function(){set('bi',this.value)});
+  $('#c4s').addEventListener('input',function(){set('snr',this.value)});
+  segOn($('#c4m'),function(v){P.mode=v;draw()});
+  tries($('#t4'),[
+    ['全部16QAMで帯域を広げる',{mode:'4',bi:6},'全サブキャリアに16QAMを載せたまま100 MHzまで広げると、LEDの帯域より上ではSNRが足りず、<b>赤枠のサブキャリアで誤りだらけ</b>になります。速さの数字は大きくても、使いものになりません。'],
+    ['SNRに合わせて割り当てる',{mode:'ad',bi:6},'サブキャリアごとにSNRに合わせて信号点の数を変えると、どこも目標のBERを満たします。<b>SNRが足りない高い周波数は使わない</b>(灰色)ので、帯域を広げても速さはある所で頭打ちになります。'],
+    ['LEDの帯域を 15 MHz に',{mode:'ad',fi:6,bi:6},'受信側で青色の光だけを取り出すなどしてLEDの帯域を広げると、同じSNRでも高い周波数まで使え、<b>数百Mb/s</b>に届きます。'],
+    ['SNRを 40 dB に',{mode:'ad',snr:40,bi:5},'受信光が強くSNRが高いと、低い周波数に256QAMを載せられ、LEDの帯域の外でもビットを載せ続けられます。']
+  ],note,reset,function(o){for(var k in o)P[k]=o[k]},draw);
+  reset();DRAW.push(draw);draw();
+})();
+
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){DRAW.forEach(function(f){f()})});
+})();
+</script>
+</body>
+</html>
