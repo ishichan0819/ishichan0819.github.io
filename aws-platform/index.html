@@ -1,0 +1,1180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AWS 基盤パズル — プラットフォームエンジニアリングを組み立てて学ぶ</title>
+<meta name="description" content="ランダムに出るお題に合わせて、AWSのサービスのブロックを線でつなぎ、プラットフォーム(共通基盤)を組み立てる学習パズル。答え合わせでは線ごとの理由と、AWS公式資料や大手ITの事例を示す。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;--rule:#C9D0DE;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1080px;margin:0 auto;padding:28px 16px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+.lede{color:var(--muted);margin:0 0 18px;max-width:44em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:0 0 20px}
+.how div{background:var(--room);color:var(--silk);border-radius:12px;padding:12px 14px;font-size:.88rem;line-height:1.7;border:1px solid var(--edge)}
+.how b{color:var(--led);display:block;font-family:var(--dot);font-weight:400;margin-bottom:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 14px;color:var(--silk);border:1px solid var(--edge)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.bar .l{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+.bar .l:last-child{flex:1 1 260px;justify-content:flex-end}
+#pick{flex:1 1 180px;min-width:0;width:100%;max-width:340px}
+.pill{font-family:var(--dot);font-size:.75rem;padding:1px 9px;border-radius:999px;border:1px solid var(--edge);color:var(--silk-dim)}
+.pill.lv1{color:var(--ok);border-color:var(--ok)}.pill.lv2{color:var(--led);border-color:var(--led)}.pill.lv3{color:var(--bad);border-color:var(--bad)}
+select{font:inherit;font-size:.82rem;padding:5px 8px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk);max-width:100%}
+.btn{font:inherit;font-weight:700;font-size:.84rem;min-height:36px;padding:4px 13px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn.sub{border-color:var(--edge);color:var(--silk-dim)}
+.btn:disabled{opacity:.4;cursor:default}
+h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;margin:10px 0 6px}
+.story{margin:0 0 10px;color:#C9D1E3;font-size:.95rem;max-width:52em}
+.reqs{margin:0 0 12px;padding:0;list-style:none;display:grid;gap:4px}
+.reqs li{display:flex;gap:8px;align-items:flex-start;font-size:.9rem;background:var(--room-deep);border:1px solid var(--edge);border-radius:8px;padding:5px 10px}
+.reqs .no{font-family:var(--dot);color:var(--led);min-width:1.4em}
+.reqs .st{margin-left:auto;font-family:var(--dot);font-size:.78rem;white-space:nowrap;padding-left:8px}
+.reqs .st.ok{color:var(--ok)}.reqs .st.part{color:var(--led)}.reqs .st.ng{color:var(--bad)}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}
+.tools .cnt{font-family:var(--dot);font-size:.85rem;color:var(--silk-dim);margin-right:auto}
+.tools .cnt b{color:var(--silk);font-weight:400}
+
+.board{position:relative;background:#0A0F1A;border:1px solid var(--edge);border-radius:12px;overflow:hidden;min-height:200px;
+  background-image:radial-gradient(rgba(238,242,250,.07) 1px,transparent 1px);background-size:22px 22px}
+.board svg{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.board svg .hit{pointer-events:stroke;cursor:pointer}
+.blk{position:absolute;height:74px;display:flex;flex-direction:column;justify-content:center;gap:0;text-align:left;padding:5px 8px 5px 13px;border-radius:10px;
+  border:1.5px solid #2B3654;background:#131C2E;color:var(--silk);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;
+  transition:left .4s ease,top .4s ease,width .4s ease,box-shadow .12s,border-color .12s,opacity .2s;z-index:1}
+.blk::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+.blk .ct{font-size:.6rem;color:var(--c);line-height:1.3}
+.blk .nm{font-weight:700;font-size:.8rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.blk .rl{font-size:.64rem;color:var(--silk-dim);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk:hover{border-color:#44527A}
+.blk.nb{border-color:rgba(255,197,61,.55)}
+.blk.sel{border-color:var(--led);box-shadow:0 0 0 3px rgba(255,197,61,.35);z-index:2}
+.blk.drag{transition:box-shadow .12s;cursor:grabbing;z-index:3}
+.blk.x{opacity:.5}
+.blk.hasb .ct{padding-right:58px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .bdg{position:absolute;right:5px;top:4px;font-family:var(--dot);font-size:.58rem;line-height:1.4;padding:0 5px;border-radius:4px;border:1px solid}
+.blk .bdg.x{color:var(--bad);border-color:var(--bad);background:#1A0E14}
+.blk .bdg.alt{color:var(--wave);border-color:var(--wave);background:#0A1A20}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.72rem;color:var(--silk-dim);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.hint{font-size:.74rem;color:var(--silk-dim);margin-top:4px;line-height:1.6}
+.conns{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:1.6em}
+.conns .c{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;background:var(--room-deep);border:1px solid var(--edge);border-radius:999px;padding:1px 4px 1px 10px}
+.conns .c.ok{border-color:var(--ok)}.conns .c.bad{border-color:var(--bad)}.conns .c.neu{border-color:var(--silk-dim)}
+.conns .c button{font:inherit;font-size:.8rem;line-height:1;background:transparent;border:0;color:var(--silk-dim);cursor:pointer;padding:3px 6px;border-radius:999px}
+.conns .c button:hover{color:var(--bad)}
+.conns .empty{font-size:.74rem;color:var(--silk-dim)}
+.live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+.result{margin-top:14px;background:var(--room-deep);border:1px solid var(--edge);border-radius:12px;padding:14px}
+.result h3{font-family:var(--dot);font-weight:400;font-size:1.05rem;margin:16px 0 6px;color:var(--silk)}
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score .rk{font-family:var(--dot);font-size:2.2rem;line-height:1}
+.score .rk.S,.score .rk.A{color:var(--ok)}.score .rk.B{color:var(--led)}.score .rk.C{color:var(--bad)}
+.score .pt{font-family:var(--dot);font-size:1.4rem}
+.score .sub{font-size:.85rem;color:var(--silk-dim)}
+.result ul,.result ol{margin:4px 0;padding-left:1.3em}
+.result li{margin:4px 0;font-size:.9rem}
+.result .why{color:#C9D1E3}
+.result .r{font-family:var(--dot);font-size:.72rem;color:var(--led);margin-left:4px}
+.result .mark{font-family:var(--dot);margin-left:6px;font-size:.78rem}
+.result .mark.ok{color:var(--ok)}.result .mark.ng{color:var(--led)}
+.result .edge{font-weight:700}
+.result .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.result p{margin:6px 0;font-size:.92rem}
+.stale{color:var(--led);font-size:.85rem}
+.refs li{list-style:none;margin-left:-1.3em}
+.refs .k{display:inline-block;font-family:var(--dot);font-size:.66rem;padding:0 6px;border-radius:4px;margin-right:6px;border:1px solid;vertical-align:1px}
+.refs .k.aws{color:var(--led);border-color:var(--led)}.refs .k.case{color:var(--wave);border-color:var(--wave)}.refs .k.doc{color:var(--silk-dim);border-color:var(--silk-dim)}
+.refs a{color:var(--silk)}
+.point{background:#0E1626;border-left:3px solid var(--led);padding:8px 12px;border-radius:0 8px 8px 0}
+.notes{margin-top:26px;font-size:.85rem;color:var(--muted)}
+.notes ul{padding-left:1.3em}
+@media (prefers-reduced-motion:reduce){.blk{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a></p>
+<h1>AWS 基盤パズル</h1>
+<p class="lede">プラットフォームエンジニアリングは、開発者が安全に速く届けられる「道」を社内に用意する仕事です。ここでは、よくある課題(お題)に対して AWS のサービスや道具のブロックを線でつなぎ、基盤を組み立てます。<b>お題は全39問。ページを開くたびに、まだ出ていないお題からランダムに選ばれます。</b></p>
+<div class="how">
+  <div><b>1. お題を読む</b>会社の状況と要件を読んで、どのブロックが必要か考えます。使わない「ひっかけ」のブロックも混ざっています。</div>
+  <div><b>2. ブロックをつなぐ</b>ブロックをタップして選び、つなぎたい相手をタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。</div>
+  <div><b>3. 答え合わせ</b>要件ごとの達成度と、余計な線の理由がわかります。解答例では線ごとの理由と、参考にした AWS 公式資料や各社の事例を確認できます。</div>
+</div>
+
+<section class="panel" id="game" aria-label="お題">
+  <div class="bar">
+    <div class="l"><span class="pill" id="lv"></span><span class="pill" id="theme"></span><span class="pill" id="no"></span><span class="pill" id="prog"></span></div>
+    <div class="l"><select id="pick" aria-label="お題を選ぶ"></select><button class="btn sub" id="rnd" type="button">別のお題 🎲</button></div>
+  </div>
+  <h2 class="t" id="title"></h2>
+  <p class="story" id="story"></p>
+  <ol class="reqs" id="reqs"></ol>
+  <div class="tools">
+    <span class="cnt" id="cnt"></span>
+    <button class="btn sub" id="hint" type="button">ヒント (−5点)</button>
+    <button class="btn sub" id="clear" type="button">線を全部消す</button>
+    <button class="btn sub" id="shuffle" type="button">並べ直す</button>
+    <button class="btn pri" id="check" type="button">答え合わせ</button>
+  </div>
+  <div class="board" id="board"><svg id="lines" aria-hidden="true"></svg></div>
+  <div class="legend" id="legend"></div>
+  <div class="hint">ブロックを2つ続けてタップ(またはEnter)すると線が引けます。同じ2つをもう一度つなぐか、線をタップすると消えます。選択を外すには空いている所をタップ(Esc)。</div>
+  <div class="conns" id="conns" aria-label="つないだ線"></div>
+  <div class="live" id="live" aria-live="polite"></div>
+  <div class="result" id="result" hidden></div>
+</section>
+
+<div class="notes">
+  <ul>
+    <li>解答例は、公式資料や事例でよく使われる「型」の1つです。要件によっては別の組み方も正解になります(代わりに使えるブロックは、つないでも減点しません)。</li>
+    <li>サービス名と仕様は 2026年9月時点の公開情報にもとづいています。AWS の公式教材ではありません。サービスの終了・名称変更は解説の中で触れています。</li>
+    <li>自己ベストの点数は、このブラウザの中にだけ保存されます。</li>
+  </ul>
+</div>
+</main>
+
+<script>
+(function(){
+'use strict';
+/* ==== カテゴリ ==== */
+var CAT={ext:['人・外部','#94A3B8'],oss:['OSS','#E2E8F0'],devops:['CI/CD・IaC','#5EE7FF'],compute:['実行基盤','#FFC53D'],net:['ネットワーク','#5CE39A'],sec:['セキュリティ・ID','#FF8A9A'],data:['データ','#7AB8FF'],ops:['管理・監視','#FDBA74'],int:['アプリ連携','#D8B4FE'],ai:['AI・ML','#99F6E4']};
+
+/* ==== 参考資料 (種類, 題名, URL) ==== */
+var REF={
+  org:['aws','AWS ホワイトペーパー: Organizing Your AWS Environment Using Multiple Accounts','https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/organizing-your-aws-environment.html'],
+  sra:['aws','AWS Security Reference Architecture (AWS SRA)','https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/welcome.html'],
+  sraLog:['aws','AWS SRA: Log Archive アカウント','https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/log-archive.html'],
+  idp:['aws','AWS Prescriptive Guidance: Building an internal developer platform on AWS','https://docs.aws.amazon.com/prescriptive-guidance/latest/internal-developer-platform/introduction.html'],
+  gp:['aws','AWS Prescriptive Guidance: ゴールデンパスの例 (サーバーレス / ECS / EKS)','https://docs.aws.amazon.com/prescriptive-guidance/latest/internal-developer-platform/examples.html'],
+  backstage:['aws','AWS Open Source Blog: Backstage と EKS Blueprints で開発者ポータルをつくる','https://aws.amazon.com/blogs/opensource/building-developer-portals-with-backstage-and-amazon-eks-blueprints/'],
+  ghoidc:['doc','GitHub Docs: Configuring OpenID Connect in Amazon Web Services','https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services'],
+  proton:['aws','AWS Proton のサポート終了と移行ガイド','https://docs.aws.amazon.com/proton/latest/userguide/proton-end-of-support.html'],
+  sf:['case','Salesforce: 1,000以上の EKS クラスタを Cluster Autoscaler から Karpenter へ (AWS Architecture Blog)','https://aws.amazon.com/blogs/architecture/how-salesforce-migrated-from-cluster-autoscaler-to-karpenter-across-their-fleet-of-1000-eks-clusters'],
+  intuit:['case','Intuit: Kubernetes への移行と Argo (CNCF ケーススタディ)','https://www.cncf.io/case-studies/intuit/'],
+  podid:['aws','Amazon EKS Pod Identity (ユーザーガイド)','https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html'],
+  mesh:['aws','AWS Containers Blog: App Mesh から VPC Lattice への移行','https://aws.amazon.com/blogs/containers/migrating-from-aws-app-mesh-to-amazon-vpc-lattice/'],
+  ecsbg:['aws','What\'s New: Amazon ECS の組み込みブルー/グリーン (2025年7月)','https://aws.amazon.com/about-aws/whats-new/2025/07/amazon-ecs-built-in-blue-green-deployments/'],
+  ecscan:['aws','What\'s New: Amazon ECS の組み込みリニア/カナリア (2025年10月)','https://aws.amazon.com/about-aws/whats-new/2025/10/amazon-ecs-built-in-linear-canary-deployments'],
+  netflix:['case','Netflix TechBlog: Global Continuous Delivery with Spinnaker','https://netflixtechblog.com/global-continuous-delivery-with-spinnaker-2a6896c23ba7'],
+  lego:['case','LEGO: The serverless journey of shop.LEGO.com (re:Invent 2019 資料)','https://d1.awsstatic.com/events/reinvent/2019/REPEAT_1_The_serverless_journey_of_shop.LEGO.com_SVS320-R1.pdf'],
+  prime:['case','Prime Video: サーバーレス構成から ECS へ移してコスト90%減 (InfoQ)','https://www.infoq.com/news/2023/05/prime-ec2-ecs-saves-costs/'],
+  cockcroft:['case','Adrian Cockcroft: Prime Video の件から学ぶべきこと','https://adrianco.medium.com/so-many-bad-takes-what-is-there-to-learn-from-the-prime-video-microservices-to-monolith-story-4bd0970423d4'],
+  obs:['aws','AWS Observability Best Practices','https://aws-observability.github.io/observability-best-practices/'],
+  qchat:['aws','AWS Chatbot から Amazon Q Developer in chat applications への名称変更','https://docs.aws.amazon.com/chatbot/latest/adminguide/service-rename.html'],
+  mvpc:['aws','AWS ホワイトペーパー: Transit Gateway と VPC ピアリングの比較','https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/transit-gateway-vs-vpc-peering.html'],
+  lattice:['aws','AWS Networking Blog: VPC Lattice でマルチアカウント・マルチ VPC の接続','https://aws.amazon.com/blogs/networking-and-content-delivery/build-secure-multi-account-multi-vpc-connectivity-for-your-applications-with-amazon-vpc-lattice/'],
+  smrot:['aws','AWS Secrets Manager: マネージドローテーション','https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_managed.html'],
+  rdssm:['aws','Amazon RDS: Secrets Manager によるパスワード管理','https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-secrets-manager.html'],
+  cid:['aws','Cloud Intelligence Dashboards on AWS: Data Exports','https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-exports.html'],
+  airbnb:['case','Airbnb: Our Journey Towards Cloud Efficiency','https://medium.com/airbnb-engineering/our-journey-towards-cloud-efficiency-9c02ba04ade8'],
+  dr:['aws','AWS ホワイトペーパー: Disaster Recovery of Workloads on AWS (DR の方式)','https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html'],
+  cell:['aws','AWS ホワイトペーパー: Reducing the Scope of Impact with Cell-Based Architecture','https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/reducing-scope-of-impact-with-cell-based-architecture.html'],
+  slack:['case','Slack: Slack\'s Migration to a Cellular Architecture','https://slack.engineering/slacks-migration-to-a-cellular-architecture/'],
+  cfgrem:['aws','AWS Config: 非準拠リソースの修復','https://docs.aws.amazon.com/config/latest/developerguide/remediation.html'],
+  custodian:['case','Capital One: Cloud Custodian を CNCF へ','https://www.capitalone.com/tech/cloud/cloud-custodian-cncf-donation/'],
+  shub:['aws','What\'s New: 新しい AWS Security Hub の一般提供 (2025年12月、旧版は Security Hub CSPM に)','https://aws.amazon.com/about-aws/whats-new/2025/12/security-hub-near-real-time-risk-analytics/'],
+  oac:['aws','Amazon CloudFront: Amazon S3 オリジンへのアクセスを制限する (OAC)','https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html'],
+  saasiso:['aws','AWS ホワイトペーパー: SaaS Tenant Isolation Strategies (プール型の分離)','https://docs.aws.amazon.com/whitepapers/latest/saas-tenant-isolation-strategies/pool-isolation.html'],
+  saasabac:['aws','AWS Security Blog: SaaS のテナントデータを DynamoDB と ABAC で守る','https://aws.amazon.com/blogs/security/how-to-secure-your-saas-tenant-data-in-dynamodb-with-abac-and-client-side-encryption/'],
+  tfs3:['doc','Terraform: S3 バックエンド (use_lockfile)','https://developer.hashicorp.com/terraform/language/backend/s3'],
+  tfaws:['aws','AWS Prescriptive Guidance: Terraform のバックエンドのベストプラクティス','https://docs.aws.amazon.com/prescriptive-guidance/latest/terraform-aws-provider-best-practices/backend.html'],
+  cdkpipe:['aws','AWS CDK: CDK Pipelines による継続的デリバリー','https://docs.aws.amazon.com/cdk/v2/guide/cdk_pipeline.html'],
+  cdkpipeblog:['aws','AWS Developer Tools Blog: CDK Pipelines','https://aws.amazon.com/blogs/developer/cdk-pipelines-continuous-delivery-for-aws-cdk-applications/'],
+  lf:['aws','AWS Lake Formation とは','https://docs.aws.amazon.com/lake-formation/latest/dg/what-is-lake-formation.html'],
+  lfath:['aws','AWS Lake Formation と Amazon Athena','https://docs.aws.amazon.com/lake-formation/latest/dg/athena-lf.html'],
+  firehose:['aws','Amazon Data Firehose (旧 Kinesis Data Firehose) の名称変更','https://www.amazonaws.cn/en/new/2024/introducing-amazon-data-firehose-formerly-known-as-amazon-kinesis-data-firehose/'],
+  kb:['aws','Amazon Bedrock Knowledge Bases: ナレッジベースを作る','https://docs.aws.amazon.com/bedrock/latest/userguide/knowledge-base-create.html'],
+  guard:['aws','Amazon Bedrock Guardrails','https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html'],
+  s3vec:['aws','AWS News Blog: Amazon S3 Vectors の一般提供','https://aws.amazon.com/blogs/aws/amazon-s3-vectors-now-generally-available-with-increased-scale-and-performance/'],
+  batchsch:['aws','AWS Batch: スケジュールで動かすジョブ (チュートリアル)','https://docs.aws.amazon.com/batch/latest/userguide/scheduled-batch-job.html'],
+  batchjq:['aws','AWS Batch: ジョブキュー','https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html'],
+  sl:['aws','Amazon Security Lake ユーザーガイド','https://docs.aws.amazon.com/security-lake/latest/userguide/'],
+  slsrc:['aws','Amazon Security Lake: AWS のサービスからのデータ収集','https://docs.aws.amazon.com/security-lake/latest/userguide/internal-sources.html'],
+  va:['aws','AWS Verified Access とは','https://docs.aws.amazon.com/verified-access/latest/ug/what-is-verified-access.html'],
+  ssm:['aws','AWS Systems Manager Session Manager','https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html'],
+  ib:['aws','EC2 Image Builder とは','https://docs.aws.amazon.com/imagebuilder/latest/userguide/what-is-image-builder.html'],
+  signer:['aws','AWS Signer: コンテナイメージに署名する','https://docs.aws.amazon.com/signer/latest/developerguide/image-signing-steps.html'],
+  signblog:['aws','AWS Containers Blog: AWS Signer と Amazon EKS によるコンテナイメージの署名','https://aws.amazon.com/blogs/containers/announcing-container-image-signing-with-aws-signer-and-amazon-eks/'],
+  ecrsign:['aws','AWS Containers Blog: Amazon ECR managed signing','https://aws.amazon.com/blogs/containers/streamline-container-image-signatures-with-amazon-ecr-managed-signing'],
+  codeguru:['aws','Amazon CodeGuru Security のサポート終了','https://docs.aws.amazon.com/codeguru/latest/security-ug/end-of-support.html'],
+  eksae:['aws','Amazon EKS アクセスエントリ','https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html'],
+  ekstenant:['aws','EKS ベストプラクティス: テナント分離','https://docs.aws.amazon.com/eks/latest/best-practices/tenant-isolation.html'],
+  pb:['aws','IAM: アクセス許可の境界 (Permissions boundaries)','https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html'],
+  pbblog:['aws','AWS Security Blog: いつ・どこで権限境界を使うか','https://aws.amazon.com/blogs/security/when-and-where-to-use-iam-permissions-boundaries'],
+  aaunused:['aws','IAM Access Analyzer の検出結果 (未使用のアクセス)','https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-findings.html'],
+  fis:['aws','AWS Fault Injection Service とは','https://docs.aws.amazon.com/fis/latest/userguide/what-is.html'],
+  fisstop:['aws','AWS FIS: 停止条件 (stop conditions)','https://docs.aws.amazon.com/fis/latest/userguide/stop-conditions.html'],
+  simian:['case','Netflix TechBlog: The Netflix Simian Army (Chaos Monkey)','https://medium.com/netflix-techblog/the-netflix-simian-army-16e57fbab116'],
+  imavail:['aws','Systems Manager Incident Manager の提供状況の変更','https://docs.aws.amazon.com/incident-manager/latest/userguide/incident-manager-availability-change.html'],
+  bkx:['aws','AWS Backup: Organizations を使ったアカウント・リージョンをまたぐデータ保護','https://docs.aws.amazon.com/reference-architecture-diagrams/latest/data-protection-aws-backup/data-protection-cross-account.html'],
+  r53hyb:['aws','AWS Prescriptive Guidance: マルチアカウント環境でハイブリッドの DNS 解決','https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/set-up-dns-resolution-for-hybrid-networks-in-a-multi-account-aws-environment.html'],
+  r53wp:['aws','AWS ホワイトペーパー: Route 53 Resolver エンドポイントと転送ルール','https://docs.aws.amazon.com/whitepapers/latest/hybrid-cloud-dns-options-for-vpc/route-53-resolver-endpoints-and-forwarding-rules.html'],
+  acff:['aws','AWS AppConfig: 機能フラグと設定データのデプロイ','https://docs.aws.amazon.com/appconfig/latest/userguide/deploying-feature-flags.html'],
+  valkey:['aws','AWS Database Blog: Amazon ElastiCache for Valkey を始める','https://aws.amazon.com/blogs/database/get-started-with-amazon-elasticache-for-valkey'],
+  rdsproxy:['aws','AWS Compute Blog: AWS Lambda で Amazon RDS Proxy を使う','https://aws.amazon.com/blogs/compute/using-amazon-rds-proxy-with-aws-lambda/'],
+  wschat:['aws','API Gateway: WebSocket API・Lambda・DynamoDB でチャットアプリ (チュートリアル)','https://docs.aws.amazon.com/apigateway/latest/developerguide/websocket-api-chat-app.html'],
+  wsover:['aws','API Gateway: WebSocket API の概要','https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-websocket-api-overview.html'],
+  apithr:['aws','API Gateway: REST API のスロットリングと使用量プラン','https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html'],
+  gtroute:['aws','AWS Prescriptive Guidance: DynamoDB グローバルテーブルと Route 53 のルーティング','https://docs.aws.amazon.com/prescriptive-guidance/latest/dynamodb-global-tables/route-53-request-routing.html'],
+  gablog:['aws','AWS Networking Blog: Global Accelerator でアプリの回復力を高める','https://aws.amazon.com/blogs/networking-and-content-delivery/maximising-application-resiliency-with-aws-global-accelerator/'],
+  presign:['aws','Amazon S3: 署名付き URL でオブジェクトをアップロードする','https://docs.aws.amazon.com/AmazonS3/latest/userguide/PresignedUrlUploadObject.html'],
+  gdmal:['aws','GuardDuty Malware Protection for S3','https://docs.aws.amazon.com/guardduty/latest/ug/gdu-malware-protection-s3.html'],
+  slo:['aws','Amazon CloudWatch: サービスレベル目標 (SLO)','https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-ServiceLevelObjectives.html'],
+  burn:['aws','What\'s New: Application Signals がバーンレートに対応 (2024年11月)','https://aws.amazon.com/about-aws/whats-new/2024/11/application-signals-burn-rate-application-performance-goals'],
+  amzsearch:['case','Amazon Search: CloudWatch Application Signals で SLO をアラーム (AWS Cloud Operations Blog)','https://aws.amazon.com/blogs/mt/alarming-on-slos-in-amazon-search-with-cloudwatch-application-signals-part-1/'],
+  scdoc:['aws','Amazon ECS Service Connect','https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html'],
+  meshsc:['aws','AWS Containers Blog: App Mesh から ECS Service Connect への移行','https://aws.amazon.com/blogs/containers/migrating-from-aws-app-mesh-to-amazon-ecs-service-connect/'],
+  graviton:['aws','AWS Containers Blog: Karpenter で EKS を x86 から Graviton へ移行','https://aws.amazon.com/blogs/containers/migrating-from-x86-to-aws-graviton-on-amazon-eks-using-karpenter/'],
+  cograv:['aws','AWS Compute Optimizer: Graviton ベースのインスタンスの推奨','https://docs.aws.amazon.com/compute-optimizer/latest/ug/graviton-recommendations.html'],
+  irec2:['aws','AWS Security Blog: EC2 のインシデント対応を自動化する','https://aws.amazon.com/blogs/security/how-to-automate-incident-response-in-aws-cloud-for-ec2-instances/'],
+  irmulti:['aws','AWS Security Blog: マルチアカウント環境での自動インシデント対応','https://aws.amazon.com/blogs/security/how-to-perform-automated-incident-response-multi-account-environment/']
+};
+var KIND={aws:['aws','AWS公式'],case:['case','事例'],doc:['doc','ドキュメント']};
+
+/* ==== お題 ====
+ nodes/alt/bad: [id, 名前, カテゴリ, 役割, (alt: 補足 / bad: 使わない理由)]
+ edges: [from, to, 要件番号, 理由]   ok: つないでも減点しない組み合わせ */
+var SC=[
+{id:'landing-zone',lv:1,theme:'ガバナンス',title:'マルチアカウントの土台をつくる',
+ story:'社員300人の SaaS 企業。1つの AWS アカウントに本番も開発も同居していて、誰が何を変えたか追えない。プロダクトと環境ごとにアカウントを分け、新しいアカウントはガードレール付きで自動で払い出したい。',
+ req:['社員は社内の IdP のアカウントで各 AWS アカウントにログインし、権限はまとめて管理する','アカウントの作成と初期設定を自動化し、組織全体に禁止ルールをかける','全アカウントの操作ログを、ログ保管専用のアカウントに集める','脅威や設定ミスの検知結果を1か所で見る'],
+ nodes:[['idp','社内 IdP','ext','Okta / Entra ID など'],['sso','IAM Identity Center','sec','SSO と権限セット'],['org','AWS Organizations','ops','アカウントを束ねる'],['ct','AWS Control Tower','ops','ランディングゾーンを自動構築'],['af','Account Factory','ops','アカウントの払い出し'],['scp','SCP','sec','組織で禁止する操作'],['trail','CloudTrail (組織の証跡)','ops','全アカウントの操作ログ'],['s3','S3 (Log Archive)','data','ログ保管専用のアカウント'],['gd','Amazon GuardDuty','sec','脅威の検知'],['cfg','AWS Config','ops','設定の記録と評価'],['sh','AWS Security Hub','sec','検知結果の集約と分析']],
+ alt:[],
+ bad:[['iamu','IAM ユーザー + アクセスキー','sec','社員ごとに発行','社員ごとに長期のアクセスキーを配ると、漏えいや退職者の棚卸しが大変。人のアクセスは Identity Center の一時的な認証情報に寄せる。'],['cog','Amazon Cognito','sec','アプリの利用者の認証','Cognito は自社サービスの「お客さま」のログイン用。社員が AWS アカウントに入る SSO には IAM Identity Center を使う。']],
+ edges:[['idp','sso',0,'社内 IdP を ID ソースにすると、社員はふだんのアカウントで各 AWS アカウントに入れる。退職時も IdP 側で止めればよい。'],
+  ['sso','org',0,'権限セット(ロールの型)を、Organizations 配下のアカウントとグループの組み合わせで割り当てる。'],
+  ['ct','org',1,'Control Tower は Organizations の上に、推奨構成の OU と共有アカウント(Log Archive / Audit)を作る。'],
+  ['ct','af',1,'Account Factory から、ガードレールが最初から入ったアカウントを払い出す。'],
+  ['scp','org',1,'SCP を OU に付けると、その下の全アカウントで「CloudTrail を止める」「許可していないリージョンを使う」などが管理者でもできなくなる。'],
+  ['trail','s3',2,'組織の証跡を Log Archive アカウントの S3 に集める。ワークロードのアカウントからは消せない。'],
+  ['gd','sh',3,'GuardDuty の検知結果を Security Hub に集約する。'],
+  ['cfg','sh',3,'Config ルールの評価結果(設定ミス)も Security Hub に集まり、優先度付きで一覧できる。']],
+ ok:[['ct','trail'],['ct','cfg'],['cfg','s3'],['ct','scp'],['ct','s3'],['gd','org'],['sh','org'],['sso','ct']],
+ point:'アカウントは「影響範囲と権限の境界」。Control Tower と Organizations で箱を作り、SCP で予防、CloudTrail / Config / GuardDuty で発見し、ログは Log Archive、検知結果は Security Hub に集める。AWS SRA では、セキュリティ系のサービスを Security Tooling アカウントにまとめて管理する形が示されている。なお2025年12月に新しい AWS Security Hub が一般提供になり、それまでの Security Hub は Security Hub CSPM(設定の評価と結果の集約)として続いている。',
+ refs:['org','sra','sraLog','shub']},
+
+{id:'golden-path',lv:2,theme:'開発者体験',title:'セルフサービスで新サービスを立ち上げる',
+ story:'開発チームが20を超え、新しいサービスを作るたびにプラットフォームチームへの依頼で1〜2週間待たされている。開発者がポータルでテンプレートを選ぶだけで、リポジトリ・CI/CD・実行環境が標準構成で立ち上がるようにしたい(ゴールデンパス)。',
+ req:['開発者はポータルのテンプレートからサービスを作る','テンプレートから、パイプライン定義入りのリポジトリが作られる','パイプラインは長期のアクセスキーを持たずに AWS を操作する','インフラはコードで作り、コンテナは ECS on Fargate で動かす'],
+ nodes:[['dev','開発者','ext','サービスを作りたい人'],['bs','Backstage','oss','開発者ポータル (テンプレートとカタログ)'],['gh','GitHub リポジトリ','ext','アプリと IaC のコード'],['gha','GitHub Actions','ext','CI/CD の実行'],['role','IAM ロール (OIDC)','sec','一時的な認証情報'],['cdk','AWS CDK / CloudFormation','devops','インフラをコードで'],['ecr','Amazon ECR','devops','コンテナイメージ置き場'],['ecs','Amazon ECS (Fargate)','compute','コンテナの実行'],['alb','Application Load Balancer','net','HTTP の入口']],
+ alt:[],
+ bad:[['proton','AWS Proton','devops','環境テンプレートの管理','テンプレートからの払い出しに使われてきたが、2026年10月7日にサポート終了。これから新しく選ぶものではない。'],['keys','GitHub Secrets にアクセスキー','sec','IAM ユーザーの長期キー','長期キーは漏えいしたら使われ放題。GitHub Actions は OIDC で一時的な認証情報を取れるので、キーを置かない。'],['ssh','EC2 に SSH して手作業デプロイ','compute','サーバーで直接作業','手作業は再現できず、誰が何をしたかも残らない。ゴールデンパスの逆。']],
+ edges:[['dev','bs',0,'開発者はポータルで「Web API (ECS)」などのテンプレートを選ぶ。これがゴールデンパスの入口。'],
+  ['bs','gh',1,'テンプレートがリポジトリを雛形ごと作る。CI/CD の定義や IaC も最初から入っている。'],
+  ['gh','gha',1,'push や merge をきっかけにワークフローが動く。'],
+  ['gha','role',2,'GitHub の OIDC トークンで IAM ロールを引き受け、短時間だけ有効な認証情報を使う。'],
+  ['gha','ecr',3,'ビルドしたイメージを ECR に push する。'],
+  ['gha','cdk',3,'cdk deploy(CloudFormation)でサービスとインフラを更新する。'],
+  ['cdk','ecs',3,'タスク定義やサービスの設定もコードで管理する。'],
+  ['ecr','ecs',3,'ECS は ECR からイメージを取得する。'],
+  ['alb','ecs',3,'ALB がタスクへリクエストを振り分ける。']],
+ ok:[['role','ecr'],['role','cdk'],['cdk','alb'],['bs','ecs'],['bs','cdk']],
+ point:'プラットフォームチームは「道(テンプレートと標準のパイプライン)」を用意し、開発者は依頼せずにそこを歩く。Backstage は開発者ポータルの定番 OSS。AWS への認証は OIDC で長期キーを持たないのが今の標準。AWS Proton はこの用途のサービスだったが、2026年10月にサポートが終わる。',
+ refs:['idp','gp','backstage','ghoidc','proton']},
+
+{id:'eks-gitops',lv:3,theme:'コンテナ基盤',title:'EKS の共通基盤を GitOps で運用する',
+ story:'100を超えるマイクロサービスを、Kubernetes(EKS)の共通基盤に載せている。各チームはマニフェストを Git に置くだけでデプロイでき、ノードは負荷に合わせて自動で増減し、Pod ごとに最小限の権限で AWS にアクセスさせたい。',
+ req:['デプロイは Git を正として自動で同期する (GitOps)','ノードは Pod の要求に合わせて自動でちょうどよく増減する','外からのリクエストは ALB で受けて Pod に届ける','Pod ごとに IAM 権限を分け、シークレットは Secrets Manager から取る'],
+ nodes:[['git','Git リポジトリ','ext','マニフェスト / Helm チャート'],['argo','Argo CD','oss','Git の内容をクラスタへ同期'],['eks','Amazon EKS','compute','Kubernetes クラスタ'],['karp','Karpenter','oss','ノードを自動で増減'],['ec2','EC2 (Spot / オンデマンド)','compute','ワーカーノード'],['ecr','Amazon ECR','devops','コンテナイメージ置き場'],['lbc','AWS Load Balancer Controller','oss','Ingress から ALB を作る'],['alb','Application Load Balancer','net','外からの入口'],['pid','EKS Pod Identity','sec','Pod に IAM ロールを渡す'],['sm','AWS Secrets Manager','sec','シークレットの保管']],
+ alt:[],
+ bad:[['mesh','AWS App Mesh','net','サービスメッシュ','2026年9月30日にサポート終了。EKS のサービス間通信なら VPC Lattice などへ移る。'],['kctl','手元から kubectl apply','ext','本番へ直接反映','誰がいつ何を変えたか Git に残らず、Argo CD の同期とも衝突する。'],['node','ノードのロールに全部の権限','sec','全 Pod で共有','ノード上の全 Pod が同じ強い権限を持ってしまう。Pod ごとのロール(Pod Identity / IRSA)で最小権限にする。']],
+ edges:[['git','argo',0,'Argo CD が Git を監視し、差分をクラスタへ反映する。'],
+  ['argo','eks',0,'クラスタを変更するのは Argo CD だけ。手作業の変更も Git の状態に戻される。'],
+  ['ecr','eks',0,'Pod のイメージは ECR から取得する。'],
+  ['eks','karp',1,'Karpenter は置き場のない Pod を見つけて、合うサイズのノードをすぐ用意する。'],
+  ['karp','ec2',1,'インスタンスタイプや Spot を柔軟に選び、空いたノードは詰め直して減らす。'],
+  ['lbc','eks',2,'コントローラーが Ingress / Service の定義を監視する。'],
+  ['lbc','alb',2,'定義に合わせて ALB とターゲットグループを作る。'],
+  ['alb','eks',2,'ALB から Pod へ直接振り分ける(IP ターゲット)。'],
+  ['eks','pid',3,'サービスアカウントに IAM ロールを関連付けると、その Pod だけがロールを使える。'],
+  ['pid','sm',3,'Pod のロールで、そのサービス用のシークレットだけを読む。']],
+ ok:[['ec2','ecr'],['alb','ec2'],['eks','ec2']],
+ point:'EKS の共通基盤は「GitOps(Argo CD)」「ノードの自動化(Karpenter)」「入口(Load Balancer Controller)」「Pod ごとの権限(Pod Identity)」が定番の組み合わせ。AWS のゴールデンパスの例(EKS)もほぼ同じ構成を挙げている。Argo は Intuit が買収した Applatix 発の OSS で、Salesforce は1,000以上の EKS クラスタを Karpenter に移した。',
+ refs:['gp','sf','intuit','podid','mesh']},
+
+{id:'ecs-release',lv:2,theme:'CI/CD',title:'止めずに安全にリリースする',
+ story:'決済 API を ECS で動かしている。リリースのたびに一瞬エラーが出て、問題があっても戻すのに30分かかる。新旧を並べて確かめてから切り替え、切り替え後に異常が出たら自動で戻したい。',
+ req:['main への merge で、ビルドからデプロイまで自動で流れる','イメージは ECR に保存し、脆弱性も継続的に調べる','新旧のタスクを並べ、ALB の振り分けを切り替える (ブルー/グリーン)','エラー率が上がったら自動でロールバック'],
+ nodes:[['gh','GitHub','ext','アプリのコード'],['cp','AWS CodePipeline','devops','パイプライン'],['cb','AWS CodeBuild','devops','ビルドとテスト'],['ecr','Amazon ECR','devops','イメージ置き場'],['insp','Amazon Inspector','sec','脆弱性スキャン'],['ecs','Amazon ECS サービス','compute','Fargate で実行'],['alb','Application Load Balancer','net','本番 / テスト用リスナー'],['cw','CloudWatch アラーム','ops','エラー率を監視']],
+ alt:[['cd','AWS CodeDeploy','devops','従来のブルー/グリーン','ECS 組み込みのブルー/グリーン(2025年7月〜)より前は、CodeDeploy を使うのが定番だった。こちらで組んでも正解。']],
+ bad:[['dns','Route 53 で DNS 切り替え','net','名前解決で新旧を切り替え','DNS はキャッシュ(TTL)があり、切り替えも戻しも遅い。ALB の振り分けなら数秒で戻せる。'],['ssh','EC2 に SSH して docker pull','compute','手作業でリリース','手作業は再現できず、戻すのも手作業。要件は自動化されたパイプラインとロールバック。']],
+ edges:[['gh','cp',0,'GitHub との接続で main への merge を検知し、パイプラインを開始する。'],
+  ['cp','cb',0,'ビルドとテストのステージ。'],
+  ['cb','ecr',1,'ビルドしたイメージを push する。'],
+  ['ecr','insp',1,'拡張スキャンを有効にすると、Inspector が継続的に脆弱性を調べる。'],
+  ['cp','ecs',0,'デプロイのステージで、ECS サービスを新しいタスク定義に更新する。'],
+  ['ecs','alb',2,'ECS 組み込みのブルー/グリーンが、新しいタスクを並べて検証し、ALB の振り分けを切り替える。'],
+  ['cw','ecs',3,'アラームをデプロイ設定に指定すると、発火したとき自動で元に戻る。']],
+ ok:[['ecr','ecs'],['cp','cd'],['cd','ecs'],['cd','alb'],['cw','cd']],
+ point:'「パイプライン → イメージ → 並べて検証 → 監視しながら切り替え → 自動で戻す」が安全なリリースの型。ECS は2025年7月に組み込みのブルー/グリーン、10月にリニア/カナリアに対応し、CodeDeploy なしでも組めるようになった。Netflix が作って公開した Spinnaker も、多数のリージョンへ安全に展開するためのデリバリー基盤。',
+ refs:['ecsbg','ecscan','gp','netflix']},
+
+{id:'serverless-api',lv:1,theme:'サーバーレス',title:'サーバーのないAPI基盤',
+ story:'会員向けモバイルアプリの API。昼と深夜でアクセスが100倍違い、サーバーの面倒は見たくない。ログインした会員だけが使え、攻撃的なリクエストは入口で止めたい。',
+ req:['入口を1つにまとめ、攻撃的なリクエストはそこで止める','ログインはマネージドの認証サービスに任せ、API は認証済みの会員だけ','処理はサーバーレスで動かし、データはキーで速く引ける DB に','遅い処理を分散トレースで追える'],
+ nodes:[['app','モバイルアプリ','ext','会員が使う'],['cf','Amazon CloudFront','net','配信の入口'],['waf','AWS WAF','sec','攻撃的なリクエストを遮断'],['apigw','Amazon API Gateway','net','API の入口'],['cog','Amazon Cognito','sec','会員のログイン'],['lam','AWS Lambda','compute','処理'],['ddb','Amazon DynamoDB','data','データ'],['xray','AWS X-Ray','ops','分散トレース']],
+ alt:[],
+ bad:[['asg','EC2 Auto Scaling グループ','compute','サーバーを増減','動くが、深夜の待機にもお金がかかり、OS の更新も自分で見ることになる。要件は「サーバーの面倒は見たくない」。'],['sso','IAM Identity Center','sec','社員の SSO','社員が AWS に入るための仕組み。アプリの会員の認証は Cognito。'],['rds','RDS に毎回直接接続','data','リクエストごとに接続','急なアクセス増で DB の接続数があふれやすい。キーで引くなら DynamoDB、RDS を使うなら RDS Proxy を挟む。']],
+ edges:[['app','cf',0,'アプリのリクエストは CloudFront(世界中のエッジ)で受ける。'],
+  ['waf','cf',0,'WAF を CloudFront に付け、SQL インジェクションや過剰なリクエストを遮断する。'],
+  ['cf','apigw',0,'CloudFront の後ろに API Gateway を置く。'],
+  ['app','cog',1,'アプリは Cognito でログインしてトークンを受け取る。'],
+  ['cog','apigw',1,'API Gateway の Cognito オーソライザーがトークンを検証する。未ログインのリクエストは Lambda まで届かない。'],
+  ['apigw','lam',2,'リクエストごとに Lambda が動く。アクセスがなければほぼ課金されない。'],
+  ['lam','ddb',2,'キーで引くデータは DynamoDB。接続数の心配もいらない。'],
+  ['lam','xray',3,'Lambda のトレースを X-Ray へ送る。'],
+  ['apigw','xray',3,'API Gateway もトレースに加えると、入口から DB までの時間の内訳が見える。']],
+ ok:[['waf','apigw']],
+ point:'サーバーレスの API は「CloudFront + WAF → API Gateway(認証) → Lambda → DynamoDB」、観測は X-Ray が基本形。AWS のゴールデンパスの例(サーバーレス)でも API Gateway、Lambda、X-Ray、Powertools などが挙がっている。LEGO の shop.LEGO.com は、こうした部品で大規模なサーバーレス化を進めた。',
+ refs:['gp','lego']},
+
+{id:'event-driven',lv:2,theme:'イベント駆動',title:'注文処理をイベントでつなぐ',
+ story:'EC サイトの注文 API が、決済・在庫・メール送信を全部同期で呼んでいて、メール送信が遅いだけで注文が失敗する。注文を受けたらすぐ返し、後の処理はイベントでつなぎたい。決済→在庫→出荷は順番どおりに進め、失敗したら取り消す。',
+ req:['注文を保存したらすぐ返し、「注文が作られた」イベントを流す','決済→在庫→出荷の手順と、失敗時の取り消しをワークフローで管理する','メール送信は遅くても注文に影響しないようキューで受け、失敗し続けたものは退避する'],
+ nodes:[['apigw','Amazon API Gateway','net','注文 API'],['ord','Lambda (注文受付)','compute','保存してすぐ返す'],['ddb','Amazon DynamoDB','data','注文データ'],['eb','Amazon EventBridge','int','イベントバス'],['sfn','AWS Step Functions','int','手順と取り消しの管理'],['steps','Lambda (決済 / 在庫 / 出荷)','compute','各ステップの処理'],['sqs','Amazon SQS','int','メール用のキュー'],['dlq','SQS (DLQ)','int','失敗し続けたメッセージの退避'],['mail','Lambda (メール送信)','compute','メールを作って送る'],['ses','Amazon SES','int','メール配信']],
+ alt:[],
+ bad:[['mq','Amazon MQ','int','既存ブローカー互換','既存アプリの ActiveMQ / RabbitMQ をそのまま移すときの選択肢。新しく作るなら EventBridge と SQS で足りる。'],['kds','Kinesis Data Streams','int','大量のストリーム','クリックログのような大量のデータを順序付きで流す用途。注文イベントの振り分けなら EventBridge。']],
+ edges:[['apigw','ord',0,'注文 API は Lambda を呼ぶ。'],
+  ['ord','ddb',0,'注文を保存したら、後続を待たずにすぐ返す。'],
+  ['ord','eb',0,'「注文作成」イベントを発行する。発行する側は、誰が受け取るかを知らなくてよい。'],
+  ['eb','sfn',1,'ルールに合ったイベントでワークフローを開始する。'],
+  ['sfn','steps',1,'決済→在庫→出荷を順に呼び、途中で失敗したら決済を取り消す(Saga パターン)。'],
+  ['eb','sqs',2,'同じイベントをメール用のキューにも配る(ファンアウト)。'],
+  ['sqs','mail',2,'キューから取り出して送る。遅くても注文には影響しない。'],
+  ['sqs','dlq',2,'何度も失敗したメッセージは DLQ に退避して、あとで調べる。'],
+  ['mail','ses',2,'SES でメールを配信する。']],
+ ok:[['ddb','eb'],['steps','ddb']],
+ point:'同期の連鎖を「イベント(EventBridge)」「手順(Step Functions)」「バッファ(SQS + DLQ)」に分けるのがイベント駆動の基本。LEGO は EventBridge を中心にサービス同士をつないでいる。一方で Prime Video は、細かく分けすぎた Step Functions + Lambda の構成を1つのプロセス(ECS)にまとめてコストを90%下げた。分け方は規模と呼び出し頻度で決める。',
+ refs:['lego','prime','cockcroft']},
+
+{id:'observability',lv:2,theme:'可観測性',title:'障害の原因をすぐ突き止める',
+ story:'EKS と ECS の上で60のサービスが動いている。障害のたびにチームごとにバラバラのダッシュボードを見ていて、原因の特定に時間がかかる。メトリクス・トレース・ログを標準の仕組みで集め、アラートはチャットに届けたい。',
+ req:['計測は OpenTelemetry に統一し、コレクターで集める','メトリクスは Prometheus 互換で保存し、Grafana で見る','トレースとログも集め、サービスをまたいで追える','異常は Slack に通知する'],
+ nodes:[['app','アプリ (EKS / ECS)','compute','計測を出す'],['adot','ADOT Collector','oss','OpenTelemetry のコレクター'],['amp','Managed Prometheus (AMP)','ops','メトリクスの保存'],['amg','Managed Grafana','ops','ダッシュボード'],['xray','AWS X-Ray','ops','トレース'],['cwl','CloudWatch Logs','ops','ログ'],['sns','Amazon SNS','int','通知の配送'],['qchat','Q Developer (チャット連携)','ops','旧 AWS Chatbot'],['slack','Slack','ext','チームのチャット']],
+ alt:[],
+ bad:[['trail','AWS CloudTrail','ops','AWS 操作の記録','「誰が AWS をどう操作したか」の監査ログ。アプリのメトリクスやトレースの置き場ではない。'],['athena','Amazon Athena','data','S3 のデータを SQL で分析','後からまとめて調べる道具。リアルタイムの監視やアラートの中心には向かない。']],
+ edges:[['app','adot',0,'アプリは OpenTelemetry の SDK で計測し、コレクターに送る。'],
+  ['adot','amp',1,'メトリクスを Prometheus 互換の形で書き込む。'],
+  ['amp','amg',1,'Grafana でサービスを横断したダッシュボードを作る。'],
+  ['adot','xray',2,'トレースを X-Ray へ送る。'],
+  ['app','cwl',2,'ログは CloudWatch Logs へ(ECS なら FireLens、EKS なら Fluent Bit など)。'],
+  ['xray','amg',2,'Grafana から X-Ray のトレースも開け、メトリクスから原因のリクエストへたどれる。'],
+  ['amp','sns',3,'Prometheus のアラートマネージャーから SNS へ送る。'],
+  ['sns','qchat',3,'SNS のトピックをチャット連携に登録する。'],
+  ['qchat','slack',3,'Slack のチャンネルに整形された通知が届く。']],
+ ok:[['adot','cwl'],['cwl','amg'],['cwl','sns']],
+ point:'OpenTelemetry で計測をそろえ、メトリクス(AMP)・トレース(X-Ray)・ログ(CloudWatch Logs)を Grafana で横断して見る構成。AWS の Observability Best Practices や、ゴールデンパスの例(EKS)の AMP / AMG と同じ方向。AWS Chatbot は2025年2月に Amazon Q Developer in chat applications へ名前が変わった(機能は同じ)。',
+ refs:['obs','gp','qchat']},
+
+{id:'network-hub',lv:2,theme:'ネットワーク',title:'80個の VPC をすっきりつなぐ',
+ story:'アカウントが50、VPC が80を超え、VPC ピアリングが網の目になって誰も全体を把握できない。オンプレミスのデータセンターともつなぎたい。インターネットへの出口は1か所に集めて検査したい。',
+ req:['VPC 同士とオンプレミスを、1つのハブを介してつなぐ','ほかのアカウントの VPC もハブにつなげるよう共有する','インターネットへの出口を1つの VPC に集め、ファイアウォールで検査する'],
+ nodes:[['vpc','各チームの VPC','net','ワークロード'],['tgw','AWS Transit Gateway','net','ハブ&スポークの中心'],['ram','AWS RAM','ops','他アカウントと共有'],['dx','AWS Direct Connect','net','専用線'],['dc','オンプレミス DC','ext','社内のデータセンター'],['egr','出口用 VPC','net','外への出口を集約'],['nfw','AWS Network Firewall','sec','通信の検査'],['nat','NAT Gateway','net','外向きの通信'],['inet','インターネット','ext','外部']],
+ alt:[],
+ bad:[['peer','VPC ピアリング (全組み合わせ)','net','VPC 同士を個別に接続','80個の VPC を全部つなぐと3,000本以上。推移的なルーティングもできず、オンプレミスとの共有も難しい。'],['vpn','VPC ごとのサイト間 VPN','net','オンプレミスと個別に接続','VPC ごとに VPN を張ると本数も運用も増える。オンプレミスとの接続はハブに1回でよい。']],
+ edges:[['vpc','tgw',0,'各 VPC を Transit Gateway にアタッチする。VPC が増えても線は1本ずつ。'],
+  ['tgw','dx',0,'オンプレミスとの専用線も Transit Gateway に1回つなぐだけ(Direct Connect ゲートウェイ経由)。'],
+  ['dx','dc',0,'データセンターと専用線で結ぶ。'],
+  ['ram','tgw',1,'Transit Gateway を RAM で組織内の他アカウントに共有する。'],
+  ['tgw','egr',2,'外向きの通信は出口用 VPC にまとめる。'],
+  ['egr','nfw',2,'出口でファイアウォールが検査する。'],
+  ['nfw','nat',2,'検査を通った通信を NAT Gateway へ。'],
+  ['nat','inet',2,'インターネットへ出る。']],
+ ok:[['ram','vpc']],
+ point:'多数の VPC は Transit Gateway のハブ&スポークでつなぎ、RAM で組織に共有し、出口は集約して Network Firewall で検査するのが AWS の推奨パターン。アプリのサービス同士をアカウントをまたいでつなぐだけなら、Amazon VPC Lattice という選択肢もある。',
+ refs:['mvpc','lattice']},
+
+{id:'secrets',lv:1,theme:'セキュリティ',title:'パスワードを平文から救い出す',
+ story:'監査で、アプリの DB パスワードがタスク定義の環境変数に平文で書かれていたと指摘された。パスワードは安全な場所に置いて定期的に自動で変え、誰が読んだかも追えるようにしたい。',
+ req:['アプリ(ECS タスク)は自分専用の IAM ロールで権限を得る','DB の認証情報は Secrets Manager に置き、専用の鍵で暗号化する','パスワードは自動でローテーションする','シークレットを読んだ記録を残す'],
+ nodes:[['task','ECS タスク','compute','アプリ'],['role','IAM ロール (タスク用)','sec','このアプリだけの権限'],['sm','AWS Secrets Manager','sec','認証情報の保管'],['kms','AWS KMS','sec','暗号化の鍵'],['rds','Amazon RDS / Aurora','data','データベース'],['trail','AWS CloudTrail','ops','API 呼び出しの記録']],
+ alt:[['ps','SSM Parameter Store','ops','設定値の保管','ふつうの設定値ならこちらでも。ただし RDS のマネージドローテーションは Secrets Manager の機能。']],
+ bad:[['env','環境変数に平文','compute','いまの状態','タスク定義を見られる人には誰でもパスワードが見える。変えるたびに再デプロイも必要。'],['s3','S3 に設定ファイル','data','自前で配布','暗号化はできても、ローテーションと配布の仕組みを自分で作ることになる。'],['iamu','共有 IAM ユーザーのキー','sec','アプリに埋め込む','長期キーは漏れたら使われ放題。アプリの権限はロールで渡す。']],
+ edges:[['task','role',0,'タスクにロールを付け、このアプリだけの権限を持たせる。'],
+  ['role','sm',0,'ロールのポリシーで、このアプリのシークレットだけ読めるようにする。'],
+  ['sm','kms',1,'カスタマー管理キーで暗号化する。鍵の使用も制御・記録できる。'],
+  ['task','rds',1,'取得した認証情報で DB に接続する。'],
+  ['sm','rds',2,'マネージドローテーションで、Secrets Manager が DB のパスワードを定期的に変える。'],
+  ['sm','trail',3,'GetSecretValue の呼び出しが CloudTrail に残り、誰がいつ読んだかわかる。']],
+ ok:[['task','sm'],['role','ps'],['ps','kms'],['task','ps'],['kms','trail']],
+ point:'「権限はロール、秘密は Secrets Manager、鍵は KMS、記録は CloudTrail」。RDS / Aurora のパスワードは Secrets Manager のマネージドローテーションで自動で変えられる。アプリが実行時に SDK で読めば(キャッシュ付き)ローテーション後も再デプロイは要らない。起動時に環境変数へ注入する場合は、タスク実行ロールに読む権限を付け、ローテーション後はタスクを入れ替える。',
+ refs:['smrot','rdssm']},
+
+{id:'finops',lv:2,theme:'コスト',title:'どのチームがいくら使っているか見える化する',
+ story:'AWS の請求が毎月増えているのに、どのチームのどのサービスがお金を使っているか誰も説明できない。チーム別に費用を見える化し、予算超えや急な増加にはすぐ気づきたい。',
+ req:['全アカウントでコスト用のタグのルールを組織としてそろえる','詳細な請求データを出力し、SQL で集計してダッシュボードにする','予算超えと異常な増加をチームに通知する'],
+ nodes:[['org','AWS Organizations','ops','全アカウントを束ねる'],['tagp','タグポリシー','ops','タグのキーと値をそろえる'],['exp','Data Exports (CUR 2.0)','ops','詳細な請求データの出力'],['s3','Amazon S3','data','請求データの置き場'],['ath','Amazon Athena','data','SQL で集計'],['qs','Amazon QuickSight','data','ダッシュボード'],['bud','AWS Budgets','ops','予算の管理'],['cad','Cost Anomaly Detection','ops','異常な増加の検知'],['sns','Amazon SNS','int','通知'],['team','各チーム','ext','費用の持ち主']],
+ alt:[],
+ bad:[['cwb','CloudWatch 請求アラーム','ops','EstimatedCharges','アカウントやサービス単位の概算の合計で、チーム(タグ)別の内訳や異常の検知はできない。'],['rs','Redshift を常時起動','data','データウェアハウス','この規模の請求データなら、使った分だけ払う Athena で十分。常時起動のクラスタはそれ自体がコストになる。']],
+ edges:[['org','tagp',0,'タグポリシーを組織に付け、team や service などのキーと値の書き方をそろえる(請求側でコスト配分タグとして有効にするのも忘れずに)。'],
+  ['org','exp',1,'管理アカウントから、組織全体の詳細な請求データを出力する。'],
+  ['exp','s3',1,'請求データが毎日 S3 に届く。'],
+  ['s3','ath',1,'Athena で team タグ別などに集計する。'],
+  ['ath','qs',1,'QuickSight のダッシュボードにする(Cloud Intelligence Dashboards がこの構成)。'],
+  ['bud','sns',2,'予算の80%・100%などに達したら通知する。'],
+  ['cad','sns',2,'機械学習で、いつもと違う増え方を検知して通知する。'],
+  ['sns','team',2,'費用の持ち主であるチームに届ける。']],
+ ok:[['qs','team'],['bud','team'],['cad','team']],
+ point:'FinOps の第一歩は「誰のお金か」をわかるようにすること。タグのルールをそろえ、詳細な請求データ(CUR 2.0)を Athena と QuickSight で見える化し(AWS の Cloud Intelligence Dashboards がこの形)、Budgets と Cost Anomaly Detection で気づけるようにする。Airbnb は請求データをチームに割り当てるダッシュボードを内製し、社内で最も見られるダッシュボードになった。',
+ refs:['cid','airbnb']},
+
+{id:'dr',lv:3,theme:'信頼性',title:'東京リージョンが止まっても続ける',
+ story:'予約サービスを、東京リージョン全体の障害でも1時間以内に大阪リージョンで再開したい(RTO 1時間、RPO は数秒)。平常時のコストは抑えたいので、大阪は小さめの構成で待たせておく(ウォームスタンバイ)。',
+ req:['ヘルスチェックで東京の異常を検知し、DNS で大阪へ切り替える','データは数秒以内の遅れで大阪へ複製する','大阪にも小さめのアプリを常に動かしておく'],
+ nodes:[['r53','Amazon Route 53','net','フェイルオーバールーティング'],['albT','ALB (東京)','net','本番の入口'],['ecsT','ECS (東京)','compute','本番のアプリ'],['auT','Aurora (東京・書き込み)','data','プライマリ'],['albO','ALB (大阪)','net','待機系の入口'],['ecsO','ECS (大阪・縮小)','compute','小さく動かしておく'],['auO','Aurora (大阪・読み取り)','data','セカンダリ']],
+ alt:[],
+ bad:[['bk','日次バックアップだけ','data','AWS Backup で1日1回','RPO が最大で1日になり、復元にも時間がかかる。数秒の RPO には継続的な複製が必要。'],['maz','Multi-AZ 構成だけ','data','同じリージョン内の冗長化','AZ の障害には強いが、リージョン全体の障害は防げない。']],
+ edges:[['r53','albT',0,'平常時は東京へ。ヘルスチェックで監視する。'],
+  ['r53','albO',0,'東京が異常と判断されたら大阪へ切り替える。'],
+  ['albT','ecsT',0,'東京の本番構成。'],
+  ['ecsT','auT',0,'東京のアプリはプライマリに書き込む。'],
+  ['auT','auO',1,'Aurora Global Database が、通常1秒未満の遅れで大阪へ複製する。切り替え時は大阪を書き込み可能に昇格させる。'],
+  ['albO','ecsO',2,'大阪にも小さめの構成を常に動かしておき、切り替え後に台数を増やす。'],
+  ['ecsO','auO',2,'大阪のアプリは大阪のクラスタを使う。']],
+ ok:[],
+ point:'DR は RTO / RPO とコストで方式を選ぶ(バックアップ&リストア → パイロットライト → ウォームスタンバイ → マルチサイト)。今回はウォームスタンバイ。障害の影響範囲を閉じ込める考え方をさらに進めたのがセル型アーキテクチャで、Slack は AZ 単位のセルに移行し、不調な AZ から5分以内に通信を抜けるようにした。',
+ refs:['dr','cell','slack']},
+
+{id:'guardrails',lv:3,theme:'ガバナンス',title:'設定ミスを予防して、自動で直す',
+ story:'開発アカウントでは開発者に自由を与えたいが、S3 バケットの公開やセキュリティグループの全開放が月に何件も起きる。そもそもやってはいけない操作は止め、それ以外の設定ミスは見つけしだい自動で直して担当チームに知らせたい。',
+ req:['絶対にやってはいけない操作は、組織のルールで予防する','設定ミスは継続的に検知し、結果を1か所に集める','検知したら自動で修復し、担当チームに通知する'],
+ nodes:[['org','AWS Organizations','ops','全アカウントを束ねる'],['scp','SCP','sec','組織で禁止する操作'],['cfg','AWS Config ルール','ops','設定ミスを継続的に検知'],['ssm','SSM Automation','ops','修復の手順書を実行'],['sh','Security Hub CSPM','sec','設定の評価と結果の集約'],['eb','Amazon EventBridge','int','イベントの振り分け'],['sns','Amazon SNS','int','通知'],['team','担当チーム','ext','アカウントの持ち主']],
+ alt:[],
+ bad:[['macie','Amazon Macie','sec','S3 内の機密データの発見','S3 の中身に個人情報などがないかを調べるサービス。公開設定の検知と修復とは目的が違う。'],['shield','AWS Shield Advanced','sec','DDoS 対策','外からの大量の攻撃への備え。設定ミスの検知・修復とは別。']],
+ edges:[['scp','org',0,'「S3 のパブリックアクセスブロックを外す」「CloudTrail を止める」などを SCP で禁止する。'],
+  ['cfg','sh',1,'Config ルールの評価結果を Security Hub CSPM(以前の Security Hub)に集める。'],
+  ['cfg','ssm',2,'Config の自動修復で、SSM Automation の手順書(公開設定を戻す、全開放のルールを消す)を実行する。'],
+  ['sh','eb',2,'検知結果はイベントとして EventBridge に流れる。'],
+  ['eb','sns',2,'重要度などで絞り込んで通知する。'],
+  ['sns','team',2,'アカウントの担当チームに届ける。']],
+ ok:[['org','cfg'],['org','sh']],
+ point:'ガードレールは「予防(SCP)」「発見(Config / Security Hub)」「修復(SSM Automation)」の3段で考える。Capital One は、クラウドのルールを YAML で書いて検知と自動修復を行う Cloud Custodian を作ってオープンソースにした(現在は CNCF のプロジェクト)。2025年12月からは、新しい AWS Security Hub が CSPM や GuardDuty、Inspector の結果をまとめて分析できる。',
+ refs:['cfgrem','sra','custodian','shub']},
+
+{id:'static-site',lv:1,theme:'配信',title:'会社のサイトを速く安全に配信する',
+ story:'コーポレートサイトとドキュメント(静的な HTML)を公開したい。世界中から速く見られ、S3 のバケットは公開せず、独自ドメインの HTTPS で配信したい。更新は GitHub への merge で自動で反映したい。',
+ req:['独自ドメインと HTTPS で配信する','世界中のエッジから配信し、S3 は非公開のまま CloudFront からだけ読ませる','merge したら自動でアップロードし、キャッシュを消す'],
+ nodes:[['user','閲覧者','ext','ブラウザ'],['r53','Amazon Route 53','net','独自ドメイン'],['acm','AWS Certificate Manager','sec','HTTPS の証明書'],['cf','Amazon CloudFront','net','エッジから配信'],['oac','Origin Access Control','sec','CloudFront だけに読ませる'],['s3','S3 (非公開)','data','サイトのファイル'],['gh','GitHub','ext','サイトのソース'],['gha','GitHub Actions','ext','ビルドと配置'],['role','IAM ロール (OIDC)','sec','一時的な認証情報']],
+ alt:[],
+ bad:[['web','S3 の静的ウェブサイト公開','data','バケットを公開','バケットを公開することになり、ウェブサイトのエンドポイントは HTTPS にも対応していない。CloudFront + OAC なら非公開のまま配信できる。'],['oai','Origin Access Identity (OAI)','sec','以前の方式','以前の方式。新しく作るなら署名の仕組みが強化された OAC を使う(AWS も OAC を推奨)。'],['ec2web','EC2 の Web サーバー','compute','常時起動','静的なファイルを配るのにサーバーは要らない。OS の更新やスケールの手間が増えるだけ。']],
+ edges:[['user','r53',0,'閲覧者は独自ドメインで名前解決する。'],
+  ['r53','cf',0,'エイリアスレコードで CloudFront のディストリビューションへ向ける。'],
+  ['acm','cf',0,'CloudFront で使う証明書は、バージニア北部(us-east-1)の ACM で発行する。'],
+  ['cf','oac',1,'オリジンへのリクエストを OAC で署名する。'],
+  ['oac','s3',1,'バケットポリシーで、このディストリビューションからの署名つきリクエストだけを許可する。'],
+  ['gh','gha',2,'merge をきっかけにワークフローが動く。'],
+  ['gha','role',2,'OIDC で IAM ロールを引き受け、長期キーを持たない。'],
+  ['gha','s3',2,'ビルドしたファイルを S3 に置く。'],
+  ['gha','cf',2,'キャッシュを無効化(invalidation)して、新しい内容を配る。']],
+ ok:[['user','cf'],['cf','s3'],['role','s3'],['role','cf']],
+ point:'静的サイトは「Route 53 → CloudFront(ACM の証明書、必要なら WAF も) → OAC → 非公開の S3」が定番。更新は CI から S3 に置き、CloudFront のキャッシュを消す。',
+ refs:['oac','ghoidc']},
+
+{id:'saas-tenant',lv:3,theme:'マルチテナント',title:'共有した DB でもテナントのデータを混ぜない',
+ story:'中小企業向けの SaaS。コストを抑えるため、全テナントで同じ Lambda と DynamoDB のテーブルを共有している(プール型)。コードにバグがあっても他社のデータを読めないようにしたい。大口の1社だけは専用の環境を求めている。',
+ req:['ログインしたユーザーのトークンにテナント ID を入れて検証する','共有の処理は、そのテナントに絞った一時的な権限でだけ DB を読む','大口のテナントだけは専用のスタックに振り分ける'],
+ nodes:[['user','利用者','ext','各社の社員'],['cog','Amazon Cognito','sec','ログイン (テナント ID 入りのトークン)'],['apigw','Amazon API Gateway','net','入口とトークン検証'],['lam','Lambda (共有)','compute','全テナントの処理'],['sts','AWS STS','sec','テナント用の一時的な認証情報'],['ddb','DynamoDB (共有テーブル)','data','パーティションキー = テナント ID'],['silo','専用スタック (大口)','compute','その会社だけの API と DB']],
+ alt:[],
+ bad:[['acct','全テナントを別アカウントに','ops','すべてサイロ型','分離は最強だが、コストと運用の手間がテナント数に比例して増える。今回は大口だけを分ける。'],['rule','「必ず WHERE で絞る」という約束','ext','人の注意に頼る','1か所の書き忘れで他社のデータが漏れる。権限の仕組みで強制する。']],
+ edges:[['user','cog',0,'利用者は Cognito でログインし、テナント ID を含むトークンを受け取る。'],
+  ['cog','apigw',0,'API Gateway のオーソライザーでトークンを検証し、テナント ID を後ろに渡す。'],
+  ['apigw','lam',1,'共有の Lambda がリクエストを処理する。'],
+  ['lam','sts',1,'テナント ID をセッションタグにしてロールを引き受け、そのテナント専用の一時的な認証情報を得る。'],
+  ['sts','ddb',1,'IAM ポリシーの条件 dynamodb:LeadingKeys に ${aws:PrincipalTag/…} を使い、自分のテナント ID の項目しか触れないようにする。'],
+  ['apigw','silo',2,'大口テナントのリクエストだけ専用スタックに振り分ける(サイロとプールを混ぜたブリッジ型)。']],
+ ok:[['user','apigw']],
+ wrong:[['lam','ddb','Lambda 自身の広い権限で直接読むと、バグ1つで他社のデータまで読めてしまう。テナントに絞った一時的な認証情報(STS)を経由させる。']],
+ point:'SaaS の分離は「サイロ(専用)」「プール(共有)」「ブリッジ(混在)」から選ぶ。プール型では、テナント ID をトークンに入れ、その ID に絞った一時的な権限でしか DB に触れないようにする(セッションタグと dynamodb:LeadingKeys による ABAC)。新しいテナントが増えても IAM を作り足す必要がない。',
+ refs:['saasiso','saasabac']},
+
+{id:'terraform-ci',lv:2,theme:'IaC',title:'Terraform をチームで安全に回す',
+ story:'10人のチームが Terraform でインフラを管理しているが、各自の PC から apply していて、state の競合や「誰が何を変えたか分からない」事故が起きた。変更はプルリクエストで plan を確かめ、merge したら CI が apply するようにしたい。',
+ req:['state は S3 に置いて暗号化し、ロックで同時実行を防ぐ','プルリクエストで plan、merge で apply(人の PC からは apply しない)','CI は長期キーを持たずに AWS を操作する'],
+ nodes:[['dev','開発者','ext','変更を作る人'],['gh','GitHub (プルリクエスト)','ext','変更のレビュー'],['gha','GitHub Actions','ext','plan / apply の実行'],['role','IAM ロール (OIDC)','sec','一時的な認証情報'],['tf','Terraform','oss','IaC'],['s3','S3 (state と lockfile)','data','state の保存とロック'],['kms','AWS KMS','sec','state の暗号化'],['aws','管理対象のリソース','compute','VPC・RDS など']],
+ alt:[],
+ bad:[['ddb','DynamoDB のロックテーブル','data','以前のロック方式','以前の定番だが、Terraform 1.11 から S3 だけでロックできる use_lockfile が一般提供になり、DynamoDB 用の設定は非推奨になった。'],['local','各自の PC から apply','ext','手元で実行','state の競合や、レビューされていない変更の原因になる。apply は CI だけが行う。'],['git','state を Git にコミット','ext','リポジトリで管理','state には秘密情報が入りうるので履歴に残してはいけない。ロックもできない。']],
+ edges:[['dev','gh',1,'変更はプルリクエストで出す。'],
+  ['gh','gha',1,'PR で plan を実行して結果をコメントし、merge で apply する。'],
+  ['gha','role',2,'OIDC で IAM ロールを引き受け、長期キーを持たない。'],
+  ['gha','tf',1,'CI の中で terraform を実行する。'],
+  ['tf','s3',0,'S3 バックエンドに state を置き、use_lockfile で S3 上のロックファイルを使う。バージョニングも有効にする。'],
+  ['s3','kms',0,'state には秘密情報が入りうるので暗号化する。'],
+  ['tf','aws',1,'apply でリソースを変更する。']],
+ ok:[['role','tf'],['role','s3'],['role','aws']],
+ point:'IaC も「プルリクエストでレビュー → CI が実行」に寄せる。state は暗号化とバージョニングを有効にした S3 に置き、ロックは use_lockfile(Terraform 1.11 から一般提供)。CI の認証は OIDC で長期キーを持たない。',
+ refs:['tfs3','tfaws','ghoidc']},
+
+{id:'cdk-pipeline',lv:2,theme:'CI/CD',title:'開発→検証→本番アカウントへ順番に届ける',
+ story:'同じアプリを、開発・検証・本番の3つのアカウントに順番にデプロイしたい。インフラもアプリも CDK で書いていて、パイプライン自身の変更もコードで管理したい。本番の前には人の承認を入れる。',
+ req:['パイプライン自体もコードで管理し、変更すると自分で自分を更新する','開発→検証→本番の順に、別々のアカウントへデプロイする','本番の前に人が承認する'],
+ nodes:[['gh','GitHub','ext','ソース'],['pipe','CDK Pipelines','devops','CodePipeline で動くパイプライン'],['synth','ビルド (cdk synth)','devops','テンプレートを生成'],['boot','cdk bootstrap の信頼関係','sec','各アカウントがパイプラインを信頼'],['dev','開発アカウント','ops','最初に届ける'],['stg','検証アカウント','ops','本番と同じ構成で確認'],['appr','手動承認','devops','ManualApprovalStep'],['prod','本番アカウント','ops','最後に届ける']],
+ alt:[],
+ bad:[['manual','本番だけ手元から cdk deploy','ext','手作業','本番こそ手作業をなくしたい。パイプラインの最後の段で、承認つきで流す。'],['single','全部を1つのアカウントに','ops','環境の同居','開発のミスが本番に及ぶ。アカウントを分けると影響範囲と権限を分けられる。']],
+ edges:[['gh','pipe',0,'push をきっかけにパイプラインが動く。'],
+  ['pipe','synth',0,'cdk synth でテンプレートを作る。パイプラインの定義が変わっていれば、まず自分自身を更新する(セルフミューテーション)。'],
+  ['boot','pipe',1,'各アカウントを cdk bootstrap してパイプラインのアカウントを信頼させると、別アカウントへデプロイできる。'],
+  ['pipe','dev',1,'まず開発アカウントへ。'],
+  ['dev','stg',1,'問題なければ検証アカウントへ。'],
+  ['stg','appr',2,'検証が済んだら承認を待つ。'],
+  ['appr','prod',2,'承認されたら本番アカウントへ。']],
+ ok:[['pipe','stg'],['pipe','prod'],['pipe','appr'],['boot','dev'],['boot','stg'],['boot','prod']],
+ point:'CDK Pipelines はパイプライン自身をコードで管理し、ステージ(アカウントやリージョン)を足すと自動で組み替わる。別アカウントへは cdk bootstrap の信頼関係を使い、本番の前に ManualApprovalStep を入れる。',
+ refs:['cdkpipe','cdkpipeblog','org']},
+
+{id:'data-lake',lv:2,theme:'データ',title:'分析用のデータレイクをつくる',
+ story:'アプリのイベントや注文データを分析に使いたい。ストリームで集めて S3 に安く貯め、アナリストは SQL で分析する。個人情報の列は一部の人にしか見せたくない。',
+ req:['イベントをストリームで集めて S3 に貯める','データの型(スキーマ)をカタログに登録し、SQL で分析する','列や行の単位で見せる範囲を制御する'],
+ nodes:[['app','アプリ','compute','イベントを出す'],['fh','Amazon Data Firehose','int','ストリームを S3 へ配送'],['s3','S3 (データレイク)','data','生データと加工済みデータ'],['glue','AWS Glue (クローラー / ETL)','data','スキーマの推定と変換'],['cat','Glue Data Catalog','data','テーブルの定義'],['lf','AWS Lake Formation','sec','列・行単位の権限'],['ath','Amazon Athena','data','SQL で分析'],['ana','アナリスト','ext','分析する人']],
+ alt:[],
+ bad:[['prod','本番の RDS に直接分析クエリ','data','いまの DB をそのまま','重い集計で本番のアプリが遅くなる。分析はデータレイクに分ける。'],['bp','S3 のバケットポリシーだけで列を隠す','sec','ファイル単位の権限','バケットポリシーはオブジェクト(ファイル)単位。列や行の単位では制御できない。']],
+ edges:[['app','fh',0,'アプリはイベントを Firehose に送る。'],
+  ['fh','s3',0,'まとめて圧縮し、Parquet などに変換して S3 に配送する。'],
+  ['glue','s3',1,'S3 のデータを読み、スキーマの推定や変換をする。'],
+  ['glue','cat',1,'テーブル定義を Data Catalog に登録する。'],
+  ['ath','cat',1,'Athena はカタログのテーブル定義を使って S3 を直接クエリする。'],
+  ['lf','cat',2,'カタログのテーブルに、列・行・セル単位の権限を付ける。'],
+  ['ana','ath',2,'アナリストは Athena で SQL を書く。見えるのは Lake Formation で許可された範囲だけ。']],
+ ok:[['ath','s3'],['lf','ath'],['lf','s3']],
+ point:'データレイクは「集める(Firehose) → 貯める(S3) → 意味づけ(Glue Data Catalog) → 分析(Athena) → 統制(Lake Formation)」。Kinesis Data Firehose は2024年2月に Amazon Data Firehose へ名前が変わった(API は同じ)。',
+ refs:['lf','lfath','firehose']},
+
+{id:'genai-rag',lv:2,theme:'生成AI',title:'社内文書に答える生成AIアシスタント',
+ story:'社内規程やマニュアル(PDF)をもとに、社員の質問に答えるチャットを作りたい。モデルは自分で運用せず、回答には社内文書の根拠をつけたい。個人情報や不適切な内容は、質問と回答の両方で止めたい。',
+ req:['社内文書を取り込み、ベクトル化して検索できるようにする (RAG)','質問に関係する文書を探し、根拠つきで回答を作る','質問と回答に安全のためのフィルタをかける'],
+ nodes:[['docs','S3 (社内文書)','data','PDF・マニュアル'],['kb','Bedrock Knowledge Bases','ai','取り込みと検索'],['emb','埋め込みモデル (Bedrock)','ai','文章をベクトルに'],['vec','ベクトルストア','data','OpenSearch Serverless / S3 Vectors など'],['fm','基盤モデル (Bedrock)','ai','回答の生成'],['gr','Bedrock Guardrails','sec','入出力のフィルタ'],['app','社内チャット (Lambda / API)','compute','質問を受ける'],['user','社員','ext','質問する人']],
+ alt:[],
+ bad:[['gpu','GPU の EC2 でモデルを自前運用','compute','自分でホスティング','要件は「モデルを自分で運用しない」。Bedrock ならマネージドで使える。'],['ft','全文書でモデルを追加学習','ai','ファインチューニング','文書が更新されるたびに学習し直しになり、根拠も示しにくい。まずは RAG で検索して渡す。']],
+ edges:[['docs','kb',0,'S3 の文書を取り込み、チャンクに分ける。'],
+  ['kb','emb',0,'埋め込みモデルでチャンクをベクトルにする。'],
+  ['kb','vec',0,'ベクトルストアに保存する(OpenSearch Serverless や S3 Vectors などを選べる)。'],
+  ['user','app',1,'社員がチャットで質問する。'],
+  ['app','kb',1,'RetrieveAndGenerate で、質問に近い文書を探して回答を作らせる。'],
+  ['kb','fm',1,'見つけた文書を根拠として基盤モデルが回答し、出典も返す。'],
+  ['app','gr',2,'ガードレールで、個人情報のマスクや禁止トピックの遮断を質問と回答の両方にかける。']],
+ ok:[['gr','kb'],['gr','fm'],['app','fm']],
+ point:'RAG は「文書を取り込む → ベクトル化して保存 → 質問に近い文書を探す → 根拠として渡して生成」。Bedrock Knowledge Bases がこの流れをまとめて提供し、ベクトルストアには OpenSearch Serverless や S3 Vectors などを選べる。Guardrails で入出力を守る。',
+ refs:['kb','guard','s3vec']},
+
+{id:'batch',lv:1,theme:'バッチ',title:'夜間の集計バッチをサーバーなしで回す',
+ story:'毎晩2時に、前日の注文データを集計してレポートを作るバッチがある。いまは常時起動の EC2 の cron で動いていて、昼間はほぼ遊んでいる。決まった時刻にだけ計算資源を用意し、安い Spot も使い、失敗したら気づけるようにしたい。',
+ req:['決まった時刻にジョブを起動する','ジョブの時だけコンテナを動かし、Spot を使う','失敗したら担当者に知らせる'],
+ nodes:[['sch','EventBridge Scheduler','int','時刻でジョブを起動'],['batch','AWS Batch','compute','ジョブキューと実行'],['ce','コンピューティング環境 (Spot)','compute','必要な時だけ EC2'],['ecr','Amazon ECR','devops','ジョブのイメージ'],['s3','Amazon S3','data','入力と結果'],['eb','Amazon EventBridge','int','ジョブの状態変化'],['sns','Amazon SNS','int','通知'],['team','担当者','ext','バッチの持ち主']],
+ alt:[],
+ bad:[['cron','常時起動の EC2 で cron','compute','いまの状態','1日数十分の処理のために、24時間ぶんのお金を払うことになる。'],['lam','Lambda で数時間の集計','compute','サーバーレス関数','Lambda の実行時間は最大15分。長いバッチはコンテナで動かす。']],
+ edges:[['sch','batch',0,'毎晩2時にジョブを投入する(タイムゾーンも指定できる)。'],
+  ['batch','ce',1,'ジョブキューが Spot のコンピューティング環境に割り当て、終われば台数を0に戻す。'],
+  ['ecr','batch',1,'ジョブのコンテナイメージを取得する。'],
+  ['batch','s3',1,'入力を読み、結果を書く。'],
+  ['batch','eb',2,'ジョブの状態変化(FAILED など)がイベントとして流れる。'],
+  ['eb','sns',2,'失敗のイベントだけを通知に回す。'],
+  ['sns','team',2,'担当者に届ける。']],
+ ok:[['ce','ecr'],['ce','s3']],
+ point:'定時バッチは「Scheduler で起動 → Batch がキューとスケールを管理 → Spot で安く → 状態変化を EventBridge で拾って通知」。15分以内の短い処理なら Lambda、長い処理はコンテナ。',
+ refs:['batchsch','batchjq']},
+
+{id:'security-lake',lv:3,theme:'セキュリティ運用',title:'全アカウントのセキュリティログを1か所で調べる',
+ story:'50アカウントの CloudTrail、VPC フローログ、DNS クエリログ、WAF ログが、形式もバラバラのまま散らばっていて、インシデントのたびに集めるだけで半日かかる。共通の形式にそろえて1か所に集め、SQL で調べ、外部の SIEM にも渡したい。',
+ req:['組織全体のログを自動で集め、共通の形式(OCSF)にそろえる','SQL でまとめて調べる','外部の SIEM にもデータを渡す'],
+ nodes:[['org','AWS Organizations','ops','全アカウント'],['trail','CloudTrail','ops','API の操作ログ'],['vpcf','VPC フローログ','net','通信の記録'],['dns','Route 53 Resolver クエリログ','net','DNS の問い合わせ'],['waf','AWS WAF ログ','sec','Web の攻撃'],['sl','Amazon Security Lake','sec','OCSF で集約'],['s3','S3 (セキュリティデータレイク)','data','自分のアカウントに保存'],['ath','Amazon Athena','data','SQL で調べる'],['siem','SIEM (外部)','ext','サブスクライバー']],
+ alt:[],
+ bad:[['each','各アカウントで個別に S3 へ','data','バラバラに保存','形式も場所もバラバラのまま。調べるたびに集め直すことになる。'],['macie','Amazon Macie','sec','S3 の機密データの発見','S3 の中の個人情報などを探すサービス。ログの集約や正規化とは別。']],
+ edges:[['org','sl',0,'委任管理者のアカウントで、組織全体の収集を有効にする。'],
+  ['trail','sl',0,'CloudTrail のログを取り込む。'],
+  ['vpcf','sl',0,'VPC フローログを取り込む。'],
+  ['dns','sl',0,'DNS のクエリログを取り込む。'],
+  ['waf','sl',0,'WAF のログも取り込める。'],
+  ['sl','s3',0,'OCSF・Parquet 形式にそろえて、自分のアカウントの S3 に保存する。'],
+  ['ath','s3',1,'Athena で、ソースを気にせず横断的に SQL で調べる。'],
+  ['sl','siem',2,'サブスクライバーとして SIEM にデータを渡す。']],
+ ok:[['ath','sl'],['siem','s3']],
+ point:'Security Lake はセキュリティのログを OCSF にそろえて集め、データは自分のアカウントの S3 に置く。ソースごとの形式の違いを気にせずに調べられ、SIEM などにはサブスクライバーとして渡せる。',
+ refs:['sl','slsrc']},
+
+{id:'verified-access',lv:2,theme:'ゼロトラスト',title:'VPN なしで社内アプリに入る',
+ story:'社内の管理画面(内部 ALB の裏のアプリ)に、リモートの社員が VPN 経由で入っている。VPN は一度つながると社内ネットワーク全体に入れてしまうのが不安。アプリごとに、本人と端末の状態をリクエストのたびに確かめてから通したい。',
+ req:['社員は会社の IdP で本人確認する','アプリごとのポリシーで、リクエストのたびに通すかを判定する','アクセスの記録を残す'],
+ nodes:[['emp','社員のブラウザ','ext','自宅や外出先'],['va','AWS Verified Access','sec','リクエストごとに判定'],['idp','IAM Identity Center / 社内 IdP','sec','本人確認 (信頼プロバイダー)'],['mdm','端末管理 (MDM など)','ext','端末の状態 (信頼プロバイダー)'],['pol','アクセスポリシー (Cedar)','sec','アプリごとの条件'],['alb','内部 ALB','net','社内アプリの入口'],['app','社内アプリ','compute','管理画面'],['logs','アクセスログ (CloudWatch Logs / S3)','ops','すべての試行を記録']],
+ alt:[],
+ bad:[['vpn','クライアント VPN で社内ごと接続','net','いまの状態','一度つながると広い範囲に届いてしまう。アプリ単位・リクエスト単位で判定するのがゼロトラスト。'],['pub','ALB を公開して IP で制限','net','送信元 IP の許可','社員の自宅の IP は変わり、IP だけでは本人も端末も確かめられない。']],
+ edges:[['emp','va',1,'社員はアプリの URL にアクセスする。まず Verified Access が受ける。'],
+  ['idp','va',0,'IdP を信頼プロバイダーにして、ユーザーの属性(所属など)を受け取る。'],
+  ['mdm','va',1,'端末の状態(管理下か、OS が最新かなど)も判定に使える。'],
+  ['pol','va',1,'Cedar で書いたポリシーで「この部署の、管理された端末だけ」などを判定する。'],
+  ['va','alb',1,'許可されたリクエストだけを内部 ALB に通す。'],
+  ['alb','app',1,'社内アプリへ届く。'],
+  ['va','logs',2,'すべてのアクセス試行を記録する。']],
+ ok:[['emp','idp']],
+ point:'ゼロトラストでは、ネットワークに入れる(VPN)のではなく、アプリへのリクエストを毎回「誰が・どの端末で」判定する。Verified Access は IdP と端末管理を信頼プロバイダーにし、Cedar のポリシーで判定して、すべてのアクセスを記録する。',
+ refs:['va']},
+
+{id:'session-manager',lv:1,theme:'運用',title:'踏み台サーバーをなくす',
+ story:'EC2 に入るために、SSH のポートを開けた踏み台サーバーを置き、SSH 鍵をチームで共有している。退職者の鍵の回収も、誰が何を実行したかの記録もできていない。',
+ req:['インバウンドのポートを開けず、鍵も配らずにサーバーに入る','誰が入れるかは IAM で管理する','セッションの操作を記録する'],
+ nodes:[['eng','エンジニア','ext','サーバーを調べたい人'],['sso','IAM Identity Center','sec','SSO と権限'],['ssm','Session Manager','ops','シェル接続'],['vpce','VPC エンドポイント','net','インターネットなしで SSM へ'],['ec2','EC2 (SSM Agent 入り)','compute','プライベートサブネット'],['logs','CloudWatch Logs / S3','ops','セッションの記録'],['trail','AWS CloudTrail','ops','接続の開始と終了']],
+ alt:[],
+ bad:[['bastion','SSH の踏み台サーバー','compute','いまの状態','ポートを開け、鍵を配り、踏み台そのものを守る手間が残る。'],['sg22','22番ポートを全開放','net','セキュリティグループ','世界中から SSH を試される。そもそもインバウンドのポートは開けない。']],
+ edges:[['eng','sso',1,'SSO でログインし、Session Manager を使える権限をもらう。'],
+  ['sso','ssm',1,'権限セットで、どのインスタンスに入れるかを決める。'],
+  ['ssm','vpce',0,'プライベートサブネットの EC2 とは VPC エンドポイント経由でつながる。'],
+  ['vpce','ec2',0,'EC2 の SSM Agent が外向きに接続するので、インバウンドのポートは要らない。'],
+  ['ssm','logs',2,'実行したコマンドと出力をセッションログとして保存する。'],
+  ['ssm','trail',2,'誰がいつ接続したかは CloudTrail に残る。']],
+ ok:[['ssm','ec2'],['eng','ssm']],
+ point:'Session Manager は EC2 側のエージェントが外向きにつなぐので、インバウンドのポートも SSH 鍵も要らない。入れる人は IAM で決まり、操作は CloudWatch Logs や S3、接続の記録は CloudTrail に残る。',
+ refs:['ssm']},
+
+{id:'golden-ami',lv:2,theme:'サーバー運用',title:'OS イメージを自動で作って最新に保つ',
+ story:'EC2 の AMI を手作業で作っていて、パッチ当てが半年止まっている。毎月と、ベースの AMI が更新されたときに、パッチ適用済み・脆弱性スキャン済みの AMI を自動で作り、各アカウントに配って、Auto Scaling の起動テンプレートも更新したい。',
+ req:['定期的にベースイメージからビルドしてテストする','脆弱性スキャンを通ったものだけを使う','できた AMI を他のアカウントに配り、起動テンプレートを更新する'],
+ nodes:[['base','ベースの AMI','compute','Amazon Linux など'],['comp','コンポーネント','devops','パッチ適用と設定の手順'],['ib','EC2 Image Builder','devops','ビルド→テスト→配布'],['insp','Amazon Inspector','sec','脆弱性スキャン'],['ami','ゴールデン AMI','compute','できたイメージ'],['acct','配布先のアカウント','ops','他のアカウント・リージョン'],['lt','起動テンプレート','compute','Auto Scaling が使う'],['asg','Auto Scaling グループ','compute','EC2 の台数管理']],
+ alt:[],
+ bad:[['hand','手作業で AMI を作る','ext','いまの状態','手順が人に依存し、パッチが止まる原因になる。'],['patch','本番の EC2 に直接パッチ','compute','その場で更新','サーバーごとに状態がずれていく。新しいイメージで入れ替えるほうが再現性が高い。']],
+ edges:[['base','ib',0,'ベースイメージの更新やスケジュールでパイプラインを起動する。'],
+  ['comp','ib',0,'パッチ適用やハードニングの手順をコンポーネントとして組み込む。'],
+  ['ib','insp',1,'できたイメージを Inspector でスキャンする。'],
+  ['ib','ami',1,'テストとスキャンを通ったら AMI として出力する。'],
+  ['ami','acct',2,'配布設定で、他のアカウントやリージョンに共有する。'],
+  ['ami','lt',2,'配布設定で、起動テンプレートの AMI も更新できる。'],
+  ['lt','asg',2,'インスタンスの入れ替えで新しい AMI に切り替わる。']],
+ ok:[['acct','lt']],
+ point:'サーバーも「その場で直す」より「作り直して入れ替える」。Image Builder のパイプラインでビルド→テスト→スキャン→配布を自動化し、配布のときに起動テンプレートまで更新する。',
+ refs:['ib']},
+
+{id:'supply-chain',lv:3,theme:'セキュリティ',title:'署名されたイメージだけを本番で動かす',
+ story:'CI でビルドしたコンテナイメージを EKS で動かしている。誰かが勝手に作ったイメージや改ざんされたイメージが本番で動かないよう、CI でビルドしたものに署名し、クラスタでは署名を確かめてから起動したい。脆弱性も継続的に調べる。',
+ req:['CI でビルドしたイメージに署名する','署名と脆弱性スキャンの結果を ECR で管理する','クラスタは署名を検証できたイメージだけを起動する'],
+ nodes:[['ci','CI (CodeBuild / GitHub Actions)','devops','ビルド'],['signer','AWS Signer','sec','署名 (Notation)'],['ecr','Amazon ECR','devops','イメージと署名'],['insp','Amazon Inspector','sec','脆弱性スキャン'],['eks','Amazon EKS','compute','本番クラスタ'],['adm','アドミッションコントローラー','oss','Kyverno / Gatekeeper + Ratify']],
+ alt:[],
+ bad:[['latest','latest タグで常に取得','devops','タグの上書き','中身が差し替わっても気づけない。イメージはダイジェストや上書きできないタグで固定する。'],['cgs','Amazon CodeGuru Security','sec','コードの脆弱性スキャン','2025年11月20日にサポート終了。コードのスキャンは Amazon Inspector や Amazon Q Developer などへ移る。']],
+ edges:[['ci','ecr',0,'ビルドしたイメージを push する。'],
+  ['ci','signer',0,'Notation と AWS Signer のプラグインで署名する(ECR の managed signing なら push 時に自動で署名)。'],
+  ['signer','ecr',1,'署名はイメージの隣に ECR に保存される。'],
+  ['ecr','insp',1,'Inspector が継続的に脆弱性を調べる。'],
+  ['eks','adm',2,'Pod を作るときにアドミッションコントローラーが呼ばれる。'],
+  ['adm','ecr',2,'ECR から署名を取り、信頼する Signer のプロファイルで署名されているかを検証する。だめなら起動を拒否する。'],
+  ['ecr','eks',2,'検証を通ったイメージだけを取得して起動する。']],
+ ok:[['signer','adm']],
+ point:'サプライチェーン対策は「誰が作ったか(署名)」「何が入っているか(スキャン)」「動かす前に確かめる(アドミッション)」の3点。ECR は Signer と連携した managed signing にも対応した。',
+ refs:['signer','signblog','ecrsign','codeguru']},
+
+{id:'eks-tenancy',lv:3,theme:'コンテナ基盤',title:'1つの EKS を複数チームで安全に共有する',
+ story:'20チームが1つの EKS クラスタを共有している。あるチームの Pod がメモリを使い切って他のチームに影響したり、他のチームの namespace を誤って消したりする事故が起きた。チームごとに権限・通信・使える量の枠を分けたい。',
+ req:['チームのメンバーは、自分の namespace だけを操作できる','namespace をまたぐ通信は既定で止める','チームごとに CPU・メモリの上限を決める'],
+ nodes:[['sso','IAM Identity Center','sec','チームの SSO'],['role','チーム用の IAM ロール','sec','権限セットから'],['ae','EKS アクセスエントリ','sec','ロールとクラスタ権限の対応'],['rbac','namespace の権限 (RBAC)','oss','アクセスポリシー / Role'],['ns','チームの namespace','compute','チームの持ち場'],['np','NetworkPolicy','net','namespace 間の通信を制限'],['rq','ResourceQuota / LimitRange','ops','CPU・メモリの上限']],
+ alt:[],
+ bad:[['cm','aws-auth ConfigMap を手で編集','oss','以前の方式','非推奨になった方式。書き損じでクラスタに誰も入れなくなる事故も起きやすい。アクセスエントリを使う。'],['admin','全員に cluster-admin','sec','強い権限を配る','他のチームの namespace も消せてしまう。']],
+ edges:[['sso','role',0,'メンバーは SSO でチーム用のロールを使う。'],
+  ['role','ae',0,'アクセスエントリで、ロールをクラスタの利用者として登録する。'],
+  ['ae','rbac',0,'アクセスポリシーを、そのチームの namespace の範囲で関連付ける。'],
+  ['rbac','ns',0,'操作できるのは自分の namespace だけになる。'],
+  ['np','ns',1,'既定は通信を拒否し、必要なものだけ許可する。'],
+  ['rq','ns',2,'namespace ごとに使える量の上限を決め、1チームの暴走を止める。']],
+ ok:[['ae','ns'],['role','rbac']],
+ point:'1つのクラスタを共有するなら、権限(アクセスエントリ + RBAC)、通信(NetworkPolicy)、量(ResourceQuota)で namespace ごとに枠を作る。それでも足りない強い分離が必要なら、クラスタやアカウントを分ける。',
+ refs:['eksae','ekstenant']},
+
+{id:'permission-boundary',lv:3,theme:'権限',title:'開発者にロールを作らせても権限昇格させない',
+ story:'開発者が Lambda などのために、IAM ロールを自分で作れるようにしたい。でも、管理者権限のロールを作って自分で使う「権限昇格」が心配。上限を決めたうえで任せ、使われていない権限は定期的に見つけて削りたい。',
+ req:['開発者が作るロールには、必ず上限(権限境界)を付けさせる','組織全体でも越えられない線を引く','使われていない権限を見つけて減らす'],
+ nodes:[['dev','開発者','ext','ロールを作りたい人'],['devrole','開発者のロール','sec','ロールを作る権限を持つ'],['pb','権限境界','sec','作るロールの上限'],['newrole','開発者が作ったロール','sec','Lambda などが使う'],['scp','SCP','sec','組織全体の上限'],['org','AWS Organizations','ops','全アカウント'],['aa','IAM Access Analyzer','sec','未使用の権限を検出']],
+ alt:[],
+ bad:[['admin','開発者に AdministratorAccess','sec','強い権限を配る','何でもできてしまい、最小権限も監査も意味がなくなる。'],['ticket','ロール作成を毎回チケットで依頼','ext','すべて手作業で承認','安全だが、プラットフォームチームがボトルネックになる。上限を決めて任せるのがセルフサービス。']],
+ edges:[['dev','devrole',0,'開発者は自分用のロールで作業する。'],
+  ['devrole','newrole',0,'iam:CreateRole は、指定の権限境界を付ける条件つきでだけ許可する。'],
+  ['pb','newrole',0,'境界を超える権限は、ポリシーに書いても効かない。'],
+  ['scp','org',1,'組織全体で、境界の付け替えや重要な操作などを禁止する。'],
+  ['aa','newrole',2,'使われていないロールや権限を見つけて、最小権限に近づける。']],
+ ok:[['aa','devrole'],['aa','org'],['pb','devrole']],
+ point:'「任せる」と「守る」を両立させるのが権限境界。ロールの作成は境界つきでだけ許可し、SCP で組織の上限を引き、IAM Access Analyzer の未使用アクセスの検出で余分な権限を削る。',
+ refs:['pb','pbblog','aaunused']},
+
+{id:'chaos',lv:3,theme:'信頼性',title:'わざと障害を起こして強さを確かめる',
+ story:'マルチ AZ 構成にしたが、本当に AZ の障害を乗り切れるかは誰も試したことがない。本番に近い環境で、タスクの停止や通信の遅延を安全に注入し、影響が大きくなったら自動で止めたい。',
+ req:['実験の内容(何を、どれだけ壊すか)をテンプレートで管理する','異常が大きくなったら実験を自動で止める','実験中のシステムの様子を観測する'],
+ nodes:[['tmpl','実験テンプレート','ops','対象とアクション'],['fis','AWS Fault Injection Service','ops','障害の注入'],['app','アプリ (ALB + ECS)','compute','実験の対象'],['cwm','CloudWatch メトリクス','ops','エラー率・レイテンシ'],['alarm','CloudWatch アラーム','ops','止める条件'],['dash','CloudWatch ダッシュボード','ops','実験中の様子']],
+ alt:[],
+ bad:[['all','いきなり本番で全台停止','compute','一度に大きく','影響範囲を小さく始め、止める条件を決めてから広げる。'],['nostop','止める条件なしで実験','ops','見ながら手で止める','人が気づくまで影響が広がる。止める条件はアラームで自動にする。']],
+ edges:[['tmpl','fis',0,'対象(ECS タスクや EC2、AZ)とアクションをテンプレートで定義する。'],
+  ['fis','app',0,'タスクの停止、CPU 負荷、ネットワークの遅延などを注入する。'],
+  ['app','cwm',2,'アプリのエラー率やレイテンシを出す。'],
+  ['cwm','alarm',1,'エラー率などが閾値を超えたらアラームになる。'],
+  ['alarm','fis',1,'アラームを停止条件に指定すると、発火したとき FIS が実験を止める。'],
+  ['cwm','dash',2,'ダッシュボードで定常状態が保たれているかを見守る。']],
+ ok:[['app','alarm'],['app','dash']],
+ point:'カオスエンジニアリングは「定常状態を決める → 小さく壊す → 止める条件つきで → 観測して学ぶ」。Netflix は2011年に Chaos Monkey などの Simian Army を公開し、意図的に障害を起こして強さを確かめる文化を広めた。AWS では FIS がマネージドで提供している。',
+ refs:['fis','fisstop','simian']},
+
+{id:'backup-governance',lv:2,theme:'データ保護',title:'バックアップを組織全体でそろえて守る',
+ story:'アカウントごとにバックアップの設定がバラバラで、ランサムウェア対策として「消されないバックアップ」も求められている。組織全体に同じバックアップ方針を配り、別のアカウントにもコピーし、コピーは管理者でも消せないようにしたい。',
+ req:['組織全体に同じ方針(頻度・保持期間・対象のタグ)を配る','バックアップを別アカウントの保管庫にコピーする','コピー先の保管庫は、決めた期間だれも消せないようにする'],
+ nodes:[['org','AWS Organizations','ops','全アカウント'],['bp','バックアップポリシー','ops','頻度・保持期間・対象タグ'],['bk','AWS Backup (各アカウント)','data','バックアップの実行'],['res','対象のリソース','data','タグ backup=daily の RDS・EBS など'],['vault','ローカルの保管庫','data','同じアカウント'],['cv','別アカウントの保管庫','data','バックアップ専用アカウント'],['lock','Vault Lock (コンプライアンス)','sec','削除の禁止']],
+ alt:[],
+ bad:[['manual','各自が手でスナップショット','ext','いまの状態','漏れや保持期間のばらつきが出る。方針は組織で一元化する。'],['same','同じアカウントにだけ保存','data','コピーしない','アカウントが乗っ取られると、バックアップも一緒に消される。']],
+ edges:[['org','bp',0,'バックアップポリシーを組織や OU に付ける。'],
+  ['bp','bk',0,'ポリシーが各アカウントにバックアッププランとして展開される。'],
+  ['bk','res',0,'タグで対象を選んでバックアップする。'],
+  ['bk','vault',0,'まず同じアカウントの保管庫に保存する。'],
+  ['vault','cv',1,'組織内の別アカウントの保管庫へコピーする(カスタマー管理キーが必要)。'],
+  ['lock','cv',2,'コンプライアンスモードの Vault Lock なら、保持期間中は root でも消せない。']],
+ ok:[['lock','vault']],
+ point:'バックアップは「組織で方針を配る → 別アカウントにコピー → Vault Lock で消せなくする」でランサムウェアにも備える。より強い分離には、論理的にエアギャップされた保管庫という選択肢もある。',
+ refs:['bkx']},
+
+{id:'hybrid-dns',lv:3,theme:'ネットワーク',title:'オンプレミスと AWS の名前解決をつなぐ',
+ story:'オンプレミスの社内 DNS(corp.example)と、AWS のプライベートな名前(aws.example)を、お互いに引けるようにしたい。アカウントは30あり、すべての VPC に同じ設定を配りたい。回線は Direct Connect でつながっている。',
+ req:['AWS からオンプレミスの名前を引けるようにする','オンプレミスから AWS の名前を引けるようにする','転送ルールを他のアカウントの VPC に共有する'],
+ nodes:[['rule','転送ルール (corp.example)','net','どこへ問い合わせるか'],['out','Resolver アウトバウンドエンドポイント','net','オンプレミスへ問い合わせる'],['dx','AWS Direct Connect','net','専用線'],['odns','オンプレミスの DNS サーバー','ext','corp.example を管理'],['in','Resolver インバウンドエンドポイント','net','オンプレミスからの問い合わせを受ける'],['phz','プライベートホストゾーン (aws.example)','net','AWS 側の名前'],['ram','AWS RAM','ops','他のアカウントと共有'],['vpcs','各アカウントの VPC','net','名前を引く側']],
+ alt:[],
+ bad:[['bind','EC2 に DNS サーバーを立てて転送','compute','自前の BIND など','動くが、冗長化やパッチを自分で見ることになる。Resolver のエンドポイントならマネージド。'],['hosts','各サーバーの hosts ファイル','ext','手で書く','台数とアカウントが増えると更新しきれない。']],
+ edges:[['rule','out',0,'corp.example の問い合わせを、アウトバウンドエンドポイントへ向ける。'],
+  ['out','dx',0,'専用線を通って届ける。'],
+  ['dx','odns',0,'オンプレミスの DNS サーバーが答える。'],
+  ['odns','in',1,'オンプレミス側で aws.example をインバウンドエンドポイントへ条件付き転送する(専用線経由)。'],
+  ['in','phz',1,'VPC の Resolver が、プライベートホストゾーンの名前を答える。'],
+  ['ram','rule',2,'転送ルールを RAM で他のアカウントに共有する。'],
+  ['rule','vpcs',2,'共有されたルールを各 VPC に関連付ける。']],
+ ok:[['vpcs','phz'],['in','dx']],
+ point:'ハイブリッド DNS は、AWS→オンプレミスはアウトバウンドエンドポイントと転送ルール、オンプレミス→AWS はインバウンドエンドポイント。ルールは共有サービスのアカウントに作り、RAM で各アカウントに配る。',
+ refs:['r53hyb','r53wp']},
+
+{id:'feature-flags',lv:2,theme:'リリース',title:'デプロイとリリースを分ける (機能フラグ)',
+ story:'新機能をデプロイしたら即座に全員に公開される運用のため、金曜のリリースが怖い。コードは先にデプロイしておき、機能は設定で少しずつ公開したい。異常が出たら設定を自動で戻したい。',
+ req:['機能の ON/OFF を設定として管理し、アプリはそれを読む','設定の変更を段階的に広げる','エラーが増えたら設定を自動で戻す'],
+ nodes:[['pm','開発者 / PM','ext','フラグを切り替える人'],['ac','AWS AppConfig','devops','機能フラグの管理'],['val','バリデーター','devops','設定の中身を検証'],['strat','デプロイ戦略','devops','10%ずつ30分かけて など'],['agent','AppConfig Agent / Lambda 拡張','devops','取得とキャッシュ'],['app','アプリ (Lambda / ECS)','compute','フラグを読む'],['alarm','CloudWatch アラーム','ops','エラー率']],
+ alt:[],
+ bad:[['env','フラグを環境変数で持って再デプロイ','compute','いまの状態','切り替えのたびにデプロイが必要で、段階的な公開も自動の巻き戻しもできない。'],['big','全員に一斉公開','ext','一度に全部','問題があると全員に影響する。少しずつ広げて様子を見る。']],
+ edges:[['pm','ac',0,'切り替えるのはコードではなく設定。'],
+  ['val','ac',0,'間違った設定はデプロイの前に弾く。'],
+  ['ac','agent',0,'エージェント(拡張機能)がフラグを取得してキャッシュする。'],
+  ['agent','app',0,'アプリはローカルのエージェントから読むだけ。'],
+  ['strat','ac',1,'設定の配信を段階的に広げる。'],
+  ['app','alarm',2,'エラー率やレイテンシを監視する。'],
+  ['alarm','ac',2,'配信中にアラームが発火したら、前の設定に自動で戻す。']],
+ ok:[['ac','app']],
+ point:'「デプロイ(コードを置く)」と「リリース(機能を公開する)」を分けると、リリースが設定の変更になる。AppConfig は段階的な配信と、アラームに連動した自動ロールバックを持つ。AWS のゴールデンパスの例(サーバーレス)でも AppConfig が挙がっている。',
+ refs:['acff','gp']},
+
+{id:'cache-db',lv:2,theme:'データベース',title:'急なアクセスから DB を守る',
+ story:'セールの告知のたびに商品ページへのアクセスが10倍になり、RDS の CPU と接続数が限界になる。読み取りの多くは同じ商品情報。Lambda からの接続も急増する。',
+ req:['よく読まれるデータはキャッシュから返す','Lambda からの大量の接続をまとめる','読み取りを複数の DB に分散する'],
+ nodes:[['api','API (Lambda)','compute','商品ページのデータ'],['cache','ElastiCache (Valkey)','data','キャッシュ'],['proxy','Amazon RDS Proxy','data','接続プール'],['w','Aurora (書き込み)','data','プライマリ'],['r','Aurora リードレプリカ','data','読み取り専用']],
+ alt:[],
+ bad:[['big','DB のサイズを上げ続ける','data','スケールアップ','一時的にはしのげても、同じデータを何度も読む無駄は残り、コストも上がり続ける。'],['mem','Lambda のメモリにキャッシュ','compute','関数ごとに保持','実行環境ごとにバラバラで、すぐ消える。共有のキャッシュが必要。']],
+ edges:[['api','cache',0,'まずキャッシュを見て、なければ DB から読んでキャッシュに入れる(キャッシュアサイド)。'],
+  ['api','proxy',1,'Lambda の短い接続を RDS Proxy がまとめ、DB への接続数を抑える。'],
+  ['proxy','w',1,'書き込みはプライマリへ。'],
+  ['proxy','r',2,'読み取り専用のエンドポイントでリードレプリカへ振り分ける。'],
+  ['w','r',2,'Aurora がストレージのレベルで複製する。']],
+ ok:[],
+ wrong:[['api','w','Lambda から毎回直接つなぐと、アクセスの急増で DB の接続数があふれる。RDS Proxy を挟む。'],['api','r','Lambda から毎回直接つなぐと、アクセスの急増で DB の接続数があふれる。RDS Proxy を挟む。']],
+ point:'読み取りの多い負荷には「キャッシュ → 接続プール → リードレプリカ」の順に効く。ElastiCache は2024年に Valkey(Redis OSS から分かれたオープンソース)に対応し、Lambda から RDS へは RDS Proxy で接続をまとめるのが AWS の推奨。',
+ refs:['valkey','rdsproxy']},
+
+{id:'websocket',lv:2,theme:'リアルタイム',title:'新着メッセージをすぐに届ける',
+ story:'社内チャットに「新しいメッセージが来たらすぐ届く」機能を足したい。サーバーは常時起動させたくない。接続中のクライアントに、サーバー側から送れるようにしたい。',
+ req:['クライアントとの双方向の接続を保つ','接続中のクライアントの一覧を管理する','新しいメッセージを接続中の全員に送る'],
+ nodes:[['client','ブラウザ / アプリ','ext','チャットの画面'],['ws','API Gateway (WebSocket API)','net','双方向の接続'],['conn','Lambda ($connect / $disconnect)','compute','接続の登録と削除'],['tbl','DynamoDB (接続 ID)','data','接続中の一覧'],['send','Lambda (sendmessage)','compute','メッセージの配信']],
+ alt:[],
+ bad:[['poll','1秒ごとにポーリング','ext','クライアントから問い合わせ','新着がなくても大量のリクエストが発生し、遅れも残る。'],['ec2','EC2 で WebSocket サーバー','compute','常時起動','動くが、接続数に合わせたスケールや常時起動のコストを自分で見ることになる。']],
+ edges:[['client','ws',0,'クライアントは WebSocket でつながったままにする。'],
+  ['ws','conn',1,'$connect / $disconnect のルートで、接続と切断を知らせる。'],
+  ['conn','tbl',1,'接続 ID を登録・削除する。'],
+  ['ws','send',2,'sendmessage ルートでメッセージを受け、@connections のコールバック URL で各接続へ送り返す。'],
+  ['send','tbl',2,'接続中の ID の一覧を読む。']],
+ ok:[],
+ point:'API Gateway の WebSocket API は接続を保ち、$connect / $disconnect で出入りを知らせる。接続 ID を DynamoDB に持ち、送るときは @connections のコールバック URL へ。サーバーは常時起動しなくてよい。',
+ refs:['wschat','wsover']},
+
+{id:'api-partner',lv:2,theme:'API',title:'取引先に API を公開して使いすぎを防ぐ',
+ story:'取引先30社に在庫照会の API を公開する。会社ごとに使える回数の上限を決め、ある1社の暴走で他社が使えなくなるのを防ぎたい。攻撃的なリクエストも止め、会社ごとの利用状況を見たい。',
+ req:['会社ごとにキーを発行して、呼び出しを識別する','会社ごとに回数(クォータ)と速さ(スロットリング)の上限を決める','攻撃的なリクエストを止め、利用状況を見られるようにする'],
+ nodes:[['partner','取引先のシステム','ext','API を呼ぶ'],['waf','AWS WAF','sec','攻撃的なリクエストを遮断'],['apigw','API Gateway (REST API)','net','公開の入口'],['key','API キー','sec','会社の識別'],['plan','使用量プラン','net','会社ごとの上限'],['lam','Lambda (在庫照会)','compute','処理'],['ddb','Amazon DynamoDB','data','在庫'],['cw','Amazon CloudWatch','ops','ログとメトリクス']],
+ alt:[],
+ bad:[['nolimit','上限なしで公開','net','制限をかけない','1社の暴走やバグで全体が止まる。'],['share','全社で1つのキーを共有','sec','共通のキー','誰が使ったか分からず、1社だけ止めることもできない。']],
+ edges:[['partner','apigw',0,'取引先は API キーを付けて呼ぶ。'],
+  ['key','plan',0,'会社ごとにキーを発行し、使用量プランに紐づける。'],
+  ['plan','apigw',1,'プランごとにスロットリングとクォータを決め、API のステージに適用する。'],
+  ['waf','apigw',2,'WAF を API に付けて、攻撃的なリクエストを止める。'],
+  ['apigw','lam',0,'在庫照会の処理を呼ぶ。'],
+  ['lam','ddb',0,'在庫を読む。'],
+  ['apigw','cw',2,'アクセスログとメトリクスで、会社ごとの利用状況を見る。']],
+ ok:[['key','apigw']],
+ point:'使用量プランで会社ごとの速さと回数の上限を決め、1社の暴走から全体を守る。ただし API キーは識別と計量のためのもので、認証の代わりにはならない。認証には IAM や Cognito、Lambda オーソライザーを組み合わせる。',
+ refs:['apithr']},
+
+{id:'multiregion-active',lv:3,theme:'グローバル',title:'世界中のユーザーに近いリージョンで応える',
+ story:'ゲームの API を、北米・欧州・アジアのユーザーに提供している。各地域のユーザーを近いリージョンで読み書きさせて遅れを減らし、1つのリージョンが落ちても他のリージョンで応え続けたい。',
+ req:['ユーザーを近いリージョンに振り分け、異常なリージョンは外す','どのリージョンでも読み書きでき、データは他のリージョンへ自動で複製される','すべてのリージョンに同じ構成を届ける'],
+ nodes:[['user','世界中のユーザー','ext','プレイヤー'],['edge','Global Accelerator / Route 53 (レイテンシー)','net','近いリージョンへ'],['us','API (us-east-1)','compute','北米'],['eu','API (eu-west-1)','compute','欧州'],['ap','API (ap-northeast-1)','compute','アジア'],['gt','DynamoDB グローバルテーブル','data','各リージョンにレプリカ'],['pipe','デプロイパイプライン','devops','全リージョンに同じ構成']],
+ alt:[],
+ bad:[['one','1リージョン + 大きなインスタンス','compute','いまの構成','遠いユーザーの遅れは縮まらず、リージョンの障害で全部止まる。'],['rds1','単一リージョンの RDS に全地域から書く','data','書き込みは1か所','遠いリージョンからの書き込みが遅く、そのリージョンが落ちると書けなくなる。']],
+ edges:[['user','edge',0,'ユーザーのリクエストをまず受ける。'],
+  ['edge','us',0,'近さとヘルスチェックで振り分ける。'],
+  ['edge','eu',0,'異常なリージョンは自動で外す。'],
+  ['edge','ap',0,'アジアのユーザーは東京へ。'],
+  ['us','gt',1,'各リージョンの API は自分のリージョンのレプリカを読み書きする。'],
+  ['eu','gt',1,'書き込みは他のリージョンへ自動で複製される。'],
+  ['ap','gt',1,'同じ項目を複数のリージョンで同時に更新すると最後の書き込みが勝つので、書き込むリージョンを決めておく設計も考える。'],
+  ['pipe','us',2,'同じテンプレートで全リージョンに展開する。'],
+  ['pipe','eu',2,'リージョンを1つずつ順番に展開すると、失敗の影響を抑えられる。'],
+  ['pipe','ap',2,'構成の違いを作らない。']],
+ ok:[],
+ point:'アクティブ-アクティブのマルチリージョンは「近いリージョンへ振り分ける入口(Route 53 のレイテンシールーティングや Global Accelerator)」「各リージョンで読み書きできるデータ(DynamoDB グローバルテーブル)」「全リージョンに同じ構成を届けるパイプライン」の3点セット。',
+ refs:['gtroute','gablog']},
+
+{id:'file-ingest',lv:2,theme:'データ取り込み',title:'ユーザーのアップロードを安全に受け付ける',
+ story:'顧客が請求書の PDF をアップロードし、中身を読み取って登録するサービス。アップロードはアプリのサーバーを通さずに直接 S3 へ送らせたい。マルウェアが混ざっていたら処理しない。',
+ req:['アプリのサーバーを通さず、期限つきの URL で S3 に直接アップロードさせる','アップロードされたファイルをマルウェアスキャンする','スキャンを通ったファイルだけを処理して、結果を保存する'],
+ nodes:[['client','顧客のブラウザ','ext','アップロードする'],['api','API (Lambda)','compute','署名付き URL を発行'],['s3in','S3 (受付バケット)','data','アップロード先'],['gdm','GuardDuty Malware Protection for S3','sec','新しいファイルをスキャン'],['eb','Amazon EventBridge','int','スキャン結果のイベント'],['sfn','AWS Step Functions','int','処理の流れ'],['tx','Amazon Textract','ai','PDF の読み取り'],['ddb','Amazon DynamoDB','data','読み取った内容']],
+ alt:[],
+ bad:[['via','アプリのサーバーで受けて転送','compute','いったん中継','大きなファイルでサーバーの帯域とメモリを使う。直接 S3 へ送らせる。'],['pub','バケットを公開書き込み可能に','data','だれでも置ける','だれでも何でも置けてしまう。期限つきの署名付き URL で1回ずつ許可する。']],
+ edges:[['client','api',0,'アップロード用の URL を依頼する。'],
+  ['client','s3in',0,'期限つきの署名付き URL で、S3 に直接 PUT する。'],
+  ['s3in','gdm',1,'新しいオブジェクトを自動でスキャンし、結果をタグとして付ける。'],
+  ['gdm','eb',1,'スキャン結果がイベントとして届く。'],
+  ['eb','sfn',2,'「脅威なし」の結果だけでワークフローを始める。'],
+  ['sfn','tx',2,'PDF の文字や表を読み取る。'],
+  ['sfn','ddb',2,'読み取った内容を保存する。']],
+ ok:[['api','s3in'],['sfn','s3in']],
+ point:'アップロードは署名付き URL で直接 S3 へ。GuardDuty Malware Protection for S3(2024年6月〜)が新しいオブジェクトを自動でスキャンし、結果を EventBridge に流すので、安全なものだけを後続に回せる。',
+ refs:['presign','gdmal']},
+
+{id:'slo',lv:2,theme:'SRE',title:'SLO でサービスの信頼性を約束する',
+ story:'「落ちたら直す」運用から、ユーザーにとっての信頼性を数字で決めて管理する運用に変えたい。主要な API の可用性とレイテンシの SLO を決め、エラーバジェットの減り方でリリースを続けるか止めるかを判断したい。',
+ req:['アプリのメトリクスとトレースを自動で集める','可用性とレイテンシの SLO を決め、達成度を追う','エラーバジェットが速く減っていたら通知する'],
+ nodes:[['app','アプリ (ECS / EKS / Lambda)','compute','主要な API'],['otel','OpenTelemetry の計装 (ADOT)','oss','自動で計測'],['sig','CloudWatch Application Signals','ops','主要な指標を集める'],['slo','SLO','ops','可用性 99.9% など'],['burn','バーンレートのアラーム','ops','バジェットの減る速さ'],['sns','Amazon SNS','int','通知'],['oncall','オンコール担当','ext','判断する人']],
+ alt:[],
+ bad:[['cpu','CPU 使用率だけでアラート','ops','インフラの指標','CPU はユーザーの体験を直接表さない。ユーザーから見た成功率とレイテンシで決める。'],['hundred','SLO を 100% にする','ops','失敗を一切許さない','変更も実験もできなくなる。少しの失敗を「予算」として許すのがエラーバジェット。']],
+ edges:[['app','otel',0,'アプリを OpenTelemetry で計装する。'],
+  ['otel','sig',0,'リクエスト数・エラー・レイテンシを自動で集める。'],
+  ['sig','slo',1,'サービスや操作ごとに SLO を設定し、達成度を追う。'],
+  ['slo','burn',2,'エラーバジェットを使う速さ(バーンレート)でアラームを作る。'],
+  ['burn','sns',2,'速く減っていたら通知する。'],
+  ['sns','oncall',2,'オンコール担当がリリースを止めるかを判断する。']],
+ ok:[],
+ point:'SLO は「ユーザーから見た成功率・レイテンシ」で決め、エラーバジェットの減る速さ(バーンレート)で気づく。Application Signals は SLO とバーンレートのアラームに対応していて、Amazon Search も SLO のアラームに使っている。',
+ refs:['slo','burn','amzsearch']},
+
+{id:'ecs-service-connect',lv:2,theme:'マイクロサービス',title:'ECS のサービス同士を名前でつなぐ',
+ story:'ECS 上の注文・在庫・決済の3サービスが、お互いを内部 ALB の URL 直書きで呼んでいる。内部通信にも ALB の費用がかかり、再試行やタイムアウトの実装もサービスごとにバラバラ。サービス名で呼び合い、再試行や通信のメトリクスを共通の仕組みにしたい。',
+ req:['外からの入口は ALB 1つにまとめる','サービス同士は名前で呼び合う','再試行や異常なタスクの除外を共通の仕組みで行う','サービス間の通信のメトリクスを集める'],
+ nodes:[['user','ユーザー','ext','外からのリクエスト'],['alb','外部向け ALB','net','入口'],['ord','注文サービス (ECS)','compute','入口のサービス'],['inv','在庫サービス (ECS)','compute','内部サービス'],['pay','決済サービス (ECS)','compute','内部サービス'],['scn','ECS Service Connect','net','マネージドなプロキシ'],['ns','Cloud Map 名前空間','net','サービスの名前'],['cw','Amazon CloudWatch','ops','通信のメトリクス']],
+ alt:[],
+ bad:[['mesh','AWS App Mesh','net','サービスメッシュ','2026年9月30日にサポート終了。ECS なら Service Connect へ移る(AWS が移行ガイドを公開している)。'],['intalb','サービスごとに内部 ALB','net','いまの状態','動くが、サービスが増えるほど ALB の数と費用が増え、再試行などは別に作る必要がある。']],
+ edges:[['user','alb',0,'外からのリクエストは ALB で受ける。'],
+  ['alb','ord',0,'入口のサービスへ。ALB は外向きだけに使う。'],
+  ['ord','scn',1,'「inventory」「payment」などの名前で呼ぶ。'],
+  ['ns','scn',1,'Service Connect のサービスは Cloud Map の名前空間に登録される。'],
+  ['scn','inv',2,'マネージドのプロキシが、再試行や外れ値の検出をしながら届ける。'],
+  ['scn','pay',2,'タスクが入れ替わっても名前で届く。'],
+  ['scn','cw',3,'リクエスト数・エラー・レイテンシのメトリクスを自動で出す。']],
+ ok:[],
+ wrong:[['ord','inv','IP や URL を直書きすると、タスクの入れ替わりや再試行を各サービスで面倒みることになる。Service Connect を通す。'],['ord','pay','IP や URL を直書きすると、タスクの入れ替わりや再試行を各サービスで面倒みることになる。Service Connect を通す。']],
+ point:'ECS のサービス間通信は Service Connect。名前で呼び合え、マネージドのプロキシが再試行・外れ値の検出・メトリクスを受け持つ。App Mesh からの移行先としても AWS が案内している。',
+ refs:['scdoc','meshsc','gp']},
+
+{id:'graviton-cost',lv:2,theme:'コスト',title:'同じ性能のまま計算資源のコストを下げる',
+ story:'EKS の計算資源の請求が大きく、性能を落とさずに下げたい。止まっても作り直せる処理は安い Spot に、ずっと動く分は長期の割引で安くし、CPU も価格性能の良いものに切り替えたい。',
+ req:['ノードは Karpenter で Spot とオンデマンドを使い分ける','Graviton(Arm)でも動くよう、イメージを両対応でビルドする','使い方に合った推奨と、長期の割引でさらに安くする'],
+ nodes:[['karp','Karpenter','oss','ノードの選択'],['spot','EC2 Spot','compute','中断されうるが安い'],['od','EC2 オンデマンド','compute','中断されない'],['grav','Graviton インスタンス','compute','Arm で価格性能が高い'],['build','マルチアーキのビルド','devops','x86 と Arm の両対応イメージ'],['ecr','Amazon ECR','devops','イメージ置き場'],['co','AWS Compute Optimizer','ops','サイズと Graviton の推奨'],['sp','Savings Plans','ops','継続利用の割引']],
+ alt:[],
+ bad:[['ri','全部を3年の予約で固定','ops','長期の約束','使い方が変わると無駄になり、Spot や Graviton への切り替えもしにくい。'],['big','大きめのインスタンスで余裕を持つ','compute','空きを多めに','空きの多いノードにお金を払い続けることになる。']],
+ edges:[['karp','spot',0,'中断に強い処理は Spot へ。選べるインスタンスタイプが多いほど中断されにくい。'],
+  ['karp','od',0,'中断できない処理はオンデマンドへ。'],
+  ['karp','grav',1,'NodePool で arm64 も許可すると、Graviton を選べるようになる。'],
+  ['build','ecr',1,'x86 と Arm の両方を含むマルチアーキテクチャのイメージを push する。'],
+  ['ecr','grav',1,'同じタグのまま、Arm のノードでも動く。'],
+  ['co','grav',2,'Graviton にした場合の価格・性能の見込みと、移行の手間を示す。'],
+  ['sp','od',2,'ずっと動く分は Savings Plans で割り引く(Spot には効かない)。']],
+ ok:[['od','grav'],['spot','grav'],['co','od']],
+ point:'計算資源は「Spot とオンデマンドの使い分け(Karpenter)」「Graviton への移行(マルチアーキのイメージ)」「推奨(Compute Optimizer)と割引(Savings Plans)」の3方向で下げる。Salesforce は Karpenter への移行で、コストとスケールの遅れを減らした。',
+ refs:['graviton','cograv','sf']},
+
+{id:'incident-auto',lv:3,theme:'セキュリティ運用',title:'怪しい EC2 を自動で隔離する',
+ story:'GuardDuty が夜中に「EC2 が暗号通貨のマイニングに関係する宛先と通信している」と検知しても、朝まで誰も対応できない。検知したら自動でそのインスタンスをネットワークから切り離し、証拠を保全して、担当者に知らせたい。',
+ req:['脅威を検知してイベントとして流す','手順どおりに自動で対応する(隔離と証拠の保全)','担当者に知らせる'],
+ nodes:[['gd','Amazon GuardDuty','sec','脅威の検知'],['eb','Amazon EventBridge','int','検知結果の振り分け'],['sfn','AWS Step Functions','int','対応の手順'],['iso','隔離用のセキュリティグループ','sec','すべての通信を止める'],['ec2','怪しい EC2','compute','対応の対象'],['snap','EBS スナップショット','data','証拠の保全'],['sns','Amazon SNS','int','通知'],['team','セキュリティ担当','ext','調べる人']],
+ alt:[],
+ bad:[['term','すぐにインスタンスを削除','compute','消してしまう','証拠(ディスクやメモリの状態)が消えて、原因を調べられなくなる。まず隔離して保全する。'],['im','Systems Manager Incident Manager','ops','インシデント管理','2025年11月7日から新規の受付を停止し、新しい機能も追加されない。これから新しく組む対応の中心には向かない。']],
+ edges:[['gd','eb',0,'検知結果は EventBridge にイベントとして届く。'],
+  ['eb','sfn',1,'重要度や種類で絞って、対応のワークフローを始める。'],
+  ['sfn','iso',1,'インスタンスのセキュリティグループを、通信をすべて止める隔離用のものに付け替える。'],
+  ['iso','ec2',1,'インスタンスはネットワークから切り離される。'],
+  ['sfn','snap',1,'調査のために EBS のスナップショットを取る。'],
+  ['sfn','sns',2,'対応した内容を通知する。'],
+  ['sns','team',2,'担当者が朝に調査を引き継ぐ。']],
+ ok:[['snap','ec2']],
+ point:'自動対応は「検知(GuardDuty) → 振り分け(EventBridge) → 手順(Step Functions / SSM Automation) → 隔離と保全 → 通知」。消すより先に、隔離と証拠の保全。AWS のセキュリティブログにも同じ形の例がある。',
+ refs:['irec2','irmulti','imavail']}
+];
+
+/* ==== 小道具 ==== */
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function key(a,b){return a<b?a+'|'+b:b+'|'+a}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+var NUM='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮';
+var board=$('#board'),svg=$('#lines'),live=$('#live'),result=$('#result');
+var BH=74,GX=18,GY=40,PAD=14;
+var S={};
+
+/* ==== お題の選択 ==== */
+function fillPick(){
+  var best=LS.get('awsp_best',{}),h='';
+  [1,2,3].forEach(function(lv){h+='<optgroup label="'+['','基礎','中級','上級'][lv]+'">';SC.forEach(function(s,i){if(s.lv!==lv)return;var b=best[s.id];h+='<option value="'+i+'">'+(i+1)+'. '+esc(s.title)+(b!=null?' (自己ベスト '+b+')':'')+'</option>'});h+='</optgroup>'});
+  $('#pick').innerHTML=h;$('#pick').value=S.i==null?0:S.i;
+  var done=SC.filter(function(s){return best[s.id]!=null}).length,perf=SC.filter(function(s){return best[s.id]===100}).length;
+  $('#prog').textContent='挑戦 '+done+' / '+SC.length+' ・ 満点 '+perf;
+}
+/* まだ出ていないお題から選ぶ。一巡したら最初から */
+function randomIndex(){
+  var seen=LS.get('awsp_seen',[]),c=[];
+  SC.forEach(function(s,i){if(seen.indexOf(s.id)<0&&i!==S.i)c.push(i)});
+  if(!c.length){seen=[];SC.forEach(function(s,i){if(i!==S.i)c.push(i)})}
+  var i=c[Math.floor(Math.random()*c.length)];seen.push(SC[i].id);LS.set('awsp_seen',seen);return i;
+}
+
+function load(i){
+  var sc=SC[i],nodes=[];
+  sc.nodes.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'need'})});
+  sc.alt.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'alt',note:n[4]})});
+  sc.bad.forEach(function(n){nodes.push({id:n[0],label:n[1],cat:n[2],role:n[3],kind:'bad',why:n[4]})});
+  S={i:i,sc:sc,nodes:shuffle(nodes),byId:{},pos:{},E:{},sel:null,graded:false,answer:false,hints:[],res:null,userPos:null,stale:false};
+  S.nodes.forEach(function(n){S.byId[n.id]=n});
+  S.req={};sc.edges.forEach(function(e,j){S.req[key(e[0],e[1])]=j});
+  S.ok={};sc.ok.forEach(function(e){S.ok[key(e[0],e[1])]=1});
+  S.wrong={};(sc.wrong||[]).forEach(function(e){S.wrong[key(e[0],e[1])]=e[2]});
+  LS.set('awsp_last',sc.id);
+  $('#lv').className='pill lv'+sc.lv;$('#lv').textContent=['','基礎','中級','上級'][sc.lv];
+  $('#theme').textContent=sc.theme;$('#no').textContent='お題 '+(i+1)+' / '+SC.length;
+  $('#title').textContent=sc.title;$('#story').textContent=sc.story;
+  fillPick();
+  board.querySelectorAll('.blk').forEach(function(b){b.remove()});
+  S.nodes.forEach(function(n){
+    var b=document.createElement('button');b.type='button';b.className='blk';b.dataset.id=n.id;b.style.setProperty('--c',CAT[n.cat][1]);
+    b.innerHTML='<span class="ct">'+CAT[n.cat][0]+'</span><span class="nm">'+esc(n.label)+'</span><span class="rl">'+esc(n.role)+'</span>';
+    board.appendChild(b);n.el=b;
+  });
+  result.hidden=true;result.innerHTML='';
+  layoutGrid();render();
+}
+
+/* ==== 配置 ==== */
+function dims(){var W=board.clientWidth||320,cols=W>=920?5:W>=720?4:W>=480?3:2;return {W:W,cols:cols,bw:Math.floor((W-PAD*2-GX*(cols-1))/cols)}}
+function layoutGrid(){
+  var d=dims();S.bw=d.bw;S.divY=null;
+  S.nodes.forEach(function(n,i){var c=i%d.cols,r=Math.floor(i/d.cols);S.pos[n.id]={fx:(PAD+c*(d.bw+GX))/d.W,y:PAD+r*(BH+GY)}});
+}
+/* 解答例の配置: 矢印の向きに沿って左→右(狭い画面では上→下)に並べる */
+function layoutAnswer(){
+  var d=dims(),W=d.W,sc=S.sc,need=S.nodes.filter(function(n){return n.kind==='need'}).map(function(n){return n.id}),others=S.nodes.filter(function(n){return n.kind!=='need'}).map(function(n){return n.id});
+  /* 輪になっている矢印(検知→対応→監視 など)は、戻る向きの1本を除いて層を決める */
+  var adj={},indeg={},stt={},back={};need.forEach(function(id){adj[id]=[];indeg[id]=0});
+  sc.edges.forEach(function(e){adj[e[0]].push(e[1]);indeg[e[1]]++});
+  function dfs(u){stt[u]=1;adj[u].forEach(function(v){if(stt[v]===1)back[u+'>'+v]=1;else if(!stt[v])dfs(v)});stt[u]=2}
+  need.filter(function(id){return !indeg[id]}).concat(need).forEach(function(id){if(!stt[id])dfs(id)});
+  var fwd=sc.edges.filter(function(e){return !back[e[0]+'>'+e[1]]});
+  var L={};need.forEach(function(id){L[id]=0});
+  for(var it=0;it<need.length;it++){var ch=false;fwd.forEach(function(e){if(L[e[1]]<L[e[0]]+1){L[e[1]]=L[e[0]]+1;ch=true}});if(!ch)break}
+  /* 入ってくる矢印のないブロックは、行き先のすぐ手前の列に寄せる */
+  need.forEach(function(id){
+    if(fwd.some(function(e){return e[1]===id}))return;
+    var m=Infinity;fwd.forEach(function(e){if(e[0]===id)m=Math.min(m,L[e[1]])});
+    if(m<Infinity&&m-1>L[id])L[id]=m-1;
+  });
+  var layers=[];need.forEach(function(id){(layers[L[id]]=layers[L[id]]||[]).push(id)});layers=layers.filter(Boolean);
+  /* 前の層での位置の平均で並べ、線の交差を減らす */
+  var idx={};layers.forEach(function(l,li){if(li>0)l.sort(function(a,b){return bary(a)-bary(b)});l.forEach(function(id,k){idx[id]=k})});
+  function bary(id){var s=0,c=0;sc.edges.forEach(function(e){if(e[1]===id&&idx[e[0]]!=null){s+=idx[e[0]];c++}if(e[0]===id&&idx[e[1]]!=null){s+=idx[e[1]];c++}});return c?s/c:0}
+  var nL=layers.length,bwH=Math.floor((W-PAD*2-GX*(nL-1))/nL),y;
+  if(bwH>=132){
+    var bw=Math.min(190,bwH),tw=nL*bw+(nL-1)*GX,x0=(W-tw)/2,mr=Math.max.apply(null,layers.map(function(l){return l.length}));
+    layers.forEach(function(l,ci){var off=(mr-l.length)*(BH+GY)/2;l.forEach(function(id,ri){S.pos[id]={fx:(x0+ci*(bw+GX))/W,y:PAD+off+ri*(BH+GY)}})});
+    S.bw=bw;y=PAD+mr*(BH+GY)+16;
+  }else{
+    S.bw=d.bw;y=PAD;
+    layers.forEach(function(l){for(var k=0;k<l.length;k+=d.cols){var row=l.slice(k,k+d.cols),tw=row.length*d.bw+(row.length-1)*GX,x0=(W-tw)/2;row.forEach(function(id,c){S.pos[id]={fx:(x0+c*(d.bw+GX))/W,y:y}});y+=BH+GY}});
+    y+=16;
+  }
+  S.divY=others.length?y-GY/2:null;y+=12;
+  var bw2=S.bw,cols=Math.max(1,Math.floor((W-PAD*2+GX)/(bw2+GX)));
+  others.forEach(function(id,k){var c=k%cols,r=Math.floor(k/cols);S.pos[id]={fx:(PAD+c*(bw2+GX))/W,y:y+r*(BH+GY)}});
+}
+function fitHeight(){var mx=0;for(var k in S.pos)mx=Math.max(mx,S.pos[k].y+BH);board.style.height=Math.max(200,mx+PAD)+'px'}
+function rect(id){var p=S.pos[id],W=board.clientWidth;return {x:p.fx*W,y:p.y,w:S.bw,h:BH}}
+
+/* ==== 描画 ==== */
+function center(r){return [r.x+r.w/2,r.y+r.h/2]}
+function clip(r,tx,ty){var c=center(r),dx=tx-c[0],dy=ty-c[1];if(!dx&&!dy)return c;var t=Math.min(dx?(r.w/2+4)/Math.abs(dx):1e9,dy?(r.h/2+4)/Math.abs(dy):1e9);return [c[0]+dx*t,c[1]+dy*t]}
+function seg(a,b){var ra=rect(a),rb=rect(b),cb=center(rb),ca=center(ra);return [clip(ra,cb[0],cb[1]),clip(rb,ca[0],ca[1])]}
+function render(){
+  var W=board.clientWidth;fitHeight();var H=board.clientHeight;
+  S.nodes.forEach(function(n){var r=rect(n.id),el=n.el;el.style.left=r.x+'px';el.style.top=r.y+'px';el.style.width=r.w+'px';
+    var nb=S.sel&&S.sel!==n.id&&S.E[key(S.sel,n.id)];
+    el.className='blk'+(S.sel===n.id?' sel':'')+(nb?' nb':'')+(S.answer&&n.kind==='bad'?' x':'')+(el.classList.contains('drag')?' drag':'');
+    el.setAttribute('aria-pressed',String(S.sel===n.id));
+    var cnt=0;for(var k in S.E){var ab=k.split('|');if(ab[0]===n.id||ab[1]===n.id)cnt++}
+    el.setAttribute('aria-label',n.label+'、'+n.role+'、線 '+cnt+' 本'+(S.sel===n.id?'、選択中':''));
+    var bd=el.querySelector('.bdg');if(bd)bd.remove();
+    if(S.answer&&n.kind!=='need'){var s=document.createElement('span');s.className='bdg '+(n.kind==='bad'?'x':'alt');s.textContent=n.kind==='bad'?'使わない':'代わりに使える';el.appendChild(s);el.classList.add('hasb')}
+  });
+  svg.setAttribute('width',W);svg.setAttribute('height',H);svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  var o='<defs>'+[['ok','#5CE39A'],['miss','#FFC53D']].map(function(m){return '<marker id="ah-'+m[0]+'" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="'+m[1]+'"/></marker>'}).join('')+'</defs>';
+  if(S.divY!=null&&S.answer)o+='<line x1="10" y1="'+S.divY+'" x2="'+(W-10)+'" y2="'+S.divY+'" stroke="rgba(238,242,250,.2)" stroke-dasharray="4 5"/><text x="14" y="'+(S.divY+14)+'" fill="#9AA6C2" font-size="11">使わない・代わりのブロック</text>';
+  var k,p;
+  for(k in S.E){var ab=k.split('|');if(S.answer&&k in S.req)continue;p=seg(ab[0],ab[1]);
+    var cl=S.graded&&S.cls?S.cls[k]:'u',st={u:'stroke="rgba(238,242,250,.8)" stroke-width="2.5"',ok:'stroke="#5CE39A" stroke-width="3"',neu:'stroke="#9AA6C2" stroke-width="2.5"',bad:'stroke="#FF6B7A" stroke-width="2.5" stroke-dasharray="7 5"'}[cl];
+    o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" '+st+' stroke-linecap="round"/>';
+    o+='<line class="hit" data-k="'+k+'" x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="transparent" stroke-width="16"><title>クリックで消す</title></line>';
+  }
+  if(S.answer){S.sc.edges.forEach(function(e,j){var kk=key(e[0],e[1]),has=!!S.E[kk];p=seg(e[0],e[1]);var col=has?'#5CE39A':'#FFC53D';
+    o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="'+col+'" stroke-width="2.6" '+(has?'':'stroke-dasharray="7 5" ')+'marker-end="url(#ah-'+(has?'ok':'miss')+')"/>';
+    if(has)o+='<line class="hit" data-k="'+kk+'" x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="transparent" stroke-width="16"/>';
+    var mx=(p[0][0]+p[1][0])/2,my=(p[0][1]+p[1][1])/2;o+='<circle cx="'+mx+'" cy="'+my+'" r="10" fill="#0A0F1A" stroke="'+col+'" stroke-width="1.5"/><text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="11" fill="'+col+'">'+(j+1)+'</text>'})}
+  else S.hints.forEach(function(j){var e=S.sc.edges[j];if(S.E[key(e[0],e[1])])return;p=seg(e[0],e[1]);var mx=(p[0][0]+p[1][0])/2,my=(p[0][1]+p[1][1])/2;
+    o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="#FFC53D" stroke-width="2" stroke-dasharray="3 5" opacity=".9"/><circle cx="'+mx+'" cy="'+my+'" r="9" fill="#0A0F1A" stroke="#FFC53D"/><text x="'+mx+'" y="'+(my+4)+'" text-anchor="middle" font-size="11" fill="#FFC53D">?</text>'});
+  svg.innerHTML=o;
+  /* 数・一覧 */
+  var n=Object.keys(S.E).length;
+  $('#cnt').innerHTML='線 <b>'+n+'</b> 本 / 目安 <b>'+S.sc.edges.length+'</b> 本'+(S.hints.length?' ・ ヒント '+S.hints.length+' 回':'');
+  var cs=Object.keys(S.E).map(function(k){var ab=k.split('|'),cl=S.graded&&S.cls?S.cls[k]:'';return '<span class="c '+(cl||'')+'">'+esc(S.byId[ab[0]].label)+' — '+esc(S.byId[ab[1]].label)+'<button type="button" data-k="'+k+'" aria-label="この線を消す">×</button></span>'});
+  $('#conns').innerHTML=cs.length?cs.join(''):'<span class="empty">まだ線がありません。ブロックを2つ続けてタップしてください。</span>';
+  renderReqs();
+}
+function reqStatus(){var st=S.sc.req.map(function(){return {n:0,h:0}});S.sc.edges.forEach(function(e){var s=st[e[2]];s.n++;if(S.E[key(e[0],e[1])])s.h++});return st}
+function renderReqs(){
+  var st=S.graded||S.answer?reqStatus():null;
+  $('#reqs').innerHTML=S.sc.req.map(function(r,i){var s='';if(st){var x=st[i];s=x.h===x.n?'<span class="st ok">✓ 達成</span>':x.h?'<span class="st part">△ '+x.h+'/'+x.n+'</span>':'<span class="st ng">✗ 未達</span>'}
+    var nums=S.answer?' <span style="color:var(--silk-dim);font-size:.78rem">('+S.sc.edges.map(function(e,j){return e[2]===i?(j+1):null}).filter(function(v){return v}).join(', ')+')</span>':'';
+    return '<li><span class="no">'+(i+1)+'</span><span>'+esc(r)+nums+'</span>'+s+'</li>'}).join('');
+}
+
+/* ==== 操作 ==== */
+function say(t){live.textContent=t}
+function toggle(a,b){var k=key(a,b),A=S.byId[a].label,B=S.byId[b].label;if(S.E[k]){delete S.E[k];say(A+' と '+B+' の線を消しました')}else{S.E[k]=1;say(A+' と '+B+' をつなぎました')}changed()}
+function changed(){if(S.graded){S.graded=false;S.stale=true;S.cls=null;if(!result.hidden)renderResult()}render()}
+function tap(id){if(S.sel==null)S.sel=id;else if(S.sel===id)S.sel=null;else{var a=S.sel;S.sel=null;toggle(a,id)}render()}
+var drag=null,suppress=false;
+board.addEventListener('pointerdown',function(e){
+  var b=e.target.closest('.blk');if(!b)return;var r=rect(b.dataset.id);
+  drag={id:b.dataset.id,el:b,sx:e.clientX,sy:e.clientY,ox:r.x,oy:r.y,moved:false};try{b.setPointerCapture(e.pointerId)}catch(_){}
+});
+board.addEventListener('pointermove',function(e){
+  if(!drag)return;var dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
+  if(!drag.moved&&Math.hypot(dx,dy)<6)return;
+  if(!drag.moved){drag.moved=true;drag.el.classList.add('drag')}
+  var W=board.clientWidth,x=Math.max(2,Math.min(W-S.bw-2,drag.ox+dx)),y=Math.max(2,drag.oy+dy);
+  S.pos[drag.id]={fx:x/W,y:y};render();
+});
+function endDrag(){if(drag){if(drag.moved){suppress=true;setTimeout(function(){suppress=false},0)}drag.el.classList.remove('drag');drag=null;render()}}
+board.addEventListener('pointerup',endDrag);board.addEventListener('pointercancel',endDrag);
+board.addEventListener('click',function(e){
+  var b=e.target.closest('.blk');
+  if(b){if(suppress){suppress=false;return}tap(b.dataset.id);return}
+  var h=e.target.closest('.hit');if(h){var ab=h.dataset.k.split('|');toggle(ab[0],ab[1]);return}
+  if(S.sel!=null){S.sel=null;render()}
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.sel!=null){S.sel=null;render()}});
+$('#conns').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var ab=b.dataset.k.split('|');toggle(ab[0],ab[1])});
+var clearArm=0;
+$('#clear').addEventListener('click',function(){
+  if(!Object.keys(S.E).length)return;
+  if(Date.now()-clearArm>3000){clearArm=Date.now();this.textContent='もう一度押すと消えます';var t=this;setTimeout(function(){t.textContent='線を全部消す'},3000);return}
+  clearArm=0;this.textContent='線を全部消す';S.E={};S.sel=null;changed();say('線を全部消しました');
+});
+$('#shuffle').addEventListener('click',function(){if(S.answer)return;shuffle(S.nodes);layoutGrid();render()});
+$('#hint').addEventListener('click',function(){
+  var miss=[];S.sc.edges.forEach(function(e,j){if(!S.E[key(e[0],e[1])]&&S.hints.indexOf(j)<0)miss.push(j)});
+  if(!miss.length){say('ヒントで出せる線はもうありません');return}
+  var j=miss[Math.floor(Math.random()*miss.length)],e=S.sc.edges[j];S.hints.push(j);
+  say('ヒント: '+S.byId[e[0]].label+' と '+S.byId[e[1]].label+' をつなぐ(要件 '+(e[2]+1)+')');render();
+});
+$('#check').addEventListener('click',function(){grade();result.hidden=false;result.scrollIntoView({behavior:'smooth',block:'nearest'})});
+$('#rnd').addEventListener('click',function(){load(randomIndex())});
+$('#pick').addEventListener('change',function(){load(+this.value)});
+result.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.a==='ans'){setAnswer(!S.answer)}
+  else if(b.dataset.a==='next'){load(randomIndex());$('#game').scrollIntoView({behavior:'smooth',block:'start'})}
+  else if(b.dataset.a==='retry'){result.hidden=true;setAnswer(false)}
+});
+function setAnswer(on){
+  if(on&&!S.answer){S.userPos=JSON.parse(JSON.stringify(S.pos));S.userBw=S.bw;S.answer=true;S.sel=null;layoutAnswer()}
+  else if(!on&&S.answer){S.answer=false;if(S.userPos){S.pos=S.userPos;S.bw=dims().bw}S.divY=null}
+  renderResult();render();
+}
+var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){if(S.answer)layoutAnswer();else{var d=dims();S.bw=d.bw;for(var k in S.pos){var W=board.clientWidth;S.pos[k].fx=Math.min(S.pos[k].fx,(W-S.bw-2)/W)}}render()},120)});
+
+/* ==== 答え合わせ ==== */
+function grade(){
+  var cls={},correct=0,extra=[],neutral=0;
+  for(var k in S.E){
+    if(k in S.req){cls[k]='ok';correct++}
+    else if(S.ok[k]){cls[k]='neu';neutral++}
+    else{cls[k]='bad';var ab=k.split('|'),na=S.byId[ab[0]],nb=S.byId[ab[1]],bn=na.kind==='bad'?na:nb.kind==='bad'?nb:null,an=na.kind==='alt'?na:nb.kind==='alt'?nb:null;
+      extra.push({k:k,a:na,b:nb,bad:bn,alt:an,note:S.wrong[k]})}
+  }
+  var R=S.sc.edges.length,score=Math.max(0,Math.round(100*correct/R)-10*extra.length-5*S.hints.length);
+  S.cls=cls;S.graded=true;S.stale=false;S.res={correct:correct,R:R,extra:extra,neutral:neutral,score:score};
+  var best=LS.get('awsp_best',{});if(best[S.sc.id]==null||score>best[S.sc.id]){best[S.sc.id]=score;LS.set('awsp_best',best);fillPick()}
+  renderResult();render();say('答え合わせ: '+score+'点');
+}
+function rank(s){return s>=100?'S':s>=80?'A':s>=60?'B':'C'}
+function renderResult(){
+  var sc=S.sc,h='';
+  if(S.res){
+    var r=S.res,rk=rank(r.score);
+    h+='<div class="score"><span class="rk '+rk+'">'+rk+'</span><span class="pt">'+r.score+' 点</span><span class="sub">正しい線 '+r.correct+' / '+r.R+' 本 ・ 余計な線 '+r.extra.length+' 本'+(r.neutral?' ・ 別解の線 '+r.neutral+' 本':'')+' ・ ヒント '+S.hints.length+' 回</span></div>';
+    if(S.stale)h+='<p class="stale">線を変えました。もう一度「答え合わせ」を押すと採点し直します。</p>';
+    var miss=r.R-r.correct;
+    if(r.score>=100)h+='<p>完璧です。解答例で、線ごとの理由と参考にした事例も確認してみてください。</p>';
+    else if(miss>0&&!S.answer)h+='<p>足りない線があと <b>'+miss+'</b> 本あります。上の要件の ✗ や △ を手がかりに、つなぎ直してみてください。</p>';
+    if(r.extra.length){h+='<h3>余計な線</h3><ul>'+r.extra.map(function(x){
+      var why=x.note?esc(x.note):x.bad?'「'+esc(x.bad.label)+'」は使いません。'+esc(x.bad.why):x.alt?'「'+esc(x.alt.label)+'」は代わりに使える部品ですが、この組み合わせではつなぎません。':'この2つを直接つなぐ必要はありません。それぞれ本来つながる相手を考えてみてください。';
+      return '<li><span class="edge">'+esc(x.a.label)+' — '+esc(x.b.label)+'</span><br><span class="why">'+why+'</span></li>'}).join('')+'</ul>'}
+  }
+  h+='<div class="row"><button type="button" class="btn '+(S.answer?'sub':'pri')+'" data-a="ans">'+(S.answer?'解答例を閉じる':'解答例を見る')+'</button>'+(S.answer?'':'<button type="button" class="btn sub" data-a="retry">もう一度つなぐ</button>')+'<button type="button" class="btn" data-a="next">次のお題 →</button></div>';
+  if(S.answer){
+    h+='<h3>解答例の線 (図の番号)</h3><p style="color:var(--silk-dim);font-size:.82rem">緑はあなたがつないだ線、黄色の点線はまだの線。矢印はデータや操作の流れの向きです。</p><ol>'+sc.edges.map(function(e,j){var has=!!S.E[key(e[0],e[1])];
+      return '<li><span class="edge">'+esc(S.byId[e[0]].label)+' → '+esc(S.byId[e[1]].label)+'</span><span class="r">要件'+(e[2]+1)+'</span><span class="mark '+(has?'ok':'ng')+'">'+(has?'✓':'まだ')+'</span><br><span class="why">'+esc(e[3])+'</span></li>'}).join('')+'</ol>';
+    var bad=S.nodes.filter(function(n){return n.kind==='bad'}),alt=S.nodes.filter(function(n){return n.kind==='alt'});
+    if(bad.length)h+='<h3>使わないブロック</h3><ul>'+bad.map(function(n){return '<li><span class="edge">'+esc(n.label)+'</span><br><span class="why">'+esc(n.why)+'</span></li>'}).join('')+'</ul>';
+    if(alt.length)h+='<h3>代わりに使えるブロック</h3><ul>'+alt.map(function(n){return '<li><span class="edge">'+esc(n.label)+'</span><br><span class="why">'+esc(n.note)+'</span></li>'}).join('')+'</ul>';
+    h+='<h3>ポイント</h3><p class="point">'+esc(sc.point)+'</p>';
+    h+='<h3>参考にした資料・事例</h3><ul class="refs">'+sc.refs.map(function(k){var r=REF[k],kd=KIND[r[0]];return '<li><span class="k '+kd[0]+'">'+kd[1]+'</span><a href="'+r[2]+'" target="_blank" rel="noopener">'+esc(r[1])+'</a></li>'}).join('')+'</ul>';
+    h+='<div class="row"><button type="button" class="btn" data-a="next">次のお題 →</button></div>';
+  }
+  result.innerHTML=h;
+}
+
+/* ==== 凡例と開始 ==== */
+$('#legend').innerHTML=Object.keys(CAT).map(function(k){return '<span><i style="background:'+CAT[k][1]+'"></i>'+CAT[k][0]+'</span>'}).join('');
+load(randomIndex());
+})();
+</script>
+</body>
+</html>

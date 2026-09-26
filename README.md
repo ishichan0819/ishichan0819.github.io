@@ -13,5 +13,6 @@ https://ishichan0819.github.io/
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
 - [Indoor VLC: 部屋じゅうに光を届ける](https://ishichan0819.github.io/indoor-vlc/) — 天井のLED照明から部屋のあちこちへ光でデータを届ける室内可視光通信のシミュレータ。照度とSNRの地図、壁の反射による遅延の広がり、人の影とハンドオーバー
 - [Optical OFDM: 狭い帯域で速く送る](https://ishichan0819.github.io/ofdm/) — 帯域が数MHzしかないLEDで速く送る光OFDMのアクティビティ。OOKのアイパターン、エルミート対称、DCO/ACO-OFDMのBER比較、ビット割り当て
+- [AWS 基盤パズル](https://ishichan0819.github.io/aws-platform/) — ランダムなお題(全39問)に合わせてAWSのサービスをつなぎ、プラットフォームエンジニアリングを学ぶパズル。解答例と、参考にしたAWS公式資料・各社の事例つき
 - [競プロ アルゴリズム図鑑](https://ishichan0819.github.io/algo/) — AtCoder 茶色から青色を目指す 12 のアルゴリズム。ステップ実行できる図と C++ / Python の実装
 - [タルとハシゴ](https://ishichan0819.github.io/barrel/) — 斜めの足場とハシゴをのぼり、樽を飛び越えててっぺんを目指すレトロ風アクションゲーム
