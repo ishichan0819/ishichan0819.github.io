@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AWS 基盤パズル — プラットフォームエンジニアリングを組み立てて学ぶ</title>
-<meta name="description" content="AWS Cloud・リージョン・VPC・AZ・サブネットにサービスを配置し、通信経路を矢印でつなぐ構成図演習。従来のAWSサービス接続問題も39問収録。">
+<meta name="description" content="AWS の構成図を自分で描いて学ぶ演習。部品をリージョン・VPC・AZ・サブネットの枠に置き、通信の向きを矢印で描く構成図 (8問) と、プラットフォームエンジニアリングのお題に合わせてサービスをつなぐ設計パズル (39問)。解答例と AWS 公式資料つき。">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
 <style>
 :root{
@@ -62,8 +62,8 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .board svg .hit,.board svg .flow-hit{pointer-events:stroke;cursor:pointer}
 .board svg .flow-badge{pointer-events:all;cursor:pointer}
 .zones{position:absolute;inset:0;pointer-events:none}
-.zone{position:absolute;left:8px;right:8px;border:1px dashed rgba(154,166,194,.28);border-radius:12px;background:rgba(19,28,46,.38)}
-.zone .zone-title{position:absolute;top:4px;left:12px;font-family:var(--dot);font-size:.68rem;color:var(--silk-dim)}
+.zone{position:absolute;border:1px dashed rgba(154,166,194,.3);border-radius:12px;background:rgba(19,28,46,.38)}
+.zone .zone-title{position:absolute;top:3px;left:10px;font-family:var(--dot);font-size:.66rem;color:var(--c,var(--silk-dim));opacity:.9}
 .board svg .flow-hit:hover{stroke:rgba(255,197,61,.18)}
 .blk{position:absolute;height:74px;display:flex;flex-direction:column;justify-content:center;gap:0;text-align:left;padding:5px 8px 5px 13px;border-radius:10px;
   border:1.5px solid #2B3654;background:#131C2E;color:var(--silk);font:inherit;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;
@@ -98,10 +98,10 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .flow-list button:hover,.flow-list button.active{border-color:var(--led)}
 .flow-list .flow-no{font-family:var(--dot);color:var(--led);margin-right:6px}
 .flow-list .flow-why{display:block;color:var(--silk-dim);font-size:.73rem;margin-top:2px}
-.flow-list .flow-why strong{color:var(--ok);font-weight:400}
+.flow-list .flow-why b{font-weight:400}.s-ok{color:var(--ok)}.s-ng{color:var(--led)}.s-rev{color:var(--bad)}
 .conns{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;min-height:1.6em}
 .conns .c{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;background:var(--room-deep);border:1px solid var(--edge);border-radius:999px;padding:1px 4px 1px 10px}
-.conns .c.ok{border-color:var(--ok)}.conns .c.bad{border-color:var(--bad)}.conns .c.neu{border-color:var(--silk-dim)}
+.conns .c.ok{border-color:var(--ok)}.conns .c.bad,.conns .c.rev{border-color:var(--bad)}.conns .c.neu{border-color:var(--silk-dim)}.conns .c.part{border-color:var(--led)}
 .conns .c button{font:inherit;font-size:.8rem;line-height:1;background:transparent;border:0;color:var(--silk-dim);cursor:pointer;padding:3px 6px;border-radius:999px}
 .conns .c button:hover{color:var(--bad)}
 .conns .empty{font-size:.74rem;color:var(--silk-dim)}
@@ -130,54 +130,82 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .refs a{color:var(--silk)}
 .point{background:#0E1626;border-left:3px solid var(--led);padding:8px 12px;border-radius:0 8px 8px 0}
 .mode-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
-.mode-tabs button{font:inherit;font-family:var(--dot);font-size:.85rem;cursor:pointer;border:1px solid var(--rule);border-radius:999px;padding:7px 15px;background:transparent;color:var(--ink)}
+.mode-tabs button{font:inherit;font-family:var(--dot);font-size:.9rem;cursor:pointer;border:1px solid var(--rule);border-radius:12px;padding:7px 15px;background:transparent;color:var(--ink);text-align:left;line-height:1.35}
+.mode-tabs button small{display:block;font-family:var(--body);font-size:.7rem;opacity:.75}
 .mode-tabs button[aria-selected="true"]{background:var(--led);border-color:var(--led);color:#1A1200}
-.arch-intro{color:#C9D1E3;font-size:.9rem;margin:0 0 12px}
-.arch-steps{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--silk-dim);font-size:.78rem;margin:2px 0 10px}
-.arch-steps b{color:var(--led);font-weight:400}
-.arch-tray{display:flex;flex-wrap:wrap;gap:6px;background:var(--room-deep);border:1px solid var(--edge);border-radius:10px;padding:9px;min-height:80px;margin:8px 0}
-.arch-tray-title{width:100%;font-family:var(--dot);font-size:.78rem;color:var(--silk-dim)}
-.arch-scroll{overflow:auto;border:1px solid var(--edge);border-radius:12px;background:#0A0F1A}
-.arch-board{position:relative;width:1040px;height:770px;background-image:radial-gradient(rgba(238,242,250,.075) 1px,transparent 1px);background-size:22px 22px}
-.arch-zone{position:absolute;border:1.5px dashed var(--zc);border-radius:8px;background:var(--zb);pointer-events:none}
-.arch-zone.cloud{border-style:solid}.arch-zone.vpc{border-style:solid}
-.arch-zone .arch-zone-title{position:absolute;top:3px;left:9px;font-family:var(--dot);font-size:12px;line-height:1.3;color:var(--zc);background:#0A0F1A;padding:0 4px}
-.arch-zone.subnet .arch-zone-title{background:transparent}
-.arch-outside-label{position:absolute;font-family:var(--dot);font-size:11px;color:var(--silk-dim);pointer-events:none}
-.arch-board .arch-lines{position:absolute;inset:0;width:1040px;height:770px;z-index:5;pointer-events:none;overflow:visible}
-.arch-board .arch-lines .arch-hit{pointer-events:stroke;cursor:pointer}
-.arch-card{width:120px;height:58px;display:flex;align-items:center;gap:6px;text-align:left;background:#131C2E;color:var(--silk);border:1.5px solid #344260;border-radius:8px;padding:5px;cursor:pointer;user-select:none;font:inherit;line-height:1.2}
-.arch-card .arch-icon{flex:none;width:31px;height:31px;display:grid;place-items:center;background:var(--ac);color:#08111C;border-radius:5px;font-family:var(--dot);font-size:10px;font-weight:700}
-.arch-card .arch-name{font-size:11px;font-weight:700;overflow-wrap:anywhere}
-.arch-card .arch-sub{display:block;color:var(--silk-dim);font-size:9px;font-weight:400;margin-top:2px}
-.arch-card.selected{border-color:var(--led);box-shadow:0 0 0 3px rgba(255,197,61,.3)}
-.arch-card.correct{border-color:var(--ok)}.arch-card.wrong{border-color:var(--bad)}
-.arch-board .arch-card{position:absolute;z-index:10;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:center;background:transparent;border-color:transparent;padding:0}
-.arch-board .arch-card .arch-icon{width:36px;height:36px;font-size:11px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
-.arch-board .arch-card .arch-name{max-width:118px;font-size:11px;line-height:1.12;text-shadow:0 1px 3px #000}
-.arch-board .arch-card .arch-sub{display:none}
-.arch-board .arch-card.selected{border-color:var(--led);background:rgba(255,197,61,.08)}
-.arch-board .arch-card.correct{border-color:var(--ok)}
-.arch-board .arch-card.wrong{border-color:var(--bad)}
-.arch-tray .arch-card{flex:none}
-.arch-controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:8px 0}
-.arch-controls .arch-count{font-family:var(--dot);font-size:.78rem;color:var(--silk-dim);margin-right:auto}
-.arch-controls .btn.active{background:var(--led);border-color:var(--led);color:#1A1200}
-.arch-focus{display:flex;flex-wrap:wrap;align-items:center;gap:7px 12px;margin:8px 0;color:var(--silk-dim);font-size:.8rem}
-.arch-focus select{margin-left:5px;min-width:220px}
-.arch-focus span{color:var(--silk)}
-.arch-place-picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.78rem;color:var(--silk-dim);margin:8px 0 4px}
-.arch-place-picker select{min-width:200px}
-.arch-result{margin-top:12px;padding:12px;border:1px solid var(--edge);border-radius:10px;background:var(--room-deep)}
-.arch-result h3{font-family:var(--dot);font-weight:400;color:var(--led);font-size:1rem;margin:8px 0}
-.arch-result p{font-size:.85rem;margin:5px 0;color:var(--silk-dim)}
-.arch-result ul{margin:4px 0 10px;padding-left:1.3em;font-size:.82rem}
-.arch-result li{margin:3px 0}
-.arch-result .good{color:var(--ok)}.arch-result .bad{color:var(--bad)}
-.arch-result .flow-list{margin-top:7px}
-.arch-result .flow-list button{cursor:default}
-.arch-board-note{font-size:.75rem;color:var(--silk-dim);margin:6px 0 0}
-.arch-board-note a{color:var(--wave)}
+.how b.in{display:inline;font-family:inherit;font-weight:700;color:var(--silk);margin:0}
+.msg{min-height:1.4em;font-size:.84rem;color:var(--led);margin:0 0 4px}
+.tray{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;background:var(--room-deep);border:1px solid var(--edge);border-radius:10px;padding:8px;min-height:64px;margin:0 0 8px}
+.tray .tray-t{width:100%;font-size:.74rem;color:var(--silk-dim)}
+.tray .empty{font-size:.78rem;color:var(--silk-dim)}
+.pc{position:relative;z-index:3;display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 9px 4px 4px;border-radius:8px;border:1.5px solid #33405F;background:#131C2E;color:var(--silk);font:inherit;text-align:left;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;line-height:1.25}
+.pc:hover{border-color:#51608A}
+.pc .ic{flex:none;width:30px;height:30px;border-radius:6px;display:grid;place-items:center;background:var(--c);color:#0A0F1A;font-family:var(--dot);font-size:.6rem;box-shadow:0 1px 6px rgba(0,0,0,.35)}
+.pc .nm{font-size:.76rem;font-weight:700;overflow-wrap:anywhere}
+.pc .sb{display:block;font-size:.64rem;font-weight:400;color:var(--silk-dim)}
+.pc.sel{border-color:var(--led);box-shadow:0 0 0 3px rgba(255,197,61,.35)}
+.pc.okp{border-color:var(--ok)}
+.pc.ngp{border-color:var(--bad);box-shadow:0 0 0 2px rgba(255,107,122,.25)}
+.pc.miss{border-color:var(--led);border-style:dashed}
+.pc.xp{opacity:.62}
+.pc.dim{opacity:.28}
+.pc .bd{position:absolute;right:-6px;top:-9px;font-family:var(--dot);font-size:.56rem;line-height:1.4;padding:0 4px;border-radius:4px;background:#1A0E14;color:var(--bad);border:1px solid var(--bad)}
+.pc.ghost{position:fixed;z-index:60;pointer-events:none;opacity:.92;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.dgw{container-type:inline-size}
+.dg{position:relative;display:grid;gap:10px;padding:10px;background:#0A0F1A;border:1px solid var(--edge);border-radius:12px;background-image:radial-gradient(rgba(238,242,250,.06) 1px,transparent 1px);background-size:22px 22px}
+.dg .pc{flex-direction:column;justify-content:flex-start;gap:3px;padding:5px 5px 4px;min-width:66px;max-width:118px;text-align:center;background:rgba(19,28,46,.94)}
+.dg .pc .nm{font-size:.68rem;line-height:1.2}
+.dg .pc .sb{display:none}
+.dg .pc.cp{border-style:dashed}
+.dgl,.dgv{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.dgl{z-index:2}.dgv{z-index:4}
+.dgl .hit{pointer-events:stroke;cursor:pointer}
+.dgv .bdg[data-j]{pointer-events:all;cursor:pointer}
+.dg.placing .dgl .hit{pointer-events:none}
+.dg.placing [data-zone]{cursor:copy}
+.dg.placing .zs{background:rgba(255,197,61,.04);border-radius:6px}
+.zn{position:relative;min-width:0;border:1.5px solid var(--zc);border-radius:8px;background:var(--zb);padding:3px 6px 6px}
+.zn>.zt{display:block;margin:0 0 4px 2px;font-family:var(--dot);font-size:.66rem;line-height:1.35;color:var(--zc);pointer-events:none}
+.zn.ext{--zc:#9AA6C2;--zb:transparent;border-style:dashed}
+.zn.cloud{--zc:#C9D1E3;--zb:rgba(35,47,70,.28)}
+.zn.region{--zc:#3CCBCB;--zb:rgba(20,110,110,.07);border-style:dashed}
+.zn.vpc{--zc:#B69CFF;--zb:rgba(120,90,210,.07)}
+.zn.az{--zc:#6CB4FF;--zb:transparent;border-style:dashed}
+.zn.pub{--zc:#8FD14F;--zb:rgba(143,209,79,.08);border-width:1px}
+.zn.pri{--zc:#3CCBCB;--zb:rgba(60,203,203,.08);border-width:1px}
+.zs{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;align-content:flex-start;min-height:52px}
+.zn.ext>.zs{flex-direction:column;align-items:center}
+.zk{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.zk>.zn{flex:1 1 220px}
+.zk.az2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+.zn.az>.zk{display:flex;flex-direction:column;flex-wrap:nowrap;gap:6px;margin-top:0}
+.zn.az>.zk>.zn{flex:none}
+.zn.vpc>.zk:not(.az2){flex-direction:column;flex-wrap:nowrap}
+.zn.vpc>.zk:not(.az2)>.zn{flex:none}
+.zn.flash{animation:zflash 1.2s ease 2}
+@keyframes zflash{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px var(--led)}}
+.abar{position:sticky;bottom:8px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(10,16,27,.96);border:1px solid var(--edge);box-shadow:0 6px 20px rgba(0,0,0,.35);font-size:.8rem}
+.abar .bt{flex:1 1 220px;color:var(--silk-dim)}
+.abar .bt b{color:var(--silk)}
+.abar label{display:flex;gap:6px;align-items:center;color:var(--silk-dim);min-width:0;flex:0 1 auto}
+.abar select{max-width:min(260px,62vw)}
+.abar .btn{min-height:32px;font-size:.78rem;padding:3px 10px}
+.legend .zl i.z{border:1.5px solid;background:transparent}
+.legend i.z.region{border-color:#3CCBCB;border-style:dashed}.legend i.z.vpc{border-color:#B69CFF}.legend i.z.az{border-color:#6CB4FF;border-style:dashed}
+.legend i.z.pub{border-color:#8FD14F;background:rgba(143,209,79,.2)}.legend i.z.pri{border-color:#3CCBCB;background:rgba(60,203,203,.2)}
+.flow-list .via{color:var(--silk-dim);font-size:.85em}
+.flow-list .r{font-family:var(--dot);font-size:.68rem;color:var(--silk-dim)}
+.result .plc .r{color:var(--silk-dim);font-family:var(--body);font-size:.8rem;margin-left:4px}
+@container (max-width:640px){
+  .dg{grid-template-columns:minmax(0,1fr)!important;gap:8px;padding:6px}
+  .zn{padding:3px 4px 4px}
+  .zn.ext>.zs{flex-direction:row;min-height:52px}
+  .zk>.zn{flex-basis:100%}
+  .dg .pc{min-width:56px;max-width:100%;padding:4px 3px 3px}
+  .dg .pc .ic{width:26px;height:26px;font-size:.56rem}
+  .dg .pc .nm{font-size:.64rem}
+  .zn.pub>.zt,.zn.pri>.zt{font-size:.6rem}
+}
 .notes{margin-top:26px;font-size:.85rem;color:var(--muted)}
 .notes ul{padding-left:1.3em}
 @media (prefers-reduced-motion:reduce){.blk{transition:none}}
@@ -187,36 +215,45 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 <main>
 <p class="top"><a href="../">← トップ</a></p>
 <h1>AWS 基盤パズル</h1>
-<p class="lede">AWS の構成図を、サービスの配置と通信経路から組み立てる演習です。外部、AWS Cloud、リージョン、VPC、AZ、サブネットの関係を考えながら部品を置いてください。<b>従来のサービス接続問題も全39問残しています。</b></p>
-<div class="mode-tabs" role="tablist" aria-label="演習モード">
-  <button type="button" id="mode-arch" role="tab" aria-selected="true" aria-controls="arch-game">構成図を組み立てる</button>
-  <button type="button" id="mode-flow" role="tab" aria-selected="false" aria-controls="game">サービス接続問題（39問）</button>
+<p class="lede">AWS の構成図とプラットフォームの設計を、手を動かして学ぶ演習です。<b>「構成図」</b>では、部品をインターネット・リージョン・VPC・AZ・サブネットの枠に置き、通信の向きを矢印で描きます (全8問)。<b>「設計パズル」</b>では、プラットフォームエンジニアリングのお題に合わせてサービスをつなぎます (全39問)。どちらも、開くたびにまだ出ていないお題が選ばれます。</p>
+<div class="mode-tabs" role="tablist" aria-label="演習の種類">
+  <button type="button" id="mode-arch" role="tab" aria-selected="true" aria-controls="arch">構成図<small>置く・矢印を描く ・ 8問</small></button>
+  <button type="button" id="mode-flow" role="tab" aria-selected="false" aria-controls="game">設計パズル<small>サービスをつなぐ ・ 39問</small></button>
 </div>
 <div class="how" id="arch-how">
-  <div><b>1. 配置を考える</b>部品を選び、図の領域をクリックして置きます。ドラッグでも配置できます。AWS の外側、リージョン、VPC、AZ、サブネットを見分けましょう。</div>
-  <div><b>2. 経路をつなぐ</b>「経路をつなぐ」に切り替え、始点と終点を順に選びます。矢印が通信やデータの向きを示します。</div>
-  <div><b>3. 答え合わせ</b>配置と経路を別々に採点します。解答例では二つの AZ にまたがる構成と、矢印ごとの理由を確認できます。</div>
+  <div><b>1. 置く</b>部品をタップしてから、置きたい枠をタップします (パソコンではドラッグでも置けます)。リージョンの外か中か、VPC の中か、どのサブネットかを考えます。使わない部品も混ざっています。</div>
+  <div><b>2. 矢印を描く</b>置いた部品を 2 つ続けてタップすると、1 つ目から 2 つ目へ矢印が引けます。矢印は<b class="in">通信を始める側から相手へ</b>向けます (応答の戻りは描きません)。</div>
+  <div><b>3. 答え合わせ</b>置き場所と矢印を採点します。解答例では、部品ごとの置き場所の理由と、矢印ごとの意味、参考にした AWS の資料を確かめられます。</div>
 </div>
-<section class="panel" id="arch-game" aria-label="AWS 構成図を組み立てる">
-  <div class="bar"><div class="l"><span class="pill lv1">構成図演習</span><span class="pill">マルチ AZ の Web システム</span></div></div>
-  <h2 class="t">二つの AZ で動く Web システムを組み立てる</h2>
-  <p class="arch-intro">利用者向けの Web サイトを東京リージョンに構築します。CloudFront は静的ファイルを S3 から配信し、動的リクエストは ALB から二つの AZ の EC2 に渡します。DB は非公開サブネットで冗長化し、社内データセンターとは VPN で接続します。</p>
-  <ol class="reqs"><li><span class="no">1</span><span>利用者からの入口と静的・動的コンテンツの経路を表す</span></li><li><span class="no">2</span><span>VPC と二つの AZ、それぞれの公開・非公開サブネットに適切な部品を置く</span></li><li><span class="no">3</span><span>二つの EC2、RDS の主系・待機系、オンプレミス接続を矢印で表す</span></li></ol>
-  <div class="arch-steps"><span><b>配置:</b> 部品を選択 → 図の領域をクリック</span><span><b>接続:</b> 始点 → 終点</span><span>スマートフォンでは下の「配置先」も使えます</span></div>
-  <div class="arch-controls"><span class="arch-count" id="arch-count"></span><button class="btn active" id="arch-place-mode" type="button" aria-pressed="true">部品を配置</button><button class="btn sub" id="arch-link-mode" type="button" aria-pressed="false">経路をつなぐ</button><button class="btn sub" id="arch-reset" type="button">やり直す</button><button class="btn pri" id="arch-check" type="button">答え合わせ</button></div>
-  <div class="arch-focus" id="arch-focus" hidden><label>解答の経路 <select id="arch-focus-pick"></select></label><span id="arch-focus-desc"></span></div>
-  <div class="arch-tray" id="arch-tray" aria-label="配置する部品"><span class="arch-tray-title">部品トレイ：図の領域に置く部品を選んでください。使わない部品もあります。</span></div>
-  <div class="arch-scroll"><div class="arch-board" id="arch-board" aria-label="AWS 構成図のキャンバス"><div id="arch-zones"></div><svg class="arch-lines" id="arch-lines" viewBox="0 0 1040 770" aria-hidden="true"></svg><div id="arch-cards"></div></div></div>
-  <div class="arch-place-picker"><span id="arch-selected">選択中：なし</span><label>配置先 <select id="arch-target"><option value="">領域を選ぶ</option></select></label></div>
-  <p class="arch-board-note">図は横にスクロールできます。矢印は通信・データの向きです。AWS Cloud や VPC の枠そのものは接続線ではありません。<a href="https://d1.awsstatic.com/Developer%20Marketing/jp/magazine/2022/img_way-to-draw-architecture_03.08e1366ebaecaf76a333002acbe1e2bd363acd4b.png" target="_blank" rel="noopener">参考にした AWS の構成図</a></p>
-  <div class="live" id="arch-live" aria-live="polite"></div>
-  <div class="arch-result" id="arch-result" hidden></div>
+<section class="panel" id="arch" aria-label="構成図のお題">
+  <div class="bar">
+    <div class="l"><span class="pill" id="a-lv"></span><span class="pill" id="a-theme"></span><span class="pill" id="a-no"></span><span class="pill" id="a-prog"></span></div>
+    <div class="l"><select id="a-pick" aria-label="お題を選ぶ"></select><button class="btn sub" id="a-rnd" type="button">別のお題 🎲</button></div>
+  </div>
+  <h2 class="t" id="a-title"></h2>
+  <p class="story" id="a-story"></p>
+  <ol class="reqs" id="a-reqs"></ol>
+  <div class="tools">
+    <span class="cnt" id="a-cnt"></span>
+    <button class="btn sub" id="a-hint" type="button">ヒント (−5点)</button>
+    <button class="btn sub" id="a-clear" type="button">全部やり直す</button>
+    <button class="btn pri" id="a-check" type="button">答え合わせ</button>
+  </div>
+  <p class="msg" id="a-msg" aria-hidden="true"></p>
+  <div class="tray" id="a-tray" aria-label="部品トレイ"></div>
+  <div class="dgw"><div class="dg" id="a-dg" aria-label="構成図"></div></div>
+  <div class="abar" id="a-bar"></div>
+  <div class="legend" id="a-legend"></div>
+  <div class="flow" id="a-flow" aria-label="解答例の矢印" hidden></div>
+  <div class="conns" id="a-conns" aria-label="描いた矢印"></div>
+  <div class="live" id="a-live" aria-live="polite"></div>
+  <div class="result" id="a-result" hidden></div>
 </section>
 
 <div class="how" id="legacy-how" hidden>
   <div><b>1. お題を読む</b>会社の状況と要件を読んで、どのブロックが必要か考えます。使わない「ひっかけ」のブロックも混ざっています。</div>
-  <div><b>2. ブロックをつなぐ</b>役割別の領域にあるブロックを2つタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。</div>
-  <div><b>3. 答え合わせ</b>要件ごとの達成度を確認。解答例は矢印付きの構成図で、要件ごとの経路と線の意味を追えます。</div>
+  <div><b>2. ブロックをつなぐ</b>ブロックをタップして選び、つなぎたい相手をタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。枠は役割ごとの置き場所で、正解の組み合わせは示しません。</div>
+  <div><b>3. 答え合わせ</b>要件ごとの達成度と、余計な線の理由がわかります。解答例では、線ごとの理由と、参考にした AWS 公式資料や各社の事例を確認できます。</div>
 </div>
 
 <section class="panel" id="game" aria-label="お題" hidden>
@@ -246,6 +283,7 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 <div class="notes">
   <ul>
     <li>解答例は、公式資料や事例でよく使われる「型」の1つです。要件によっては別の組み方も正解になります(代わりに使えるブロックは、つないでも減点しません)。</li>
+    <li>構成図の枠の色と線 (リージョンは点線、VPC は実線、パブリックサブネットは緑など) は、AWS のアーキテクチャ図の描き方をまねています。部品の略号は説明のためのもので、AWS 公式のアイコンではありません。</li>
     <li>サービス名と仕様は 2026年9月時点の公開情報にもとづいています。AWS の公式教材ではありません。サービスの終了・名称変更は解説の中で触れています。</li>
     <li>自己ベストの点数は、このブラウザの中にだけ保存されます。</li>
   </ul>
@@ -349,6 +387,7 @@ var REF={
   irmulti:['aws','AWS Security Blog: マルチアカウント環境での自動インシデント対応','https://aws.amazon.com/blogs/security/how-to-perform-automated-incident-response-multi-account-environment/']
 };
 var KIND={aws:['aws','AWS公式'],case:['case','事例'],doc:['doc','ドキュメント']};
+window.AWSP_REF=REF;window.AWSP_KIND=KIND;
 
 /* ==== お題 ====
  nodes/alt/bad: [id, 名前, カテゴリ, 役割, (alt: 補足 / bad: 使わない理由)]
@@ -1081,17 +1120,26 @@ function load(i){
 
 /* ==== 配置 ==== */
 function dims(){var W=board.clientWidth||320,cols=W>=920?5:W>=720?4:W>=480?3:2;return {W:W,cols:cols,bw:Math.floor((W-PAD*2-GX*(cols-1))/cols)}}
+/* 役割ごとの枠に分けて並べる。小さい枠は同じ段に詰める */
 function layoutGrid(){
-  var d=dims(),groups={},order=['ext','net','compute','int','data','ai','devops','oss','sec','ops'],y=PAD;
+  var d=dims(),groups={},order=['ext','net','compute','int','data','ai','devops','oss','sec','ops'],y=PAD,shelf=[],used=0;
   S.bw=d.bw;S.divY=null;S.zones=[];
   S.nodes.forEach(function(n){(groups[n.cat]=groups[n.cat]||[]).push(n)});
+  function flush(){
+    if(!shelf.length)return;
+    var rows=Math.max.apply(null,shelf.map(function(s){return Math.ceil(s.list.length/s.c)})),h=24+rows*(BH+12)+2;
+    shelf.forEach(function(s){
+      S.zones.push({cat:s.cat,x:PAD+s.col*(d.bw+GX)-6,w:s.c*d.bw+(s.c-1)*GX+12,y:y,h:h});
+      s.list.forEach(function(n,i){S.pos[n.id]={fx:(PAD+(s.col+i%s.c)*(d.bw+GX))/d.W,y:y+22+Math.floor(i/s.c)*(BH+12)}});
+    });
+    y+=h+10;shelf=[];used=0;
+  }
   order.forEach(function(cat){
     var list=groups[cat];if(!list||!list.length)return;
-    var rows=Math.ceil(list.length/d.cols),h=28+rows*(BH+17)+6;
-    S.zones.push({cat:cat,y:y,h:h});
-    list.forEach(function(n,i){var c=i%d.cols,r=Math.floor(i/d.cols);S.pos[n.id]={fx:(PAD+c*(d.bw+GX))/d.W,y:y+25+r*(BH+17)}});
-    y+=h+12;
+    var c=Math.min(d.cols,list.length);if(used+c>d.cols)flush();
+    shelf.push({cat:cat,list:list,c:c,col:used});used+=c;
   });
+  flush();
 }
 /* 解答例の配置: 矢印の向きに沿って左→右(狭い画面では上→下)に並べる */
 function layoutAnswer(){
@@ -1136,20 +1184,42 @@ function rect(id){var p=S.pos[id],W=board.clientWidth;return {x:p.fx*W,y:p.y,w:S
 function center(r){return [r.x+r.w/2,r.y+r.h/2]}
 function clip(r,tx,ty){var c=center(r),dx=tx-c[0],dy=ty-c[1];if(!dx&&!dy)return c;var t=Math.min(dx?(r.w/2+4)/Math.abs(dx):1e9,dy?(r.h/2+4)/Math.abs(dy):1e9);return [c[0]+dx*t,c[1]+dy*t]}
 function seg(a,b){var ra=rect(a),rb=rect(b),cb=center(rb),ca=center(ra);return [clip(ra,cb[0],cb[1]),clip(rb,ca[0],ca[1])]}
-/* 解答例では直交する線を使い、始点と矢印の向きを明確にする。 */
-function route(a,b){
-  var ra=rect(a),rb=rect(b),ca=center(ra),cb=center(rb),dx=cb[0]-ca[0],dy=cb[1]-ca[1],x1,y1,x2,y2,m;
-  if(Math.abs(dx)>Math.abs(dy)*.7&&Math.abs(dx)>(ra.w+rb.w)/2+12){
-    x1=dx>0?ra.x+ra.w+3:ra.x-3;y1=ca[1];x2=dx>0?rb.x-3:rb.x+rb.w+3;y2=cb[1];m=(x1+x2)/2;
-    return {d:'M'+x1+' '+y1+' L'+m+' '+y1+' L'+m+' '+y2+' L'+x2+' '+y2,x:m,y:(y1+y2)/2};
-  }
-  x1=ca[0];y1=dy>=0?ra.y+ra.h+3:ra.y-3;x2=cb[0];y2=dy>=0?rb.y-3:rb.y+rb.h+3;m=(y1+y2)/2;
-  return {d:'M'+x1+' '+y1+' L'+x1+' '+m+' L'+x2+' '+m+' L'+x2+' '+y2,x:(x1+x2)/2,y:m};
+/* 解答例の矢印は、層の向きに沿ったなめらかな曲線にする。同じ辺に集まる矢印は、辺の上で少しずつずらして重ならないようにする */
+function port(r,side,off,pad){var c=center(r);return side==='r'?[r.x+r.w+pad,c[1]+off]:side==='l'?[r.x-pad,c[1]+off]:side==='b'?[c[0]+off,r.y+r.h+pad]:[c[0]+off,r.y-pad]}
+function routes(){
+  var arcs=0,span=S.bw*1.5+GX*2;
+  var R=S.sc.edges.map(function(e){
+    var ra=rect(e[0]),rb=rect(e[1]),ca=center(ra),cb=center(rb),dx=cb[0]-ca[0],dy=cb[1]-ca[1],hz=Math.abs(dx)>=(ra.w+rb.w)/2+8,r={a:e[0],b:e[1],ra:ra,rb:rb};
+    if(hz&&Math.abs(dx)>span){
+      /* 列を 1 つ以上飛ばす矢印は、途中のブロックの裏に隠れないようにする。同じ段なら上か下を弧で回し、別の段なら行き先へ上下から入る */
+      if(Math.abs(dy)<BH){var up=Math.min(ra.y,rb.y)>70;r.sa=r.sb=up?'t':'b';r.arc=34+12*(arcs++%3)}
+      else{r.sa=dx>0?'r':'l';r.sb=dy>0?'t':'b'}
+    }else if(hz){r.sa=dx>0?'r':'l';r.sb=dx>0?'l':'r'}
+    else{r.sa=dy>=0?'b':'t';r.sb=dy>=0?'t':'b'}
+    return r;
+  });
+  function axis(sd){return sd==='l'||sd==='r'?1:0}
+  var ports={};
+  R.forEach(function(r,j){
+    (ports[r.a+'|'+r.sa]=ports[r.a+'|'+r.sa]||[]).push({j:j,end:'a',o:center(r.rb)[axis(r.sa)]});
+    (ports[r.b+'|'+r.sb]=ports[r.b+'|'+r.sb]||[]).push({j:j,end:'b',o:center(r.ra)[axis(r.sb)]});
+  });
+  Object.keys(ports).forEach(function(k){
+    var l=ports[k].sort(function(x,y){return x.o-y.o}),n=l.length,side=k.split('|')[1],r0=R[l[0].j][l[0].end==='a'?'ra':'rb'],len=axis(side)?r0.h:r0.w,sp=Math.min(14,(len-16)/Math.max(1,n));
+    l.forEach(function(p,i){R[p.j]['o'+p.end]=(i-(n-1)/2)*sp});
+  });
+  function out(sd){return sd==='r'?[1,0]:sd==='l'?[-1,0]:sd==='b'?[0,1]:[0,-1]}
+  return R.map(function(r){
+    var p=port(r.ra,r.sa,r.oa||0,2),q=port(r.rb,r.sb,r.ob||0,5),da=out(r.sa),db=out(r.sb);
+    function k(d){return r.arc||Math.max(24,(d[0]?Math.abs(q[0]-p[0]):Math.abs(q[1]-p[1]))*.45)}
+    var c1=[p[0]+da[0]*k(da),p[1]+da[1]*k(da)],c2=[q[0]+db[0]*k(db),q[1]+db[1]*k(db)];
+    return {d:'M'+p[0]+' '+p[1]+' C'+c1[0]+' '+c1[1]+' '+c2[0]+' '+c2[1]+' '+q[0]+' '+q[1],x:(p[0]+3*c1[0]+3*c2[0]+q[0])/8,y:(p[1]+3*c1[1]+3*c2[1]+q[1])/8};
+  });
 }
 function edgeFocused(e,j){return S.focusEdge!=null?S.focusEdge===j:S.focusReq==null||S.focusReq===e[2]}
 function render(){
   var W=board.clientWidth;fitHeight();var H=board.clientHeight;
-  zones.innerHTML=S.zones.map(function(z){return '<div class="zone" style="top:'+z.y+'px;height:'+z.h+'px"><span class="zone-title">'+esc(CAT[z.cat][0])+'</span></div>'}).join('');
+  zones.innerHTML=S.zones.map(function(z){return '<div class="zone" style="left:'+z.x+'px;width:'+z.w+'px;top:'+z.y+'px;height:'+z.h+'px;--c:'+CAT[z.cat][1]+'"><span class="zone-title">'+esc(CAT[z.cat][0])+'</span></div>'}).join('');
   var focusedNodes={},filtering=S.answer&&(S.focusReq!=null||S.focusEdge!=null);
   if(filtering)S.sc.edges.forEach(function(e,j){if(edgeFocused(e,j)){focusedNodes[e[0]]=1;focusedNodes[e[1]]=1}});
   S.nodes.forEach(function(n){var r=rect(n.id),el=n.el;el.style.left=r.x+'px';el.style.top=r.y+'px';el.style.width=r.w+'px';
@@ -1170,7 +1240,8 @@ function render(){
     o+='<line x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" '+st+' stroke-linecap="round"/>';
     o+='<line class="hit" data-k="'+k+'" x1="'+p[0][0]+'" y1="'+p[0][1]+'" x2="'+p[1][0]+'" y2="'+p[1][1]+'" stroke="transparent" stroke-width="16"><title>クリックで消す</title></line>';
   }
-  if(S.answer){S.sc.edges.forEach(function(e,j){var kk=key(e[0],e[1]),has=!!S.E[kk],path=route(e[0],e[1]),col=has?'#5CE39A':'#FFC53D',active=edgeFocused(e,j),opacity=active?1:.14;
+  var RT=S.answer?routes():null;
+  if(S.answer){S.sc.edges.forEach(function(e,j){var kk=key(e[0],e[1]),has=!!S.E[kk],path=RT[j],col=has?'#5CE39A':'#FFC53D',active=edgeFocused(e,j),opacity=active?1:.14;
     o+='<path d="'+path.d+'" fill="none" stroke="'+col+'" stroke-width="'+(S.focusEdge===j?'3.6':'2.6')+'" stroke-linecap="round" stroke-linejoin="round" opacity="'+opacity+'" '+(has?'':'stroke-dasharray="7 5" ')+'marker-end="url(#ah-'+(has?'ok':'miss')+')"/>';
     o+='<path class="flow-hit" data-j="'+j+'" d="'+path.d+'" fill="none" stroke="transparent" stroke-width="18"><title>'+esc(S.byId[e[0]].label+' → '+S.byId[e[1]].label+'。'+e[3])+'</title></path>';
     o+='<circle class="flow-badge" data-j="'+j+'" cx="'+path.x+'" cy="'+path.y+'" r="'+(S.focusEdge===j?12:10)+'" fill="#0A0F1A" stroke="'+col+'" stroke-width="1.5" opacity="'+opacity+'"/><text class="flow-badge" data-j="'+j+'" x="'+path.x+'" y="'+(path.y+4)+'" text-anchor="middle" font-size="11" fill="'+col+'" opacity="'+opacity+'">'+(j+1)+'</text>'})}
@@ -1200,9 +1271,9 @@ function renderFlow(){
   S.sc.req.forEach(function(r,i){filters+='<button type="button" data-req="'+i+'" class="'+(S.focusReq===i?'active':'')+'" aria-pressed="'+(S.focusReq===i)+'">要件 '+(i+1)+'</button>'});
   var list=S.sc.edges.map(function(e,j){if(S.focusReq!=null&&e[2]!==S.focusReq)return '';
     var has=!!S.E[key(e[0],e[1])];
-    return '<button type="button" data-edge="'+j+'" class="'+(S.focusEdge===j?'active':'')+'" aria-pressed="'+(S.focusEdge===j)+'"><span class="flow-no">'+(j+1)+'</span>'+esc(S.byId[e[0]].label)+' → '+esc(S.byId[e[1]].label)+'<span class="flow-why"><strong>'+(has?'接続済み':'未接続')+'</strong> ・ '+esc(e[3])+'</span></button>'
+    return '<button type="button" data-edge="'+j+'" class="'+(S.focusEdge===j?'active':'')+'" aria-pressed="'+(S.focusEdge===j)+'"><span class="flow-no">'+(j+1)+'</span>'+esc(S.byId[e[0]].label)+' → '+esc(S.byId[e[1]].label)+' <span class="r">要件'+(e[2]+1)+'</span><span class="flow-why">'+(has?'<b class="s-ok">つないだ</b>':'<b class="s-ng">まだ</b>')+' ・ '+esc(e[3])+'</span></button>'
   }).join('');
-  flow.innerHTML='<div class="flow-head"><b>構成図の流れ</b><span>要件を選ぶと関連する矢印だけを強調します。線の番号を選ぶと接続の意味を読めます。</span></div><div class="flow-filters">'+filters+'</div><div class="flow-list">'+list+'</div>';
+  flow.innerHTML='<div class="flow-head"><b>解答例の線</b><span>要件を選ぶと、その線だけを強調します。緑はあなたがつないだ線、黄色の点線はまだの線です。</span></div><div class="flow-filters">'+filters+'</div><div class="flow-list">'+list+'</div>';
 }
 
 /* ==== 操作 ==== */
@@ -1264,7 +1335,8 @@ function setAnswer(on){
   else if(!on&&S.answer){S.answer=false;if(S.userPos){S.pos=S.userPos;S.zones=S.userZones;S.bw=dims().bw}S.divY=null;S.focusReq=null;S.focusEdge=null}
   renderResult();render();
 }
-var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){if(S.answer)layoutAnswer();else{var d=dims();S.bw=d.bw;for(var k in S.pos){var W=board.clientWidth;S.pos[k].fx=Math.min(S.pos[k].fx,(W-S.bw-2)/W)}}render()},120)});
+function relayout(){if(!S.sc||!board.clientWidth)return;if(S.answer)layoutAnswer();else{var d=dims();S.bw=d.bw;for(var k in S.pos){var W=board.clientWidth;S.pos[k].fx=Math.min(S.pos[k].fx,(W-S.bw-2)/W)}}render()}
+var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){if(!board.clientWidth)return;if(S.answer)layoutAnswer();else{var d=dims();S.bw=d.bw;for(var k in S.pos){var W=board.clientWidth;S.pos[k].fx=Math.min(S.pos[k].fx,(W-S.bw-2)/W)}}render()},120)});
 
 /* ==== 答え合わせ ==== */
 function grade(){
@@ -1296,8 +1368,7 @@ function renderResult(){
   }
   h+='<div class="row"><button type="button" class="btn '+(S.answer?'sub':'pri')+'" data-a="ans">'+(S.answer?'解答例を閉じる':'解答例を見る')+'</button>'+(S.answer?'':'<button type="button" class="btn sub" data-a="retry">もう一度つなぐ</button>')+'<button type="button" class="btn" data-a="next">次のお題 →</button></div>';
   if(S.answer){
-    h+='<h3>解答例の線 (図の番号)</h3><p style="color:var(--silk-dim);font-size:.82rem">緑はあなたがつないだ線、黄色の点線はまだの線。矢印はデータや操作の流れの向きです。</p><ol>'+sc.edges.map(function(e,j){var has=!!S.E[key(e[0],e[1])];
-      return '<li><span class="edge">'+esc(S.byId[e[0]].label)+' → '+esc(S.byId[e[1]].label)+'</span><span class="r">要件'+(e[2]+1)+'</span><span class="mark '+(has?'ok':'ng')+'">'+(has?'✓':'まだ')+'</span><br><span class="why">'+esc(e[3])+'</span></li>'}).join('')+'</ol>';
+    h+='<p>線ごとの理由は、図のすぐ下の「解答例の線」で確かめられます。</p>';
     var bad=S.nodes.filter(function(n){return n.kind==='bad'}),alt=S.nodes.filter(function(n){return n.kind==='alt'});
     if(bad.length)h+='<h3>使わないブロック</h3><ul>'+bad.map(function(n){return '<li><span class="edge">'+esc(n.label)+'</span><br><span class="why">'+esc(n.why)+'</span></li>'}).join('')+'</ul>';
     if(alt.length)h+='<h3>代わりに使えるブロック</h3><ul>'+alt.map(function(n){return '<li><span class="edge">'+esc(n.label)+'</span><br><span class="why">'+esc(n.note)+'</span></li>'}).join('')+'</ul>';
@@ -1310,129 +1381,735 @@ function renderResult(){
 
 /* ==== 凡例と開始 ==== */
 $('#legend').innerHTML=Object.keys(CAT).map(function(k){return '<span><i style="background:'+CAT[k][1]+'"></i>'+CAT[k][0]+'</span>'}).join('');
-window.startLegacyPuzzle=function(){if(!S.sc)load(randomIndex())};
+window.startLegacyPuzzle=function(){if(!S.sc)load(randomIndex());else relayout()};
 })();
 </script>
 <script>
 (function(){
 'use strict';
-/* 参考図のように、包含関係と経路の両方を組み立てる演習。 */
-var N=[
-  {id:'users',name:'利用者',sub:'Web ブラウザー',icon:'USR',color:'#94A3B8',scope:'outside',slot:0,x:5,y:92},
-  {id:'route53',name:'Route 53',sub:'DNS',icon:'53',color:'#A78BFA',scope:'cloud',slot:0,x:300,y:88},
-  {id:'cloudfront',name:'CloudFront',sub:'CDN',icon:'CF',color:'#A78BFA',scope:'cloud',slot:1,x:505,y:88},
-  {id:'s3',name:'Amazon S3',sub:'静的ファイル',icon:'S3',color:'#71D6A3',scope:'region',slot:0,x:688,y:190},
-  {id:'igw',name:'Internet Gateway',sub:'公開入口',icon:'IGW',color:'#A78BFA',scope:'vpc',slot:0,x:465,y:278},
-  {id:'alb',name:'ALB（2 AZ）',sub:'HTTP 負荷分散',icon:'ALB',color:'#A78BFA',scope:'public-a',accept:['public-a','public-b'],slot:0,x:465,y:375},
-  {id:'ec2a',name:'Amazon EC2',sub:'AZ a / アプリ',icon:'EC2',color:'#FFC53D',scope:'private-a',slot:0,x:335,y:493},
-  {id:'ec2b',name:'Amazon EC2',sub:'AZ b / アプリ',icon:'EC2',color:'#FFC53D',scope:'private-b',slot:0,x:595,y:493},
-  {id:'rdsa',name:'Amazon RDS',sub:'AZ a / 主系',icon:'RDS',color:'#7AB8FF',scope:'private-a',slot:1,x:335,y:585},
-  {id:'rdsb',name:'Amazon RDS',sub:'AZ b / 待機系',icon:'RDS',color:'#7AB8FF',scope:'private-b',slot:1,x:595,y:585},
-  {id:'vpn',name:'VPN Gateway',sub:'閉域接続の入口',icon:'VPN',color:'#A78BFA',scope:'vpc',slot:1,x:745,y:437},
-  {id:'dc',name:'社内データセンター',sub:'オンプレミス',icon:'DC',color:'#94A3B8',scope:'outside',slot:1,x:905,y:437},
-  {id:'nat',name:'NAT Gateway',sub:'今回は使わない',icon:'NAT',color:'#A78BFA',scope:null}
+/* ==== 構成図モードのお題 ====
+   zones: 枠の入れ子。id のある枠に部品を置ける (サブネットの段は [id, 図の見出し, 文中での名前])
+   parts: [id, 名前, 何をするものか, 略号, 種類, 正しい置き場所(null は使わない部品), 理由, {span:[解答例で並べて描く枠]}]
+   edges: [始点, 終点, 要件番号, 理由, {via:途中の部品(描かなくても可), any:向きを問わない, alt:[代わりに認める矢印], sameAz:同じ AZ に置いた部品どうしのときだけ正解}]
+   groups: 見分けのつかない部品の組 (入れ替えて採点する)
+   apart: 別の AZ に置く部品の組
+   ok: 減点しない別解の矢印 / wrong: まちがいの矢印とその理由 (4つ目は要件番号) */
+function Z(id,k,t,l,kids){return {id:id,k:k,t:t,l:l||t,kids:kids||[]}}
+function EXT(id,t){return Z(id,'ext',t)}
+function CLOUD(kids){return Z('cloud','cloud','AWS Cloud','AWS Cloud (リージョンの外)',kids)}
+function REG(id,t,kids){return Z(id,'region',t,kids&&kids.length?t+' (VPC の外)':t,kids)}
+function VPC(id,t,l,kids){return Z(id,'vpc',t,l,kids)}
+function AZS(tiers){return [['a','AZ 1'],['b','AZ 2']].map(function(z){var az=Z(null,'az',z[1],null,tiers.map(function(t){var s=Z(t[0]+z[0],t[0]==='pub'?'pub':'pri',t[1],z[1]+' の'+(t[2]||t[1]));s.az=z[0];return s}));return az})}
+var TP=[['pub','パブリックサブネット'],['pri','プライベートサブネット']];
+var TPD=[['pub','パブリックサブネット'],['pri','プライベート (アプリ)','プライベートサブネット (アプリ)'],['db','プライベート (DB)','プライベートサブネット (DB)']];
+
+var AS=[
+{id:'web2az',lv:1,theme:'Web',title:'2つの AZ で動く Web サイト',
+ story:'会社の Web サイトを東京リージョンに作ります。画像などの静的ファイルは S3 に置いて CloudFront で配り、動的なページは 2 台の EC2 で返します。DB は RDS をスタンバイ付きで冗長化し、社内からは VPN を通って DB の保守をします。',
+ req:['利用者はドメイン名でアクセスし、静的ファイルは CloudFront 経由で S3 から返す','動的なページは ALB から 2 台の EC2 に振り分ける','DB は別の AZ にスタンバイを置いて冗長化する','社内から VPN を通って DB を保守する'],
+ zones:[EXT('inet','インターネット'),CLOUD([REG('region','東京リージョン',[VPC('vpc','VPC','VPC (境界)',AZS(TPD))])]),EXT('onprem','社内データセンター')],
+ parts:[
+  ['users','利用者','ブラウザー','USR','ext',['inet'],'インターネット側の利用者。AWS の枠の外に描く。'],
+  ['r53','Route 53','DNS','R53','net',['cloud'],'Route 53 はグローバルなサービス。リージョンの枠の外、AWS Cloud の中に描く。'],
+  ['cf','CloudFront','CDN','CF','net',['cloud'],'CloudFront は世界中のエッジで動くグローバルなサービス。リージョンの外に描く。'],
+  ['s3','Amazon S3','静的ファイル','S3','store',['region'],'S3 はリージョンのサービスだが、VPC の中には入らない。リージョンの枠の中、VPC の外に描く。'],
+  ['igw','インターネットゲートウェイ','VPC の出入口','IGW','net',['vpc'],'VPC にアタッチする出入口。VPC の境界に描く。'],
+  ['alb','ALB','負荷分散','ALB','net',['puba','pubb'],'インターネット向けの ALB は、2 つ以上の AZ のパブリックサブネットに置く (どちらの AZ に置いても正解)。',{span:['puba','pubb']}],
+  ['ec2a','EC2 アプリ ①','Web・アプリ','EC2','compute',['pria'],'アプリのサーバーはプライベートサブネットに置き、外からは ALB を通してだけ届くようにする。'],
+  ['ec2b','EC2 アプリ ②','Web・アプリ','EC2','compute',['prib'],'もう 1 台は別の AZ に置く。片方の AZ が止まっても動き続ける。'],
+  ['rdsp','RDS プライマリ','書き込み先','RDS','db',['dba','dbb'],'DB はインターネットから届かない、DB 用のプライベートサブネットに置く (DB サブネットグループ)。'],
+  ['rdss','RDS スタンバイ','同期レプリカ','RDS','db',['dbb','dba'],'スタンバイはプライマリと別の AZ に置く。障害のときに自動で昇格する。'],
+  ['vgw','仮想プライベートゲートウェイ','VPN の AWS 側','VGW','net',['vpc'],'Site-to-Site VPN の AWS 側の終端。VPC にアタッチするので、VPC の境界に描く。'],
+  ['dc','社内ネットワーク','オンプレミス','DC','ext',['onprem'],'社内のデータセンターは AWS の外。インターネットとは別の枠に描く。'],
+  ['nat','NAT ゲートウェイ','外向きの通信','NAT','net',null,'プライベートサブネットからインターネットへ出る要件はない。今回は置かない。'],
+  ['tgw','Transit Gateway','VPC のハブ','TGW','net',null,'VPC が 1 つで社内とつなぐだけなら、仮想プライベートゲートウェイで足りる。']],
+ groups:[['ec2a','ec2b']],apart:[['rdsp','rdss']],
+ edges:[
+  ['users','r53',0,'利用者は最初にドメイン名を Route 53 に問い合わせる (名前解決)。'],
+  ['users','cf',0,'名前解決の結果に従って、近くの CloudFront エッジに HTTPS でつなぐ。「Route 53 → CloudFront」と描いても正解にする。',{alt:['r53>cf']}],
+  ['cf','s3',0,'静的ファイルは S3 オリジンから取る。OAC で CloudFront からだけ読めるようにし、S3 は公開しない。'],
+  ['cf','alb',1,'動的なリクエストは ALB オリジンへ。インターネットゲートウェイを通って VPC に入る。',{via:'igw'}],
+  ['alb','ec2a',1,'ALB が AZ 1 の EC2 に振り分ける。'],
+  ['alb','ec2b',1,'AZ 2 の EC2 にも振り分ける。片方が落ちたら、ヘルスチェックで外される。'],
+  ['ec2a','rdsp',2,'アプリはプライマリに読み書きする。'],
+  ['ec2b','rdsp',2,'別の AZ の EC2 も、同じプライマリにつなぐ (AZ をまたぐ通信)。'],
+  ['rdsp','rdss',2,'プライマリからスタンバイへ同期でレプリケーションする。'],
+  ['dc','rdsp',3,'社内から VPN を通って DB に入る。',{via:'vgw'}]],
+ ok:[],
+ wrong:[
+  ['users','alb','ALB に直接つなぐと、CloudFront を通らない入口ができる。入口は CloudFront に 1 本化する。'],
+  ['users','s3','S3 を直接公開しない。CloudFront (OAC) を通してだけ読ませる。'],
+  ['ec2a','rdss','スタンバイが 1 台の Multi-AZ 配置では、スタンバイは待機専用で読み取りにも使えない。'],
+  ['ec2b','rdss','スタンバイは待機専用。アプリはプライマリにだけつなぐ。']],
+ point:'構成図は「どこに置くか」と「どちら向きに流れるか」の 2 つで読む。Route 53 と CloudFront はリージョンの外、S3 はリージョンの中で VPC の外、ALB は 2 つの AZ のパブリックサブネット、EC2 はアプリ用、DB は DB 用のプライベートサブネット。',
+ refs:['bf','alb','rdsmaz','oac','igw','s2svpn']},
+
+{id:'static',lv:1,theme:'配信',title:'静的サイトを WAF で守り、独自ドメインの HTTPS で出す',
+ story:'キャンペーン用の静的なサイト (HTML と画像) を、独自ドメインの HTTPS で公開します。攻撃やボットは WAF で防ぎます。サイトのファイルは東京リージョンの S3 に置き、S3 は直接公開しません。',
+ req:['独自ドメインで CloudFront にアクセスさせる','HTTPS の証明書と WAF を CloudFront に付ける','ファイルは非公開の S3 から CloudFront だけが読む'],
+ zones:[EXT('inet','インターネット'),CLOUD([REG('use1','バージニア北部 (us-east-1)'),REG('tokyo','東京リージョン')])],
+ parts:[
+  ['users','利用者','ブラウザー','USR','ext',['inet'],'インターネット側の利用者。'],
+  ['r53','Route 53','独自ドメイン','R53','net',['cloud'],'グローバルなサービス。リージョンの外に描く。'],
+  ['cf','CloudFront','CDN','CF','net',['cloud'],'グローバルなサービス。リージョンの外に描く。'],
+  ['waf','AWS WAF','Web ACL','WAF','sec',['cloud','use1'],'CloudFront 用の Web ACL は「グローバル (CloudFront)」として作り、リージョンは us-east-1 に固定される。図ではグローバル側に描くことが多い (どちらでも正解)。'],
+  ['acm','ACM 証明書','HTTPS の証明書','ACM','sec',['use1'],'CloudFront で使う ACM 証明書は、バージニア北部 (us-east-1) で発行 (またはインポート) する。東京で発行した証明書は CloudFront に付けられない。'],
+  ['s3','Amazon S3','サイトのファイル','S3','store',['tokyo'],'ファイルは東京リージョンのバケットに置く。CloudFront のオリジンは、どのリージョンのバケットでもよい。'],
+  ['alb','ALB','負荷分散','ALB','net',null,'静的なサイトなので、サーバーもロードバランサーもいらない。'],
+  ['ec2','EC2 の Web サーバー','常時起動','EC2','compute',null,'HTML を返すだけなら S3 と CloudFront で足りる。サーバーの運用がいらない。']],
+ edges:[
+  ['users','r53',0,'利用者はまず Route 53 で名前解決する。'],
+  ['users','cf',0,'CloudFront のエッジへ HTTPS でつなぐ。「Route 53 → CloudFront」と描いても正解にする。',{alt:['r53>cf']}],
+  ['acm','cf',1,'us-east-1 の証明書を、CloudFront の独自ドメインに関連付ける。',{any:true}],
+  ['waf','cf',1,'Web ACL を CloudFront に関連付け、エッジでリクエストを検査する。',{any:true}],
+  ['cf','s3',2,'OAC で署名したリクエストで S3 から取る。バケットポリシーで CloudFront 以外を拒否する。']],
+ ok:[['users','waf','WAF を入口の手前に描く図もある。実際は、CloudFront に関連付けた Web ACL がエッジで検査する。']],
+ wrong:[
+  ['users','s3','S3 を直接公開しない。CloudFront (OAC) を通してだけ読ませる。'],
+  ['acm','s3','証明書は CloudFront (独自ドメイン) に付ける。S3 には付けない。']],
+ point:'グローバルなサービスでも、設定を置くリージョンが決まっていることがある。CloudFront に付ける ACM 証明書は us-east-1、CloudFront 用の WAF も us-east-1 (グローバル) で作る。コンテンツを置く S3 は東京でよい。',
+ refs:['cfcert','wafacl','oac','bf']},
+
+{id:'natgw',lv:2,theme:'ネットワーク',title:'プライベートサブネットから外部の API を呼ぶ',
+ story:'プライベートサブネットで動くアプリから、インターネット上の決済サービスの API を呼びます。アプリへは外から入れないままにします。AZ が 1 つ止まっても API を呼べるようにし、S3 への大量の保存は NAT を通さずに安く済ませます。',
+ req:['アプリから決済サービスの API を呼べるようにする (外からアプリへは入れない)','AZ が 1 つ止まっても外へ出られるよう、同じ AZ の NAT を使う','S3 への保存は NAT を通さない'],
+ zones:[EXT('inet','インターネット'),CLOUD([REG('region','東京リージョン',[VPC('vpc','VPC','VPC (境界)',AZS(TP))])])],
+ parts:[
+  ['api','決済サービスの API','外部の SaaS','API','ext',['inet'],'インターネット上の外部サービス。AWS の枠の外。'],
+  ['igw','インターネットゲートウェイ','VPC の出入口','IGW','net',['vpc'],'VPC の境界に描く。NAT ゲートウェイの通信も、最後はここから外へ出る。'],
+  ['nata','NAT ゲートウェイ ①','外向きの通信','NAT','net',['puba'],'ゾーン型の NAT ゲートウェイはパブリックサブネットに置く。'],
+  ['natb','NAT ゲートウェイ ②','外向きの通信','NAT','net',['pubb'],'AZ ごとに 1 つずつ置くと、AZ 障害の影響を受けにくい。'],
+  ['appa','EC2 アプリ ①','API を呼ぶ側','EC2','compute',['pria'],'アプリはプライベートサブネット。パブリック IP を持たない。'],
+  ['appb','EC2 アプリ ②','API を呼ぶ側','EC2','compute',['prib'],'2 台目は別の AZ のプライベートサブネットに置く。'],
+  ['gwe','ゲートウェイエンドポイント (S3)','ルートテーブルの行き先','GWE','net',['vpc'],'ゲートウェイエンドポイントはサブネットにネットワークインターフェイスを作らず、ルートテーブルの行き先になる。VPC の境界に描く。'],
+  ['s3','Amazon S3','画像の保存先','S3','store',['region'],'リージョンのサービス。VPC の外に描く。'],
+  ['eigw','Egress-only インターネットゲートウェイ','IPv6 の外向き','EIGW','net',null,'IPv6 専用の出口。IPv4 で外へ出るには NAT ゲートウェイを使う。'],
+  ['alb','ALB','負荷分散','ALB','net',null,'外から受ける通信はない (アプリが外を呼ぶだけ)。ロードバランサーはいらない。']],
+ groups:[['nata','natb'],['appa','appb']],
+ edges:[
+  ['appa','nata',1,'AZ 1 のアプリは同じ AZ の NAT ゲートウェイへ (ルートテーブルで 0.0.0.0/0 を NAT に向ける)。',{sameAz:true}],
+  ['appb','natb',1,'AZ 2 のアプリも同じ AZ の NAT へ。',{sameAz:true}],
+  ['nata','igw',0,'NAT ゲートウェイは、インターネットゲートウェイから外へ出る。'],
+  ['natb','igw',0,'もう一方の NAT も、同じインターネットゲートウェイから外へ出る。'],
+  ['igw','api',0,'決済サービスの API に届く。戻りの通信は NAT が元のアプリへ返す。'],
+  ['appa','gwe',2,'S3 行きの通信は、ルートテーブルでゲートウェイエンドポイントに向ける。'],
+  ['appb','gwe',2,'AZ 2 のサブネットのルートテーブルにも同じ経路を入れる。'],
+  ['gwe','s3',2,'エンドポイントを通って S3 へ。ゲートウェイエンドポイントは追加料金がかからない。']],
+ ok:[],
+ wrong:[
+  ['api','igw','外から中へ向かう矢印は描かない。NAT は、アプリから始めた通信の戻りしか通さない。'],
+  ['appa','igw','プライベートサブネットのアプリはパブリック IP がないので、IGW から直接は出られない。'],
+  ['appb','igw','NAT を通さずに IGW へは出られない。'],
+  ['appa','natb','AZ をまたいで NAT を使うと、NAT のある AZ が止まったとき、両方の AZ が外へ出られなくなる。'],
+  ['appb','nata','AZ をまたいで NAT を使わない。各 AZ で、同じ AZ の NAT を使う。'],
+  ['nata','s3','S3 へは NAT ではなくゲートウェイエンドポイントで届ける (NAT は処理したデータ量に料金がかかる)。'],
+  ['natb','s3','S3 へはゲートウェイエンドポイントで届ける。']],
+ point:'ゾーン型の NAT ゲートウェイはパブリックサブネットに置き、AZ ごとに 1 つ。各 AZ のプライベートサブネットは、同じ AZ の NAT を使う。S3 と DynamoDB は、ゲートウェイエンドポイントで NAT を通さずに届く。なお、パブリックサブネットのいらない「リージョン型の NAT ゲートウェイ」も選べるようになっている。',
+ refs:['natb','natr','natex','s3gwe','eigw']},
+
+{id:'serverless',lv:2,theme:'サーバーレス',title:'サーバーレスの API から VPC の中の DB を使う',
+ story:'スマホアプリ向けの API を作ります。アクセスは時間帯で大きく変わるので、API Gateway と Lambda で作ります。ログインは Cognito です。データは既存の Aurora (プライベートサブネット) にあります。Lambda が一気に増えても DB の接続があふれないようにし、DB のパスワードはコードに書きません。',
+ req:['ログインして得たトークンで API を呼ぶ','API の処理は Lambda が行い、DB へは RDS Proxy を通してつなぐ','DB のパスワードはコードに書かず、Secrets Manager に置く','Aurora は別の AZ にリーダーを置く'],
+ zones:[EXT('inet','インターネット'),CLOUD([REG('region','東京リージョン',[VPC('vpc','VPC','VPC (境界)',AZS(TPD.slice(1)))])])],
+ parts:[
+  ['app','スマホアプリ','利用者の端末','APP','ext',['inet'],'利用者の手元。AWS の外。'],
+  ['cog','Amazon Cognito','ユーザープール','COG','sec',['region'],'リージョンのマネージドサービス。VPC には入らない。'],
+  ['apigw','API Gateway','REST API','APIG','int',['region'],'リージョン API はリージョンのサービスで、VPC の外にある。'],
+  ['fn','Lambda 関数','API の処理','λ','compute',['pria','prib'],'VPC に接続した Lambda は、指定したプライベートサブネットにネットワークインターフェイスを作り、そこから DB に届く。2 つの AZ のサブネットを指定する。',{span:['pria','prib']}],
+  ['proxy','RDS Proxy','接続プール','PRX','db',['dba','dbb','pria','prib'],'RDS Proxy は DB と同じ VPC のサブネットに置く (インターネットには公開できない)。',{span:['dba','dbb']}],
+  ['aw','Aurora ライター','書き込み','AUR','db',['dba','dbb'],'DB は DB 用のプライベートサブネットに置く。'],
+  ['ar','Aurora リーダー','読み取り・待機','AUR','db',['dbb','dba'],'リーダーはライターと別の AZ に置く。ライターが止まると昇格する。'],
+  ['sm','Secrets Manager','DB の認証情報','SM','sec',['region'],'リージョンのサービス。DB のパスワードをここに置き、コードに書かない。'],
+  ['nat','NAT ゲートウェイ','外向きの通信','NAT','net',null,'Lambda からインターネットへ出る要件はない。'],
+  ['ec2','EC2 の API サーバー','常時起動','EC2','compute',null,'アクセスの波が大きいので、常時起動のサーバーではなく Lambda で処理する。']],
+ apart:[['aw','ar']],
+ edges:[
+  ['app','cog',0,'ログインして ID トークンを受け取る。'],
+  ['app','apigw',0,'トークンを付けて API を呼ぶ。'],
+  ['apigw','cog',0,'Cognito オーソライザーがトークンを確かめる。',{any:true}],
+  ['apigw','fn',1,'API Gateway が Lambda を呼び出す。'],
+  ['fn','proxy',1,'Lambda は DB に直接つながず、RDS Proxy につなぐ。Proxy が接続をためて使い回す。'],
+  ['proxy','aw',1,'Proxy がライターへの接続をプールする。'],
+  ['proxy','sm',2,'RDS Proxy は、Secrets Manager の認証情報で DB にログインする。'],
+  ['aw','ar',3,'リーダーは同じクラスターボリュームを読む。ライターが止まるとリーダーが昇格する。']],
+ ok:[['fn','sm','Lambda が Secrets Manager から読む形もある。Proxy に IAM 認証でつなげば、Lambda はパスワードを持たなくてよい。']],
+ wrong:[
+  ['fn','aw','Lambda から DB に直接つなぐと、同時実行が増えたときに接続があふれやすい。RDS Proxy を挟む。'],
+  ['app','fn','アプリから Lambda を直接呼ばず、API Gateway を入口にして認証やスロットリングをかける。'],
+  ['app','proxy','DB の側の部品には、インターネットから届かない。']],
+ point:'Lambda は同時実行で一気に増えるので、DB との間に RDS Proxy を置いて接続を使い回す。API Gateway・Cognito・Secrets Manager はリージョンのサービスで VPC の外。VPC に接続した Lambda、RDS Proxy、Aurora はプライベートサブネット。',
+ refs:['lvpc','proxy','rdsproxy','apicog']},
+
+{id:'ssm',lv:2,theme:'運用',title:'踏み台なしでサーバーに入る',
+ story:'プライベートサブネットの EC2 に、運用担当がシェルで入れるようにします。踏み台サーバーも SSH の 22 番ポートも使いたくありません。この VPC にはインターネットへの出口 (NAT) がありません。操作の記録は CloudWatch Logs に残します。',
+ req:['運用担当は Session Manager でセッションを始める','EC2 の SSM エージェントは、インターネットを通らずに Systems Manager とつながる','セッションの記録を CloudWatch Logs に送る'],
+ zones:[EXT('ops','運用担当の PC'),CLOUD([REG('region','東京リージョン',[VPC('vpc','VPC','VPC (境界)',AZS([['pri','プライベートサブネット']]))])])],
+ parts:[
+  ['op','運用担当','ブラウザー・CLI','OPS','ext',['ops'],'運用担当の PC は AWS の外。'],
+  ['ssm','Systems Manager','Session Manager','SSM','mgmt',['region'],'Systems Manager はリージョンのサービス。VPC の外に描く。'],
+  ['vpce','インターフェイスエンドポイント','ssm・ssmmessages・logs','VPCE','net',['pria','prib'],'インターフェイスエンドポイントは、指定したサブネットの中にネットワークインターフェイス (プライベート IP) を作る。だから VPC の境界ではなく、サブネットの中に描く。',{span:['pria','prib']}],
+  ['ec2a','EC2 ①','業務サーバー','EC2','compute',['pria'],'サーバーはプライベートサブネット。パブリック IP も、受信のポートも持たない。'],
+  ['ec2b','EC2 ②','業務サーバー','EC2','compute',['prib'],'2 台目は別の AZ に置く。'],
+  ['cwl','CloudWatch Logs','操作の記録','CWL','mgmt',['region'],'リージョンのサービス。セッションの記録を残す。'],
+  ['bastion','踏み台サーバー','SSH (22 番)','BAS','compute',null,'踏み台と 22 番ポートをなくすのが今回の目的。Session Manager なら受信のポートを開けなくてよい。'],
+  ['igw','インターネットゲートウェイ','VPC の出入口','IGW','net',null,'インターネットとの出入口はいらない。AWS のサービスへはエンドポイントで届く。'],
+  ['nat','NAT ゲートウェイ','外向きの通信','NAT','net',null,'NAT は使わない。エンドポイントがあれば、エージェントは Systems Manager とつながる。']],
+ groups:[['ec2a','ec2b']],
+ edges:[
+  ['op','ssm',0,'コンソールや CLI からセッションを始める。誰が入れるかは IAM で決める。'],
+  ['ec2a','vpce',1,'SSM エージェントが内側から HTTPS (443) でつなぐ。EC2 は受信のポートを開けなくてよい。'],
+  ['ec2b','vpce',1,'もう 1 台のエージェントも、同じように内側からつなぐ。'],
+  ['vpce','ssm',1,'エンドポイントを通って Systems Manager へ。インターネットを通らない。'],
+  ['vpce','cwl',2,'セッションの記録は、logs のエンドポイントを通って CloudWatch Logs へ送る。']],
+ ok:[['ssm','vpce','応答の向きで描く図もある。この演習では、通信を始める側 (エージェント) から矢印を描く。']],
+ wrong:[
+  ['ssm','ec2a','Systems Manager から EC2 へ接続を始めるのではない。エージェントが内側からつないで指示を待つ。'],
+  ['ssm','ec2b','向きはエージェント (EC2) → Systems Manager。'],
+  ['op','ec2a','運用担当から EC2 へ直接はつながない (SSH を使わない)。'],
+  ['op','ec2b','EC2 へは直接つながず、Session Manager を通す。']],
+ point:'Session Manager では、EC2 のエージェントが内側から Systems Manager へつなぐ。受信のポートも踏み台もいらない。NAT のない VPC では、ssm と ssmmessages (ログを送るなら logs も) のインターフェイスエンドポイントを置く。SSM エージェント 3.3.40 以降は、使えるときは ec2messages の代わりに ssmmessages を使う。',
+ refs:['ssm','ssmvpc','plaws']},
+
+{id:'dr',lv:2,theme:'災害対策',title:'大阪リージョンで災害に備える (ウォームスタンバイ)',
+ story:'東京リージョン全体の障害に備えて、大阪リージョンに小さな待機系を動かしておきます (ウォームスタンバイ)。ふだんは東京だけを使い、東京が止まったら DNS で大阪に切り替えます。DB は Aurora Global Database で大阪に複製します。',
+ req:['ふだんは東京、東京が止まったら大阪へ DNS で切り替える','各リージョンで ALB → アプリ → DB の順に流す','DB は東京から大阪へ複製し、大阪で昇格できるようにする'],
+ zones:[EXT('inet','インターネット'),CLOUD([
+  REG('tyo','東京リージョン',[VPC('vpct','VPC','東京の VPC (境界)',[Z('pubt','pub','パブリックサブネット','東京のパブリックサブネット'),Z('prit','pri','プライベートサブネット','東京のプライベートサブネット')])]),
+  REG('osa','大阪リージョン',[VPC('vpco','VPC','大阪の VPC (境界)',[Z('pubo','pub','パブリックサブネット','大阪のパブリックサブネット'),Z('prio','pri','プライベートサブネット','大阪のプライベートサブネット')])])])],
+ parts:[
+  ['users','利用者','ブラウザー','USR','ext',['inet'],'インターネット側の利用者。'],
+  ['r53','Route 53','フェイルオーバー','R53','net',['cloud'],'Route 53 はグローバルなサービスで、どちらのリージョンにも属さない。'],
+  ['albt','ALB (東京)','負荷分散','ALB','net',['pubt'],'東京のパブリックサブネット。'],
+  ['appt','アプリ (東京)','ECS のタスク','APP','compute',['prit'],'東京のプライベートサブネット。'],
+  ['dbt','Aurora プライマリ','書き込み','AUR','db',['prit'],'東京のプライベートサブネット。書き込みを受けるのはプライマリだけ。'],
+  ['albo','ALB (大阪)','負荷分散','ALB','net',['pubo'],'大阪にも同じ形で置いておく。'],
+  ['appo','アプリ (大阪)','小さく待機','APP','compute',['prio'],'大阪のアプリは少ない台数で動かしておき、切り替えのあとで増やす。'],
+  ['dbo','Aurora セカンダリ','読み取り専用','AUR','db',['prio'],'大阪のセカンダリクラスター。障害のときに昇格してプライマリになる。'],
+  ['rr','RDS リードレプリカ (東京の別 AZ)','同じリージョン','RR','db',null,'同じリージョンの中の複製では、リージョン全体の障害に耐えられない。'],
+  ['pcx','VPC ピアリング','VPC どうし','PCX','net',null,'リージョンをまたいでアプリどうしが通信する要件はない。DB の複製は Aurora が専用の仕組みで行う。']],
+ edges:[
+  ['users','r53',0,'名前解決。フェイルオーバーのレコードで、東京が正常なら東京の ALB を返す。'],
+  ['users','albt',0,'ふだんは東京の ALB へ。'],
+  ['users','albo',0,'東京が異常になると、Route 53 は大阪の ALB を返す。'],
+  ['albt','appt',1,'東京の ALB からアプリへ。'],
+  ['appt','dbt',1,'アプリはプライマリに書き込む。'],
+  ['albo','appo',1,'大阪も同じ形で待機する。'],
+  ['appo','dbo',1,'大阪のアプリは大阪の DB を使う。切り替えのあとは、昇格した DB に書き込む。'],
+  ['dbt','dbo',2,'Aurora Global Database がストレージの層で大阪へ複製する (遅れは通常 1 秒未満)。']],
+ ok:[['r53','albt','ヘルスチェックで東京の状態を見る矢印として描いてもよい。'],['r53','albo','ヘルスチェックで大阪の状態を見る矢印として描いてもよい。']],
+ wrong:[
+  ['appo','dbt','大阪のアプリが東京の DB を使うと、東京が止まったときに一緒に止まる。'],
+  ['albt','appo','リージョンをまたいで振り分けない。切り替えは DNS で行う。'],
+  ['albo','appt','リージョンをまたいで振り分けない。各リージョンの中で完結させる。']],
+ point:'リージョン全体の障害には、別のリージョンに同じ形の待機系を置き、Route 53 のフェイルオーバールーティングで切り替える。DB は Aurora Global Database で複製し、障害のときは大阪のセカンダリを昇格させる。',
+ refs:['r53fo','agdb','drwp']},
+
+{id:'tgw',lv:3,theme:'ハイブリッド',title:'Transit Gateway で 3 つの VPC と社内をつなぐ',
+ story:'本番・開発・共通サービスの 3 つの VPC と、社内のネットワークをつなぎます。社内からは本番にも開発にも入れるようにしますが、本番と開発の VPC どうしは通信させません。社内の DNS からは、AWS の中の名前を引けるようにします。',
+ req:['社内と AWS を VPN でつなぐ','社内から本番と開発の両方のサーバーに入れる','社内の DNS から AWS の中の名前を引ける','本番と開発の VPC どうしは通信させない'],
+ zones:[EXT('onprem','社内ネットワーク'),CLOUD([REG('region','東京リージョン',[
+  VPC('vpcp','本番 VPC','本番 VPC (境界)',[Z('prip','pri','プライベートサブネット','本番 VPC のプライベートサブネット')]),
+  VPC('vpcd','開発 VPC','開発 VPC (境界)',[Z('prid','pri','プライベートサブネット','開発 VPC のプライベートサブネット')]),
+  VPC('vpcs','共通サービス VPC','共通サービス VPC (境界)',[Z('pris','pri','プライベートサブネット','共通サービス VPC のプライベートサブネット')])])])],
+ parts:[
+  ['corp','社内の PC・DNS','オンプレミス','CORP','ext',['onprem'],'社内は AWS の外。'],
+  ['cgw','カスタマーゲートウェイ','社内の VPN 機器','CGW','net',['onprem'],'社内側の VPN ルーター (AWS にはその情報を登録する)。社内の枠に描く。'],
+  ['vpn','Site-to-Site VPN','IPsec のトンネル','VPN','net',['region'],'VPN 接続は Transit Gateway にアタッチする。リージョンの中、VPC の外に描く。'],
+  ['tgw','Transit Gateway','リージョンのルーター','TGW','net',['region'],'リージョンの仮想ルーター。どの VPC にも属さないので、VPC の外に描く。'],
+  ['prod','本番サーバー','EC2','EC2','compute',['prip'],'本番 VPC のプライベートサブネット。'],
+  ['dev','開発サーバー','EC2','EC2','compute',['prid'],'開発 VPC のプライベートサブネット。'],
+  ['res','Resolver インバウンドエンドポイント','社内からの DNS','R53R','net',['pris'],'Route 53 Resolver のエンドポイントは、サブネットにネットワークインターフェイスを作る。共通サービス VPC のサブネットに置く。'],
+  ['pcx','VPC ピアリング','1 対 1 の接続','PCX','net',null,'ピアリングは 2 つの VPC を 1 対 1 でつなぐだけで、推移的なルーティングができない。社内から VPC への中継には使えない。'],
+  ['vgw','仮想プライベートゲートウェイ','1 つの VPC 用','VGW','net',null,'VGW は 1 つの VPC 用。複数の VPC と社内をまとめてつなぐなら、Transit Gateway に VPN をつなぐ。']],
+ edges:[
+  ['corp','cgw',0,'社内のネットワークから VPN 機器へ。'],
+  ['cgw','vpn',0,'カスタマーゲートウェイから AWS へ IPsec のトンネルを張る。'],
+  ['vpn','tgw',0,'VPN 接続は Transit Gateway のアタッチメントになる。'],
+  ['tgw','prod',1,'VPN 用のルートテーブルには、各 VPC への経路がある。社内から本番へ届く。'],
+  ['tgw','dev',1,'同じく、社内から開発へ届く。'],
+  ['tgw','res',2,'社内の DNS サーバーは、AWS の中の名前の問い合わせをインバウンドエンドポイントへ転送する。']],
+ ok:[['prod','tgw','本番から社内へ通信を始める向きとして描いてもよい。'],['dev','tgw','開発から社内へ通信を始める向きとして描いてもよい。']],
+ wrong:[
+  ['prod','dev','本番と開発を直接つながない。VPC 用のルートテーブルには VPN への経路だけを入れる。',3],
+  ['dev','prod','開発から本番へは届かないようにする。',3]],
+ point:'VPC が増えたら、1 対 1 のピアリングではなく Transit Gateway をハブにする。ルートテーブルを「VPC 用」と「VPN 用」に分けると、社内からはすべての VPC に届き、VPC どうしは隔離できる (AWS の Isolated VPCs の例)。',
+ refs:['tgw','s2svpn','r53wp']},
+
+{id:'ecs',lv:3,theme:'コンテナ',title:'NAT なしの VPC でコンテナを動かす',
+ story:'公開の Web API を ECS (Fargate) で動かします。タスクはプライベートサブネットに置き、コストとセキュリティのために NAT ゲートウェイは使いません。コンテナのイメージは ECR から取り、ログは CloudWatch Logs に送ります。',
+ req:['利用者の通信は ALB が受け、2 つの AZ のタスクに振り分ける','タスクは NAT なしで ECR からイメージを取る','コンテナのログを CloudWatch Logs に送る'],
+ zones:[EXT('inet','インターネット'),CLOUD([REG('region','東京リージョン',[VPC('vpc','VPC','VPC (境界)',AZS(TP))])])],
+ parts:[
+  ['users','利用者','ブラウザー','USR','ext',['inet'],'インターネット側の利用者。'],
+  ['igw','インターネットゲートウェイ','VPC の出入口','IGW','net',['vpc'],'VPC の境界に描く。利用者からの通信はここから入る。'],
+  ['alb','ALB','負荷分散','ALB','net',['puba','pubb'],'インターネット向けの ALB は、2 つ以上の AZ のパブリックサブネットに置く。',{span:['puba','pubb']}],
+  ['ta','ECS タスク ①','Fargate','ECS','compute',['pria'],'タスクはプライベートサブネット。パブリック IP を付けない。'],
+  ['tb','ECS タスク ②','Fargate','ECS','compute',['prib'],'2 つ目のタスクは別の AZ に置く。'],
+  ['epi','インターフェイスエンドポイント','ecr.api・ecr.dkr・logs','VPCE','net',['pria','prib'],'インターフェイスエンドポイントは、サブネットの中にネットワークインターフェイスを作る。タスクと同じ AZ のサブネットに置く。',{span:['pria','prib']}],
+  ['epg','ゲートウェイエンドポイント (S3)','ルートテーブルの行き先','GWE','net',['vpc'],'ゲートウェイエンドポイントはルートテーブルの行き先。サブネットには入れず、VPC の境界に描く。'],
+  ['ecr','Amazon ECR','イメージの置き場','ECR','compute',['region'],'リージョンのサービス。VPC の外。'],
+  ['s3','Amazon S3','イメージのレイヤー','S3','store',['region'],'ECR はイメージのレイヤーを S3 に置いている。リージョンのサービス。'],
+  ['cwl','CloudWatch Logs','コンテナのログ','CWL','mgmt',['region'],'リージョンのサービス。VPC の外。'],
+  ['nat','NAT ゲートウェイ','外向きの通信','NAT','net',null,'NAT は使わない方針。AWS のサービスへは VPC エンドポイントで届く。'],
+  ['eip','Elastic IP','固定のパブリック IP','EIP','net',null,'タスクにパブリック IP を付けない。外からは ALB だけが受ける。']],
+ groups:[['ta','tb']],
+ edges:[
+  ['users','alb',0,'インターネットゲートウェイを通って ALB へ。',{via:'igw'}],
+  ['alb','ta',0,'ALB が AZ 1 のタスクへ振り分ける。'],
+  ['alb','tb',0,'AZ 2 のタスクへも振り分ける。'],
+  ['ta','epi',1,'イメージの情報は、ecr.api と ecr.dkr のインターフェイスエンドポイントから取る。'],
+  ['tb','epi',1,'もう一方のタスクも、同じようにエンドポイントを使う。'],
+  ['epi','ecr',1,'エンドポイントを通って ECR へ。'],
+  ['ta','epg',1,'イメージのレイヤーは S3 から取るので、S3 のゲートウェイエンドポイントも要る。'],
+  ['tb','epg',1,'AZ 2 のサブネットのルートテーブルにも、ゲートウェイエンドポイントへの経路を入れる。'],
+  ['epg','s3',1,'ゲートウェイエンドポイントを通って S3 へ。'],
+  ['epi','cwl',2,'awslogs ドライバーのログは、logs のインターフェイスエンドポイントを通って CloudWatch Logs へ。']],
+ ok:[],
+ wrong:[
+  ['ta','igw','プライベートサブネットのタスクは、IGW から直接は出られない。'],
+  ['tb','igw','NAT も IGW も通らず、エンドポイントで AWS のサービスへ届ける。'],
+  ['users','ta','タスクへ直接は届かない。公開するのは ALB だけ。'],
+  ['users','tb','公開するのは ALB だけ。タスクはプライベートサブネットにある。'],
+  ['epi','s3','このインターフェイスエンドポイント (ecr・logs) は S3 には通じない。S3 はゲートウェイエンドポイントを使う。']],
+ point:'NAT がなくても、AWS のサービスへは VPC エンドポイントで届く。インターフェイス型はサブネットにネットワークインターフェイスを置き、ゲートウェイ型 (S3・DynamoDB) はルートテーブルの行き先になる。Fargate で ECR からイメージを取るには、ecr.api・ecr.dkr に加えて、レイヤーのある S3 のゲートウェイエンドポイントが要る。',
+ refs:['ecrvpce','s3gwe','cwlvpce','plaws']}
 ];
-var E=[
-  ['users','route53','利用者がドメイン名を問い合わせる。'],
-  ['route53','cloudfront','DNS が CloudFront の配信先を返す。'],
-  ['cloudfront','s3','静的ファイルは S3 オリジンから取得する。'],
-  ['cloudfront','igw','動的リクエストは公開 ALB に届く。'],
-  ['igw','alb','インターネットからの通信を公開サブネットの ALB が受ける。'],
-  ['alb','ec2a','ALB が AZ a のアプリへ振り分ける。'],
-  ['alb','ec2b','ALB が AZ b のアプリへ振り分ける。'],
-  ['ec2a','rdsa','AZ a のアプリが DB 主系へアクセスする。'],
-  ['ec2b','rdsa','AZ b のアプリも DB 主系へアクセスする。'],
-  ['rdsa','rdsb','DB の主系から別 AZ の待機系へ複製する。'],
-  ['dc','vpn','社内データセンターから VPN で AWS に接続する。'],
-  ['vpn','ec2a','VPN 経由で非公開サブネットのアプリに到達する。']
-];
-var Z=[
-  {id:'cloud',title:'AWS Cloud / グローバルサービス',x:135,y:28,w:750,h:715,cls:'cloud',line:'#9AA6C2',fill:'rgba(27,37,57,.27)',drop:true},
-  {id:'region',title:'Region: 東京 (ap-northeast-1)',x:173,y:160,w:676,h:550,cls:'region',line:'#7AB8FF',fill:'rgba(42,75,111,.12)',drop:true},
-  {id:'vpc',title:'VPC 10.0.0.0/16',x:255,y:270,w:560,h:415,cls:'vpc',line:'#5CE39A',fill:'rgba(37,89,66,.12)',drop:true},
-  {id:'az-a',title:'Availability Zone a',x:277,y:320,w:246,h:345,cls:'az',line:'#8FBEE9',fill:'rgba(60,91,127,.07)'},
-  {id:'az-b',title:'Availability Zone b',x:539,y:320,w:246,h:345,cls:'az',line:'#8FBEE9',fill:'rgba(60,91,127,.07)'},
-  {id:'public-a',title:'Public subnet',x:287,y:356,w:226,h:95,cls:'subnet',line:'#5CE39A',fill:'rgba(92,227,154,.09)',drop:true},
-  {id:'public-b',title:'Public subnet',x:549,y:356,w:226,h:95,cls:'subnet',line:'#5CE39A',fill:'rgba(92,227,154,.09)',drop:true},
-  {id:'private-a',title:'Private subnet',x:287,y:468,w:226,h:184,cls:'subnet',line:'#7AB8FF',fill:'rgba(122,184,255,.09)',drop:true},
-  {id:'private-b',title:'Private subnet',x:549,y:468,w:226,h:184,cls:'subnet',line:'#7AB8FF',fill:'rgba(122,184,255,.09)',drop:true}
-];
-var SLOTS={outside:[[5,92],[905,437],[5,437],[905,92]],cloud:[[300,88],[505,88],[680,88]],region:[[688,190],[450,190]],vpc:[[465,278],[745,437],[260,278]],'public-a':[[340,382],[285,382]],'public-b':[[610,382],[650,382]],'private-a':[[335,493],[335,585],[380,540]],'private-b':[[595,493],[595,585],[640,540]]};
-var S={placed:{},links:{},mode:'place',selected:null,graded:false,answer:false,focused:null,score:0,goodPlaces:0,goodLinks:0};
-var byId={};N.forEach(function(n){byId[n.id]=n});
-var board=document.getElementById('arch-board'),tray=document.getElementById('arch-tray'),cards=document.getElementById('arch-cards'),lines=document.getElementById('arch-lines'),result=document.getElementById('arch-result'),picker=document.getElementById('arch-target');
-function esc(s){return String(s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
-function good(n,scope){return n.scope!=null&&(n.accept?n.accept.indexOf(scope)>=0:n.scope===scope)}
-function pair(a,b){return a+'>'+b}
-function positions(){var p={};if(S.answer){N.forEach(function(n){if(n.scope!=null)p[n.id]={x:n.x,y:n.y}});return p}
-  Object.keys(SLOTS).forEach(function(scope){var slots=SLOTS[scope],used={},group=N.filter(function(n){return S.placed[n.id]===scope});
-    group.filter(function(n){return good(n,scope)}).concat(group.filter(function(n){return !good(n,scope)})).forEach(function(n){
-      var i=good(n,scope)&&n.slot!=null&&!used[n.slot]?n.slot:slots.findIndex(function(_,j){return !used[j]});if(i<0)i=slots.length+Object.keys(used).length;
-      used[i]=1;var z=Z.filter(function(x){return x.id===scope})[0],v=slots[i]||[z?z.x+8:5,Math.min(700,510+60*i)];p[n.id]={x:v[0],y:v[1]};
+
+var AREF={
+ bf:['aws','builders.flash: AWS のアーキテクチャ図を描きたい ! でもどうすれば良いの ?','https://aws.amazon.com/jp/builders-flash/202204/way-to-draw-architecture/'],
+ alb:['aws','Application Load Balancer: ロードバランサーのサブネット (2 つ以上の AZ)','https://docs.aws.amazon.com/elasticloadbalancing/latest/application/application-load-balancers.html'],
+ rdsmaz:['aws','Amazon RDS: Multi-AZ DB インスタンス配置','https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html'],
+ igw:['aws','Amazon VPC: インターネットゲートウェイ','https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html'],
+ s2svpn:['aws','AWS Site-to-Site VPN のしくみ','https://docs.aws.amazon.com/vpn/latest/s2svpn/how_it_works.html'],
+ natb:['aws','Amazon VPC: NAT ゲートウェイの基本 (AZ ごとに作る)','https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-basics.html'],
+ natr:['aws','Amazon VPC: リージョン型 NAT ゲートウェイ','https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html'],
+ natex:['aws','Amazon VPC: プライベートサブネットのサーバーと NAT の構成例','https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html'],
+ s3gwe:['aws','AWS PrivateLink: Amazon S3 のゲートウェイエンドポイント','https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html'],
+ eigw:['aws','Amazon VPC: Egress-only インターネットゲートウェイ (IPv6 専用)','https://docs.aws.amazon.com/vpc/latest/userguide/egress-only-internet-gateway.html'],
+ lvpc:['aws','AWS Lambda: VPC の中のリソースにアクセスする','https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html'],
+ proxy:['aws','Amazon RDS Proxy (Aurora ユーザーガイド)','https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-proxy.html'],
+ apicog:['aws','API Gateway: Cognito ユーザープールをオーソライザーに使う','https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-integrate-with-cognito.html'],
+ ssmvpc:['aws','Systems Manager: VPC エンドポイントで EC2 を守る','https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html'],
+ plaws:['aws','AWS PrivateLink: インターフェイスエンドポイントで AWS のサービスにつなぐ','https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-access-aws-services.html'],
+ cfcert:['aws','CloudFront: SSL/TLS 証明書の要件 (ACM は us-east-1)','https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements.html'],
+ wafacl:['aws','AWS WAF: Web ACL を作る (CloudFront 用は us-east-1)','https://docs.aws.amazon.com/waf/latest/developerguide/web-acl-creating.html'],
+ r53fo:['aws','Route 53: アクティブ-パッシブのフェイルオーバー','https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover-types.html'],
+ agdb:['aws','Amazon Aurora Global Database','https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html'],
+ drwp:['aws','AWS ホワイトペーパー: クラウドでの災害対策の選択肢','https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html'],
+ tgw:['aws','AWS Transit Gateway のしくみ (Isolated VPCs の例)','https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html'],
+ ecrvpce:['aws','Amazon ECR: インターフェイス VPC エンドポイント','https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html'],
+ cwlvpce:['aws','CloudWatch Logs: インターフェイス VPC エンドポイント','https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/cloudwatch-logs-and-interface-VPC.html']
+};
+
+var ACAT={ext:['外部','#94A3B8'],net:['ネットワーク','#B69CFF'],compute:['コンピューティング','#FFB347'],db:['データベース','#6FA8FF'],store:['ストレージ','#8FD14F'],sec:['セキュリティ','#FF7A8A'],mgmt:['管理・監視','#F472B6'],int:['アプリ連携','#F0ABFC']};
+var KIND=window.AWSP_KIND||{aws:['aws','AWS公式'],case:['case','事例'],doc:['doc','ドキュメント']};
+function ref(k){return AREF[k]||(window.AWSP_REF||{})[k]}
+
+/* ==== 小道具 ==== */
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+var LS={get:function(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+var sec=$('#arch'),dg=$('#a-dg'),tray=$('#a-tray'),bar=$('#a-bar'),flow=$('#a-flow'),result=$('#a-result'),live=$('#a-live'),msg=$('#a-msg');
+var S={},byId={},ZI={};
+function rank(s){return s>=100?'S':s>=80?'A':s>=60?'B':'C'}
+function say(t,show){live.textContent=t;if(show)msg.textContent=t}
+function nm(id){return byId[id]?byId[id].name:id}
+
+/* ==== お題の選択 ==== */
+function fillPick(){
+  var best=LS.get('awsa_best',{}),h='';
+  [1,2,3].forEach(function(lv){h+='<optgroup label="'+['','基礎','中級','上級'][lv]+'">';AS.forEach(function(s,i){if(s.lv!==lv)return;var b=best[s.id];h+='<option value="'+i+'">'+(i+1)+'. '+esc(s.title)+(b!=null?' (自己ベスト '+b+')':'')+'</option>'});h+='</optgroup>'});
+  $('#a-pick').innerHTML=h;$('#a-pick').value=S.i==null?0:S.i;
+  var done=AS.filter(function(s){return best[s.id]!=null}).length,perf=AS.filter(function(s){return best[s.id]===100}).length;
+  $('#a-prog').textContent='挑戦 '+done+' / '+AS.length+' ・ 満点 '+perf;
+}
+function randomIndex(){
+  var seen=LS.get('awsa_seen',[]),c=[];
+  AS.forEach(function(s,i){if(seen.indexOf(s.id)<0&&i!==S.i)c.push(i)});
+  if(!c.length){seen=[];AS.forEach(function(s,i){if(i!==S.i)c.push(i)})}
+  var i=c[Math.floor(Math.random()*c.length)];seen.push(AS[i].id);LS.set('awsa_seen',seen);return i;
+}
+
+/* ==== 読み込み ==== */
+function zoneHTML(z){
+  var h='<div class="zn '+z.k+'"'+(z.id?' data-zone="'+z.id+'"':'')+'><span class="zt">'+esc(z.t)+'</span>';
+  if(z.id)h+='<div class="zs" data-slot="'+z.id+'"></div>';
+  if(z.kids.length)h+='<div class="zk'+(z.kids[0].k==='az'?' az2':'')+'">'+z.kids.map(zoneHTML).join('')+'</div>';
+  return h+'</div>';
+}
+function indexZones(list,az){list.forEach(function(z){if(z.id)ZI[z.id]={l:z.l,az:z.az||az||null,k:z.k};indexZones(z.kids,z.az||az)})}
+function load(i){
+  var sc=AS[i];
+  byId={};ZI={};
+  var parts=sc.parts.map(function(p){var o={id:p[0],name:p[1],sub:p[2],ic:p[3],cat:p[4],at:p[5],why:p[6],span:(p[7]||{}).span||null};byId[o.id]=o;return o});
+  indexZones(sc.zones);
+  S={i:i,sc:sc,parts:parts,order:shuffle(parts.slice()),place:{},links:{},sel:null,selEdge:null,graded:false,stale:false,answer:false,res:null,hints:0,hintPairs:[],focusReq:null,focusEdge:null};
+  $('#a-lv').className='pill lv'+sc.lv;$('#a-lv').textContent=['','基礎','中級','上級'][sc.lv];
+  $('#a-theme').textContent=sc.theme;$('#a-no').textContent='お題 '+(i+1)+' / '+AS.length;
+  $('#a-title').textContent=sc.title;$('#a-story').textContent=sc.story;
+  fillPick();
+  var cols=sc.zones.map(function(z){return z.k==='ext'?'minmax(86px,.2fr)':'minmax(0,1fr)'}).join(' ');
+  dg.innerHTML=sc.zones.map(zoneHTML).join('')+'<svg class="dgl" id="a-hits" aria-hidden="true"></svg><svg class="dgv" id="a-lines" aria-hidden="true"></svg>';
+  dg.style.gridTemplateColumns=cols;
+  result.hidden=true;result.innerHTML='';msg.textContent='';
+  render();
+}
+
+/* ==== 採点 ==== */
+function mappings(){
+  var res=[{}];
+  (S.sc.groups||[]).forEach(function(g){
+    var ps=perms(g),nr=[];
+    res.forEach(function(m){ps.forEach(function(p){var mm={};for(var k in m)mm[k]=m[k];g.forEach(function(id,j){mm[id]=p[j]});nr.push(mm)})});
+    res=nr;
+  });
+  return res;
+}
+function perms(a){if(a.length<2)return [a.slice()];var out=[];a.forEach(function(x,i){perms(a.slice(0,i).concat(a.slice(i+1))).forEach(function(r){out.push([x].concat(r))})});return out}
+function findPair(list,a,b){for(var i=0;i<(list||[]).length;i++)if(list[i][0]===a&&list[i][1]===b)return list[i];return null}
+function sameAz(P,a,b){return !!(P[a]&&P[b]&&ZI[P[a]].az&&ZI[P[a]].az===ZI[P[b]].az)}
+function classify(ck,sat,P){
+  var sc=S.sc,ab=ck.split('>'),a=ab[0],b=ab[1],j,e,o;
+  for(j=0;j<sc.edges.length;j++){e=sc.edges[j];o=e[4]||{};
+    if(o.sameAz&&ck===e[0]+'>'+e[1]&&!sameAz(P,a,b))return {c:'bad',note:'同じ AZ に置いた部品どうしをつなぎます。AZ をまたぐと、片方の AZ が止まったときにもう片方も巻き込まれます。'};
+    if(ck===e[0]+'>'+e[1]||(o.any&&ck===e[1]+'>'+e[0])||(o.alt||[]).indexOf(ck)>=0)return {c:'ok',j:j};
+    if(o.via&&(ck===e[0]+'>'+o.via||ck===o.via+'>'+e[1]))return {c:sat[j]?'ok':'part',j:j};
+  }
+  var n=findPair(sc.ok,a,b);if(n)return {c:'neu',note:n[2]};
+  n=findPair(sc.wrong,a,b);if(n)return {c:'bad',note:n[2],w:n};
+  for(j=0;j<sc.edges.length;j++){e=sc.edges[j];if(ck===e[1]+'>'+e[0])return {c:'rev',j:j}}
+  var dp=!byId[a].at?byId[a]:!byId[b].at?byId[b]:null;
+  if(dp)return {c:'bad',note:'「'+dp.name+'」は使わない部品です。'+dp.why};
+  return {c:'bad',note:null};
+}
+function evaluate(){
+  var sc=S.sc,best=null,need=S.parts.filter(function(p){return p.at});
+  mappings().forEach(function(m){
+    function M(id){return m[id]||id}
+    var P={},L={},orig={};
+    Object.keys(S.place).forEach(function(u){P[M(u)]=S.place[u]});
+    Object.keys(S.links).forEach(function(k){var ab=k.split('>'),ck=M(ab[0])+'>'+M(ab[1]);L[ck]=1;orig[k]=ck});
+    var pok={},nOk=0,apart=[];
+    need.forEach(function(p){pok[p.id]=!!P[p.id]&&p.at.indexOf(P[p.id])>=0});
+    (sc.apart||[]).forEach(function(pr){var a=P[pr[0]],b=P[pr[1]];if(a&&b&&ZI[a].az&&ZI[a].az===ZI[b].az){pok[pr[1]]=false;apart.push(pr)}});
+    need.forEach(function(p){if(pok[p.id])nOk++});
+    var sat=sc.edges.map(function(e){var o=e[4]||{};if(o.sameAz&&!sameAz(P,e[0],e[1]))return false;return !!(L[e[0]+'>'+e[1]]||(o.via&&L[e[0]+'>'+o.via]&&L[o.via+'>'+e[1]])||(o.any&&L[e[1]+'>'+e[0]])||(o.alt||[]).some(function(k){return L[k]}))});
+    var nSat=sat.filter(Boolean).length,cls={},bad=0;
+    Object.keys(S.links).forEach(function(k){var c=classify(orig[k],sat,P);cls[k]=c;if(c.c==='bad')bad++});
+    var badParts=S.parts.filter(function(p){return !p.at&&P[p.id]}).length;
+    var raw=40*nOk/need.length+60*nSat/sc.edges.length-5*bad-5*badParts;
+    if(!best||raw>best.raw+1e-9)best={raw:raw,m:m,pok:pok,nOk:nOk,nNeed:need.length,sat:sat,nSat:nSat,cls:cls,bad:bad,badParts:badParts,apart:apart};
+  });
+  best.inv={};for(var u in best.m)best.inv[best.m[u]]=u;
+  best.score=Math.max(0,Math.min(100,Math.round(best.raw)-5*S.hints));
+  return best;
+}
+function canon(u){return S.res&&S.res.m[u]||u}
+function user(c){return S.res&&S.res.inv[c]||c}
+function grade(){
+  var r=evaluate();S.res=r;S.graded=true;S.stale=false;S.sel=null;S.selEdge=null;
+  var best=LS.get('awsa_best',{});if(best[S.sc.id]==null||r.score>best[S.sc.id]){best[S.sc.id]=r.score;LS.set('awsa_best',best);fillPick()}
+  render();say('答え合わせ: '+r.score+'点');
+}
+function reqStatus(){
+  var r=S.res,sc=S.sc;
+  return sc.req.map(function(_,i){
+    var n=0,h=0;sc.edges.forEach(function(e,j){if(e[2]===i){n++;if(r.sat[j])h++}});
+    if(!n){var hit=Object.keys(r.cls).some(function(k){var c=r.cls[k];return c.w&&c.w[3]===i});return {n:1,h:hit?0:1}}
+    return {n:n,h:h};
+  });
+}
+
+/* ==== 描画 ==== */
+function chip(p,o){
+  var cls='pc'+(o.tray?' tr':''),bd='',label=p.name;
+  if(!S.answer){
+    if(S.sel===p.id)cls+=' sel';
+    if(S.graded&&S.place[p.id]){var c=canon(p.id),ok=p.at?S.res.pok[c]:false;cls+=ok?' okp':' ngp'}
+    label+='、'+(S.place[p.id]?ZI[S.place[p.id]].l+' に配置':'未配置')+(S.sel===p.id?'、選択中':'');
+  }else{
+    if(!p.at){cls+=' xp';bd='<span class="bd">使わない</span>'}
+    else{cls+=S.res.pok[p.id]?' okp':' miss';if(o.copy)cls+=' cp'}
+    if(o.dim)cls+=' dim';
+    label+='、解答例の置き場所 '+(p.at?ZI[p.at[0]].l:'なし');
+  }
+  return '<button type="button" class="'+cls+'" data-id="'+p.id+'" style="--c:'+ACAT[p.cat][1]+'" aria-label="'+esc(label)+'"><span class="ic">'+esc(p.ic)+'</span><span class="nm">'+esc(p.name)+'<span class="sb">'+esc(p.sub)+'</span></span>'+bd+'</button>';
+}
+function focusedEdge(j){return S.focusEdge!=null?S.focusEdge===j:S.focusReq==null||S.focusReq===S.sc.edges[j][2]}
+function render(){
+  var sc=S.sc,content={},focusN=null;
+  if(S.answer&&(S.focusReq!=null||S.focusEdge!=null)){focusN={};sc.edges.forEach(function(e,j){if(focusedEdge(j)){focusN[e[0]]=1;focusN[e[1]]=1;if((e[4]||{}).via)focusN[e[4].via]=1}})}
+  /* 解答例: 2 つの AZ にまたがる部品の写しは、枠の最後に並べる (ほかの矢印の邪魔をしにくい) */
+  if(S.answer)[0,1].forEach(function(pass){S.parts.forEach(function(p){if(!p.at)return;(p.span||[p.at[0]]).forEach(function(z,k){if((k>0)!==!!pass)return;(content[z]=content[z]||[]).push(chip(p,{copy:k>0,dim:focusN&&!focusN[p.id]}))})})});
+  else S.order.forEach(function(p){var z=S.place[p.id];if(z)(content[z]=content[z]||[]).push(chip(p,{}))});
+  dg.querySelectorAll('[data-slot]').forEach(function(s){s.innerHTML=(content[s.dataset.slot]||[]).join('')});
+  var tp=S.answer?S.order.filter(function(p){return !p.at}):S.order.filter(function(p){return !S.place[p.id]});
+  tray.innerHTML='<span class="tray-t">'+(S.answer?'使わない部品 (置いたら減点)':'部品トレイ: まだ置いていない部品。使わない部品も混ざっています。')+'</span>'+tp.map(function(p){return chip(p,{tray:1})}).join('')+(tp.length?'':'<span class="empty">すべて置きました。</span>');
+  dg.classList.toggle('placing',!!S.sel&&!S.answer);
+  drawLines();renderBar();renderReqs();renderConns();renderFlow();renderResult();
+  var n=Object.keys(S.links).length,placed=Object.keys(S.place).length;
+  $('#a-cnt').innerHTML='置いた部品 <b>'+placed+'</b> ・ 矢印 <b>'+n+'</b> 本 / 目安 <b>'+sc.edges.length+'</b> 本'+(S.hints?' ・ ヒント '+S.hints+' 回':'');
+  $('#a-hint').disabled=S.answer;$('#a-clear').disabled=S.answer;
+  $('#a-check').textContent=S.answer?'自分の図に戻る':'答え合わせ';
+  if(S.focusId){var f=sec.querySelector('.pc[data-id="'+S.focusId+'"]');if(f)f.focus({preventScroll:true});S.focusId=null}
+}
+function renderReqs(){
+  var st=S.res&&(S.graded||S.answer)?reqStatus():null;
+  $('#a-reqs').innerHTML=S.sc.req.map(function(r,i){var s='';if(st){var x=st[i];s=x.h===x.n?'<span class="st ok">✓ 達成</span>':x.h?'<span class="st part">△ '+x.h+'/'+x.n+'</span>':'<span class="st ng">✗ 未達</span>'}
+    return '<li><span class="no">'+(i+1)+'</span><span>'+esc(r)+'</span>'+s+'</li>'}).join('');
+}
+function renderBar(){
+  var h='';
+  if(S.answer)h='<span class="bt">解答例を表示しています。番号や、下の「構成図の流れ」を選ぶと、その矢印だけを強調します。</span><button type="button" class="btn sub" data-b="mine">自分の図に戻る</button>';
+  else if(S.selEdge){var ab=S.selEdge.split('>');h='<span class="bt">矢印 <b>'+esc(nm(ab[0]))+' → '+esc(nm(ab[1]))+'</b></span><button type="button" class="btn sub" data-b="rev">向きを反転 ⇄</button><button type="button" class="btn sub" data-b="del">消す</button><button type="button" class="btn sub" data-b="none">閉じる</button>'}
+  else if(S.sel){var p=byId[S.sel],placed=!!S.place[p.id];
+    h='<span class="bt"><b>'+esc(p.name)+'</b> '+(placed?'を選択中。矢印の行き先の部品をタップ。別の枠をタップすると移動。':'を選択中。置きたい枠をタップ。')+'</span>';
+    h+='<label>置き場所 <select id="a-where"><option value="">枠を選ぶ</option>'+Object.keys(ZI).map(function(z){return '<option value="'+z+'"'+(S.place[p.id]===z?' selected':'')+'>'+esc(ZI[z].l)+'</option>'}).join('')+'</select></label>';
+    if(placed)h+='<button type="button" class="btn sub" data-b="unplace">トレイに戻す</button>';
+    h+='<button type="button" class="btn sub" data-b="none">選択をやめる</button>';
+  }else h='<span class="bt">部品をタップ → 枠をタップで置く。置いた部品を 2 つ続けてタップすると矢印 (1 つ目 → 2 つ目) を引けます。</span>';
+  bar.innerHTML=h;
+}
+function renderConns(){
+  var ks=Object.keys(S.links);
+  $('#a-conns').innerHTML=S.answer?'':ks.length?ks.map(function(k){var ab=k.split('>'),c=S.graded?S.res.cls[k].c:'';
+    return '<span class="c '+c+'">'+esc(nm(ab[0]))+' → '+esc(nm(ab[1]))+'<button type="button" data-rev="'+k+'" aria-label="向きを反転">⇄</button><button type="button" data-del="'+k+'" aria-label="この矢印を消す">×</button></span>'}).join(''):'<span class="empty">まだ矢印がありません。置いた部品を 2 つ続けてタップしてください。</span>';
+}
+function edgeText(e){var v=(e[4]||{}).via;return esc(nm(e[0]))+' → '+(v?'<span class="via">('+esc(nm(v))+')</span> → ':'')+esc(nm(e[1]))}
+function renderFlow(){
+  flow.hidden=!S.answer;if(!S.answer){flow.innerHTML='';return}
+  var sc=S.sc,r=S.res,rev={};Object.keys(r.cls).forEach(function(k){if(r.cls[k].c==='rev')rev[r.cls[k].j]=1});
+  var f='<button type="button" data-req="all" class="'+(S.focusReq==null?'active':'')+'" aria-pressed="'+(S.focusReq==null)+'">全体</button>';
+  sc.req.forEach(function(_,i){f+='<button type="button" data-req="'+i+'" class="'+(S.focusReq===i?'active':'')+'" aria-pressed="'+(S.focusReq===i)+'">要件 '+(i+1)+'</button>'});
+  var list=sc.edges.map(function(e,j){if(S.focusReq!=null&&e[2]!==S.focusReq)return '';
+    var st=r.sat[j]?'<b class="s-ok">描けた</b>':rev[j]?'<b class="s-rev">向きが逆</b>':'<b class="s-ng">まだ</b>';
+    return '<button type="button" data-edge="'+j+'" class="'+(S.focusEdge===j?'active':'')+'" aria-pressed="'+(S.focusEdge===j)+'"><span class="flow-no">'+(j+1)+'</span>'+edgeText(e)+'<span class="flow-why">'+st+' ・ '+esc(e[3])+'</span></button>'}).join('');
+  flow.innerHTML='<div class="flow-head"><b>構成図の流れ</b><span>要件を選ぶと、その矢印だけを強調します。緑は描けた矢印、黄色の点線はまだの矢印です。</span></div><div class="flow-filters">'+f+'</div><div class="flow-list">'+list+'</div>';
+}
+function renderResult(){
+  var r=S.res,sc=S.sc,h='';
+  if(!r||(!S.graded&&!S.stale&&!S.answer)){result.hidden=true;return}
+  result.hidden=false;
+  var rk=rank(r.score);
+  h+='<div class="score"><span class="rk '+rk+'">'+rk+'</span><span class="pt">'+r.score+' 点</span><span class="sub">置き場所 '+r.nOk+' / '+r.nNeed+' ・ 矢印 '+r.nSat+' / '+sc.edges.length+' 本 ・ 余計な矢印 '+r.bad+' 本'+(r.badParts?' ・ 使わない部品 '+r.badParts+' 個':'')+' ・ ヒント '+S.hints+' 回</span></div>';
+  if(S.stale)h+='<p class="stale">図を変えました。もう一度「答え合わせ」を押すと採点し直します。</p>';
+  if(!S.answer){
+    if(r.score>=100)h+='<p>完璧です。解答例で、置き場所と矢印ごとの理由も確かめてみてください。</p>';
+    var wrongP=[],unp=[];
+    S.parts.forEach(function(p){if(!p.at)return;var u=user(p.id);if(r.pok[p.id])return;if(S.place[u])wrongP.push(u);else unp.push(u)});
+    if(wrongP.length)h+='<h3>置き場所を見直す部品</h3><ul>'+wrongP.map(function(u){var c=canon(u),why=r.apart.some(function(pr){return pr[1]===c})?' (もう一方と同じ AZ にある)':'';return '<li><span class="edge">'+esc(nm(u))+'</span> <span class="why">いまは「'+esc(ZI[S.place[u]].l)+'」'+why+'</span></li>'}).join('')+'</ul>';
+    if(unp.length)h+='<p>まだ置いていない、必要な部品が <b>'+unp.length+'</b> 個あります。</p>';
+    var bp=S.parts.filter(function(p){return !p.at&&S.place[p.id]});
+    if(bp.length)h+='<h3>使わない部品</h3><ul>'+bp.map(function(p){return '<li><span class="edge">'+esc(p.name)+'</span><br><span class="why">'+esc(p.why)+'</span></li>'}).join('')+'</ul>';
+    var rv=[],bd=[];Object.keys(r.cls).forEach(function(k){var c=r.cls[k];if(c.c==='rev')rv.push(k);else if(c.c==='bad')bd.push(k)});
+    if(rv.length)h+='<h3>向きが逆の矢印</h3><ul>'+rv.map(function(k){var ab=k.split('>');return '<li><span class="edge">'+esc(nm(ab[0]))+' → '+esc(nm(ab[1]))+'</span><br><span class="why">矢印は、通信を始める側から相手へ向けます。</span></li>'}).join('')+'</ul>';
+    if(bd.length)h+='<h3>余計な矢印</h3><ul>'+bd.map(function(k){var ab=k.split('>'),c=r.cls[k];return '<li><span class="edge">'+esc(nm(ab[0]))+' → '+esc(nm(ab[1]))+'</span><br><span class="why">'+esc(c.note||'この 2 つを直接つなぐ必要はありません。それぞれ本来つながる相手を考えてみてください。')+'</span></li>'}).join('')+'</ul>';
+    var miss=sc.edges.length-r.nSat;
+    if(miss>0&&r.score<100)h+='<p>足りない矢印があと <b>'+miss+'</b> 本あります。上の要件の ✗ や △ を手がかりにしてください。</p>';
+  }
+  h+='<div class="row"><button type="button" class="btn '+(S.answer?'sub':'pri')+'" data-a="ans">'+(S.answer?'自分の図に戻る':'解答例を見る')+'</button>'+(S.answer?'':'<button type="button" class="btn sub" data-a="retry">続けて直す</button>')+'<button type="button" class="btn" data-a="next">次のお題 →</button></div>';
+  if(S.answer){
+    h+='<h3>置き場所の考え方</h3><ul class="plc">'+S.parts.filter(function(p){return p.at}).map(function(p){var ok=r.pok[p.id];
+      return '<li><span class="mark '+(ok?'ok':'ng')+'">'+(ok?'✓':'✗')+'</span> <span class="edge">'+esc(p.name)+'</span> <span class="r">'+p.at.map(function(z){return esc(ZI[z].l)}).join(' / ')+'</span><br><span class="why">'+esc(p.why)+'</span></li>'}).join('')+'</ul>';
+    var bad=S.parts.filter(function(p){return !p.at});
+    if(bad.length)h+='<h3>使わない部品</h3><ul>'+bad.map(function(p){return '<li><span class="edge">'+esc(p.name)+'</span><br><span class="why">'+esc(p.why)+'</span></li>'}).join('')+'</ul>';
+    if(sc.ok&&sc.ok.length)h+='<h3>描いても減点しない矢印</h3><ul>'+sc.ok.map(function(o){return '<li><span class="edge">'+esc(nm(o[0]))+' → '+esc(nm(o[1]))+'</span><br><span class="why">'+esc(o[2])+'</span></li>'}).join('')+'</ul>';
+    h+='<h3>ポイント</h3><p class="point">'+esc(sc.point)+'</p>';
+    h+='<h3>参考にした資料</h3><ul class="refs">'+sc.refs.map(function(k){var x=ref(k);if(!x)return '';var kd=KIND[x[0]];return '<li><span class="k '+kd[0]+'">'+kd[1]+'</span><a href="'+x[2]+'" target="_blank" rel="noopener">'+esc(x[1])+'</a></li>'}).join('')+'</ul>';
+    h+='<div class="row"><button type="button" class="btn" data-a="next">次のお題 →</button></div>';
+  }
+  result.innerHTML=h;
+}
+
+/* ==== 矢印 ==== */
+var COL={w:'#E9EEF8',ok:'#5CE39A',neu:'#9AA6C2',part:'#FFC53D',bad:'#FF6B7A',rev:'#FF6B7A',miss:'#FFC53D',sel:'#FFC53D'};
+function relRect(el){var a=el.getBoundingClientRect(),b=dg.getBoundingClientRect();return {x:a.left-b.left-dg.clientLeft,y:a.top-b.top-dg.clientTop,w:a.width,h:a.height}}
+function rectsOf(id){return Array.prototype.map.call(dg.querySelectorAll('.pc[data-id="'+id+'"]'),relRect)}
+function nearest(A,B){var best=null,bd=1e18;A.forEach(function(a){B.forEach(function(b){var dx=a.x+a.w/2-b.x-b.w/2,dy=a.y+a.h/2-b.y-b.h/2,d=dx*dx+dy*dy;if(d<bd){bd=d;best=[a,b]}})});return best}
+function clipR(r,tx,ty,pad){var cx=r.x+r.w/2,cy=r.y+r.h/2,dx=tx-cx,dy=ty-cy;if(!dx&&!dy)return [cx,cy];var t=Math.min(dx?(r.w/2+pad)/Math.abs(dx):1e9,dy?(r.h/2+pad)/Math.abs(dy):1e9);return [cx+dx*t,cy+dy*t]}
+function seg(a,b,off){
+  var A=rectsOf(a),B=rectsOf(b);if(!A.length||!B.length)return null;
+  var pr=nearest(A,B),ra=pr[0],rb=pr[1],ca=[ra.x+ra.w/2,ra.y+ra.h/2],cb=[rb.x+rb.w/2,rb.y+rb.h/2];
+  var p=clipR(ra,cb[0],cb[1],2),q=clipR(rb,ca[0],ca[1],5);
+  if(off){var dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy)||1;p=[p[0]-dy/L*off,p[1]+dx/L*off];q=[q[0]-dy/L*off,q[1]+dx/L*off]}
+  return [p,q];
+}
+function f1(v){return Math.round(v*10)/10}
+function line(s,col,o){
+  o=o||{};var d='M'+f1(s[0][0])+' '+f1(s[0][1])+' L'+f1(s[1][0])+' '+f1(s[1][1]);
+  var w=o.w||2.4,op=o.op!=null?' opacity="'+o.op+'"':'';
+  var h='<path d="'+d+'" fill="none" stroke="#0A0F1A" stroke-width="'+(w+3)+'" stroke-linecap="round"'+op+' stroke-opacity=".85"/>';
+  h+='<path d="'+d+'" fill="none" stroke="'+COL[col]+'" stroke-width="'+w+'" stroke-linecap="round"'+(o.dash?' stroke-dasharray="7 5"':'')+op+' marker-end="url(#am-'+col+')"/>';
+  if(o.key)HITS+='<path class="hit" data-k="'+o.key+'" d="'+d+'" fill="none" stroke="transparent" stroke-width="16"><title>'+esc(o.title||'')+'</title></path>';
+  return h;
+}
+function badge(s,txt,col,o){o=o||{};var x=f1((s[0][0]+s[1][0])/2),y=f1((s[0][1]+s[1][1])/2);
+  return '<g class="bdg"'+(o.j!=null?' data-j="'+o.j+'"':'')+(o.op!=null?' opacity="'+o.op+'"':'')+'><circle cx="'+x+'" cy="'+y+'" r="'+(o.r||9)+'" fill="#0A0F1A" stroke="'+COL[col]+'" stroke-width="1.5"/><text x="'+x+'" y="'+f1(y+3.8)+'" text-anchor="middle" font-size="10.5" fill="'+COL[col]+'">'+txt+'</text></g>'}
+var HITS='';
+function drawLines(){
+  var svg=$('#a-lines'),hs=$('#a-hits');if(!svg)return;HITS='';
+  var W=dg.clientWidth,H=dg.clientHeight;[svg,hs].forEach(function(g){g.setAttribute('width',W);g.setAttribute('height',H);g.setAttribute('viewBox','0 0 '+W+' '+H)});
+  var o='<defs>'+Object.keys(COL).map(function(k){return '<marker id="am-'+k+'" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="'+COL[k]+'"/></marker>'}).join('')+'</defs>';
+  if(!W){svg.innerHTML=o;hs.innerHTML='';return}
+  if(S.answer){
+    S.sc.edges.forEach(function(e,j){var has=S.res.sat[j],col=has?'ok':'miss',op=focusedEdge(j)?1:.12,w=S.focusEdge===j?3.4:2.4,v=(e[4]||{}).via;
+      var parts=v?[[e[0],v],[v,e[1]]]:[[e[0],e[1]]],first=null;
+      parts.forEach(function(pq){var s=seg(pq[0],pq[1],0);if(!s)return;if(!first)first=s;o+=line(s,col,{dash:!has,op:op,w:w})});
+      if(first)o+=badge(first,j+1,col,{j:j,op:op,r:S.focusEdge===j?11:9});
     });
-  });return p}
-function zoneAt(x,y){if(x>=513&&x<549&&y>=356&&y<451)return 'public-a';for(var i=Z.length-1;i>=0;i--){var z=Z[i];if(z.drop&&x>=z.x&&x<z.x+z.w&&y>=z.y&&y<z.y+z.h)return z.id}return 'outside'}
-function card(n,placed,pos){var selected=S.selected===n.id,mark=S.graded&&!S.answer&&placed?(good(n,S.placed[n.id])?' correct':' wrong'):'';
-  return '<button type="button" draggable="'+(!S.answer)+'" class="arch-card'+(selected?' selected':'')+mark+'" data-id="'+n.id+'" aria-label="'+esc(n.name+'、'+(placed?'配置先 '+scopeName(S.answer?n.scope:S.placed[n.id]):'未配置'))+'" style="--ac:'+n.color+(pos?';left:'+pos.x+'px;top:'+pos.y+'px':'')+'"><span class="arch-icon">'+esc(n.icon)+'</span><span class="arch-name">'+esc(n.name)+'<span class="arch-sub">'+esc(n.sub)+'</span></span></button>'}
-function scopeName(id){return {outside:'AWS の外',cloud:'AWS グローバル',region:'リージョン内・VPC 外',vpc:'VPC 境界','public-a':'AZ a 公開サブネット','public-b':'AZ b 公開サブネット','private-a':'AZ a 非公開サブネット','private-b':'AZ b 非公開サブネット'}[id]||'未配置'}
-function path(a,b){var ax=a.x+60,ay=a.y+29,bx=b.x+60,by=b.y+29,x1,y1,x2,y2,m;
-  if(Math.abs(bx-ax)>Math.abs(by-ay)*.8&&Math.abs(bx-ax)>120){x1=bx>ax?a.x+123:a.x-3;y1=ay;x2=bx>ax?b.x-3:b.x+123;y2=by;m=(x1+x2)/2;return 'M'+x1+' '+y1+' L'+m+' '+y1+' L'+m+' '+y2+' L'+x2+' '+y2}
-  x1=ax;y1=by>ay?a.y+61:a.y-3;x2=bx;y2=by>ay?b.y-3:b.y+61;m=(y1+y2)/2;return 'M'+x1+' '+y1+' L'+x1+' '+m+' L'+x2+' '+m+' L'+x2+' '+y2}
-function renderLines(p){var out='<defs><marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#E9EEF8"/></marker><marker id="arch-answer-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#FFC53D"/></marker><marker id="arch-good-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5CE39A"/></marker></defs>';
-  var list=S.answer?E.filter(function(e){return !S.focused||pair(e[0],e[1])===S.focused}).map(function(e){return {a:e[0],b:e[1],why:e[2],good:!!S.links[pair(e[0],e[1])]}}):Object.keys(S.links).map(function(k){var a=k.split('>');return {a:a[0],b:a[1],why:'クリックして消す',good:false}});
-  list.forEach(function(e,i){if(!p[e.a]||!p[e.b])return;var d=path(p[e.a],p[e.b]),color=S.answer?(e.good?'#5CE39A':'#FFC53D'):'#E9EEF8',marker=S.answer?(e.good?'arch-good-arrow':'arch-answer-arrow'):'arch-arrow',k=pair(e.a,e.b);
-    out+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" '+(S.answer&&!e.good?'stroke-dasharray="7 5" ':'')+'marker-end="url(#'+marker+')"><title>'+esc(byId[e.a].name+' → '+byId[e.b].name+'。'+e.why)+'</title></path>';
-    if(!S.answer)out+='<path class="arch-hit" data-link="'+k+'" d="'+d+'" fill="none" stroke="transparent" stroke-width="16"><title>クリックして線を消す</title></path>';
-  });lines.innerHTML=out}
-function render(){var p=positions(),required=N.filter(function(n){return n.scope!=null}),placed=required.filter(function(n){return !!S.placed[n.id]}).length;
-  tray.innerHTML='<span class="arch-tray-title">部品トレイ：図の領域に置く部品を選んでください。使わない部品もあります。</span>'+N.filter(function(n){return S.answer?n.scope==null:!S.placed[n.id]}).map(function(n){return card(n,false)}).join('');
-  cards.innerHTML=N.filter(function(n){return !!p[n.id]}).map(function(n){return card(n,true,p[n.id])}).join('');
-  renderLines(p);document.getElementById('arch-count').textContent='配置 '+placed+' / '+required.length+' ・ 経路 '+Object.keys(S.links).length+' / '+E.length;
-  document.getElementById('arch-selected').textContent='選択中：'+(S.selected?byId[S.selected].name:'なし');picker.value=S.selected?(S.placed[S.selected]||''):'';
-  ['place','link'].forEach(function(m){var b=document.getElementById('arch-'+m+'-mode');b.classList.toggle('active',S.mode===m);b.classList.toggle('sub',S.mode!==m);b.setAttribute('aria-pressed',String(S.mode===m))});
-  document.getElementById('arch-check').textContent=S.answer?'演習に戻る':'答え合わせ';
-  document.getElementById('arch-focus').hidden=!S.answer;
-  document.getElementById('arch-focus-pick').value=S.focused||'';
-  var focusEdge=E.filter(function(e){return pair(e[0],e[1])===S.focused})[0];
-  document.getElementById('arch-focus-desc').textContent=focusEdge?focusEdge[2]:'経路を選ぶと、その矢印だけを表示します。';renderResult()}
-function renderResult(){result.hidden=!S.graded;if(!S.graded)return;
-  var needed=N.filter(function(n){return n.scope!=null}).length,extra=Object.keys(S.links).filter(function(k){return !E.some(function(e){return pair(e[0],e[1])===k})}).length;
-  var html='<h3>'+S.score+' 点</h3><p>配置 '+S.goodPlaces+' / '+needed+' ・ 正しい経路 '+S.goodLinks+' / '+E.length+' ・ 余計な経路 '+extra+'</p>';
-  if(!S.answer)html+='<p>部品の置き場所と矢印の向きを確認してください。解答例を開くと正しい包含関係と経路を表示します。</p><button class="btn pri" type="button" id="arch-show-answer">解答例を見る</button>';
-  else{html+='<h3>配置の考え方</h3><ul><li>Route 53 と CloudFront はリージョンの枠外に置くグローバルな入口です。</li><li>S3 はリージョン内のサービスですが、この図では VPC・サブネットには入れません。</li><li>ALB は二つの AZ の公開サブネットにまたがる入口、EC2 と RDS は非公開サブネットに置きます。</li><li>Internet Gateway と VPN Gateway は VPC の境界を表し、社内データセンターは AWS Cloud の外です。</li><li>NAT Gateway はこの課題の通信経路に不要です。</li></ul><h3>矢印の意味</h3><div class="flow-list">';
-    E.forEach(function(e,i){html+='<button type="button" tabindex="-1"><span class="flow-no">'+(i+1)+'</span>'+esc(byId[e[0]].name)+' → '+esc(byId[e[1]].name)+'<span class="flow-why"><strong>'+(S.links[pair(e[0],e[1])]?'接続済み':'未接続')+'</strong> ・ '+esc(e[2])+'</span></button>'});
-    html+='</div><p>この図は通信経路と配置の関係を学ぶために単純化した構成例です。</p>'}
-  result.innerHTML=html}
-function changed(message){S.graded=false;S.answer=false;S.focused=null;render();document.getElementById('arch-live').textContent=message}
-function place(id,scope){if(S.answer)return;S.placed[id]=scope;S.selected=null;changed(byId[id].name+'を'+scopeName(scope)+'に配置しました')}
-function selectCard(id){if(S.answer)return;if(S.mode==='place'){S.selected=S.selected===id?null:id;render();return}
-  if(!S.placed[id]){document.getElementById('arch-live').textContent='経路をつなぐ前に部品を配置してください';return}
-  if(!S.selected){S.selected=id;render();return}
-  if(S.selected===id){S.selected=null;render();return}
-  var a=S.selected,k=pair(a,id);S.selected=null;if(S.links[k])delete S.links[k];else S.links[k]=1;changed(byId[a].name+' → '+byId[id].name+'の経路を'+(S.links[k]?'追加':'削除')+'しました')}
-document.getElementById('arch-zones').innerHTML='<span class="arch-outside-label" style="left:8px;top:28px">AWS の外</span><span class="arch-outside-label" style="left:907px;top:370px">社内環境</span>'+Z.map(function(z){return '<div class="arch-zone '+z.cls+'" style="left:'+z.x+'px;top:'+z.y+'px;width:'+z.w+'px;height:'+z.h+'px;--zc:'+z.line+';--zb:'+z.fill+'"><span class="arch-zone-title">'+esc(z.title)+'</span></div>'}).join('');
-picker.innerHTML='<option value="">領域を選ぶ</option>'+[['outside','AWS の外'],['cloud','AWS グローバル'],['region','リージョン内・VPC 外'],['vpc','VPC 境界'],['public-a','AZ a 公開サブネット'],['public-b','AZ b 公開サブネット'],['private-a','AZ a 非公開サブネット'],['private-b','AZ b 非公開サブネット']].map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join('');
-document.getElementById('arch-focus-pick').innerHTML='<option value="">全経路を表示</option>'+E.map(function(e,i){return '<option value="'+pair(e[0],e[1])+'">'+(i+1)+'. '+esc(byId[e[0]].name)+' → '+esc(byId[e[1]].name)+'</option>'}).join('');
-document.getElementById('arch-focus-pick').addEventListener('change',function(){S.focused=this.value||null;render()});
-tray.addEventListener('click',function(e){var b=e.target.closest('[data-id]');if(b)selectCard(b.dataset.id)});
-board.addEventListener('click',function(e){var hit=e.target.closest('[data-link]');if(hit&&!S.answer){delete S.links[hit.dataset.link];changed('経路を削除しました');return}
-  var b=e.target.closest('[data-id]');if(b){selectCard(b.dataset.id);return}if(S.answer||S.mode!=='place'||!S.selected)return;
-  var r=board.getBoundingClientRect(),scope=zoneAt(e.clientX-r.left,e.clientY-r.top);place(S.selected,scope)});
-[tray,board].forEach(function(el){el.addEventListener('dragstart',function(e){var b=e.target.closest('[data-id]');if(!b||S.answer)return;e.dataTransfer.setData('text/plain',b.dataset.id);e.dataTransfer.effectAllowed='move'})});
-board.addEventListener('dragover',function(e){if(!S.answer)e.preventDefault()});
-board.addEventListener('drop',function(e){if(S.answer)return;e.preventDefault();var id=e.dataTransfer.getData('text/plain');if(!byId[id])return;var r=board.getBoundingClientRect();place(id,zoneAt(e.clientX-r.left,e.clientY-r.top))});
-picker.addEventListener('change',function(){if(S.selected&&this.value)place(S.selected,this.value)});
-document.getElementById('arch-place-mode').addEventListener('click',function(){S.mode='place';S.selected=null;render()});
-document.getElementById('arch-link-mode').addEventListener('click',function(){S.mode='link';S.selected=null;render()});
-document.getElementById('arch-reset').addEventListener('click',function(){S={placed:{},links:{},mode:'place',selected:null,graded:false,answer:false,focused:null,score:0,goodPlaces:0,goodLinks:0};render();document.getElementById('arch-live').textContent='演習を最初からやり直しました'});
-document.getElementById('arch-check').addEventListener('click',function(){if(S.answer){S.answer=false;render();return}
-  var required=N.filter(function(n){return n.scope!=null});S.goodPlaces=required.filter(function(n){return good(n,S.placed[n.id])}).length;
-  S.goodLinks=E.filter(function(e){return !!S.links[pair(e[0],e[1])]}).length;
-  var extra=Object.keys(S.links).filter(function(k){return !E.some(function(e){return pair(e[0],e[1])===k})}).length;
-  S.score=Math.max(0,Math.round(50*S.goodPlaces/required.length+50*S.goodLinks/E.length)-5*extra-(S.placed.nat?5:0));S.graded=true;S.selected=null;render();result.scrollIntoView({behavior:'smooth',block:'nearest'})});
-result.addEventListener('click',function(e){if(e.target.id==='arch-show-answer'){S.answer=true;S.selected=null;render();board.scrollIntoView({behavior:'smooth',block:'center'})}});
-['arch','flow'].forEach(function(mode){document.getElementById('mode-'+mode).addEventListener('click',function(){var isArch=mode==='arch';document.getElementById('mode-arch').setAttribute('aria-selected',String(isArch));document.getElementById('mode-flow').setAttribute('aria-selected',String(!isArch));document.getElementById('arch-game').hidden=!isArch;document.getElementById('arch-how').hidden=!isArch;document.getElementById('game').hidden=isArch;document.getElementById('legacy-how').hidden=isArch;if(!isArch)window.startLegacyPuzzle()})});
-render();
+  }else{
+    Object.keys(S.links).forEach(function(k){var ab=k.split('>'),both=!!S.links[ab[1]+'>'+ab[0]],s=seg(ab[0],ab[1],both?4:0);if(!s)return;
+      var c=S.graded?S.res.cls[k].c:'w';if(S.selEdge===k)c='sel';
+      o+=line(s,c,{dash:c==='bad'||c==='rev',w:S.selEdge===k?3.4:2.4,key:k,title:nm(ab[0])+' → '+nm(ab[1])+' (タップで選ぶ)'});
+      if(S.graded&&c==='rev')o+=badge(s,'逆','rev');
+    });
+    S.hintPairs.forEach(function(pq){if(S.links[pq[0]+'>'+pq[1]])return;var s=seg(pq[0],pq[1],0);if(!s)return;o+='<path d="M'+f1(s[0][0])+' '+f1(s[0][1])+' L'+f1(s[1][0])+' '+f1(s[1][1])+'" stroke="#FFC53D" stroke-width="2" stroke-dasharray="3 5" opacity=".9" marker-end="url(#am-miss)"/>'+badge(s,'?','miss')});
+  }
+  svg.innerHTML=o;hs.innerHTML=HITS;
+}
+
+/* ==== 操作 ==== */
+function changed(t){
+  if(S.graded){S.graded=false;S.stale=true}
+  msg.textContent='';
+  render();if(t)say(t);
+}
+function place(id,z){
+  var was=S.place[id];S.place[id]=z;S.sel=null;S.selEdge=null;S.focusId=id;
+  changed('「'+nm(id)+'」を'+ZI[z].l+'に'+(was?'移しました':'置きました'));
+}
+function unplace(id){
+  delete S.place[id];Object.keys(S.links).forEach(function(k){var ab=k.split('>');if(ab[0]===id||ab[1]===id)delete S.links[k]});
+  S.sel=null;changed('「'+nm(id)+'」をトレイに戻しました (つないでいた矢印も消えます)');
+}
+function toggleLink(a,b){
+  var k=a+'>'+b;S.sel=null;S.selEdge=null;
+  if(S.links[k]){delete S.links[k];changed(nm(a)+' → '+nm(b)+' の矢印を消しました')}
+  else{S.links[k]=1;S.focusId=b;changed(nm(a)+' → '+nm(b)+' の矢印を引きました')}
+}
+function tapChip(id){
+  if(S.answer)return;
+  var placed=!!S.place[id];S.selEdge=null;
+  if(S.sel===id){S.sel=null;render();return}
+  if(S.sel&&placed){
+    if(S.place[S.sel]){toggleLink(S.sel,id);return}
+    place(S.sel,S.place[id]);return;
+  }
+  S.sel=id;S.focusId=id;render();
+  say('「'+nm(id)+'」を選びました。'+(placed?'矢印の行き先の部品か、移す先の枠をタップしてください。':'置きたい枠をタップしてください。'));
+}
+var suppress=false;
+tray.addEventListener('click',function(e){
+  if(suppress)return;
+  var c=e.target.closest('.pc');if(c){tapChip(c.dataset.id);return}
+  if(S.sel&&S.place[S.sel])unplace(S.sel);
+});
+dg.addEventListener('click',function(e){
+  if(suppress)return;
+  var c=e.target.closest('.pc');if(c){tapChip(c.dataset.id);return}
+  var b=e.target.closest('.bdg[data-j]');if(b&&S.answer){var j=+b.dataset.j;S.focusEdge=S.focusEdge===j?null:j;render();return}
+  var h=e.target.closest('.hit');if(h&&!S.answer){S.sel=null;S.selEdge=S.selEdge===h.dataset.k?null:h.dataset.k;render();return}
+  var z=e.target.closest('[data-zone]');
+  if(z&&S.sel&&!S.answer){place(S.sel,z.dataset.zone);return}
+  if(S.sel||S.selEdge){S.sel=null;S.selEdge=null;render()}
+});
+bar.addEventListener('click',function(e){
+  var b=e.target.closest('[data-b]');if(!b)return;var a=b.dataset.b;
+  if(a==='none'){S.sel=null;S.selEdge=null;render()}
+  else if(a==='unplace'&&S.sel)unplace(S.sel);
+  else if(a==='mine')setAnswer(false);
+  else if(S.selEdge&&(a==='rev'||a==='del')){var k=S.selEdge,ab=k.split('>');delete S.links[k];S.selEdge=null;
+    if(a==='rev'){S.links[ab[1]+'>'+ab[0]]=1;changed('矢印の向きを反転しました: '+nm(ab[1])+' → '+nm(ab[0]))}else changed('矢印を消しました')}
+});
+bar.addEventListener('change',function(e){if(e.target.id==='a-where'&&S.sel&&e.target.value)place(S.sel,e.target.value)});
+$('#a-conns').addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.del){delete S.links[b.dataset.del];if(S.selEdge===b.dataset.del)S.selEdge=null;changed('矢印を消しました')}
+  else if(b.dataset.rev){var ab=b.dataset.rev.split('>');delete S.links[b.dataset.rev];S.links[ab[1]+'>'+ab[0]]=1;S.selEdge=null;changed('矢印の向きを反転しました')}
+});
+flow.addEventListener('click',function(e){
+  var q=e.target.closest('[data-req]');if(q){S.focusReq=q.dataset.req==='all'?null:+q.dataset.req;S.focusEdge=null;render();return}
+  var g=e.target.closest('[data-edge]');if(g){var j=+g.dataset.edge;S.focusEdge=S.focusEdge===j?null:j;render()}
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&(S.sel||S.selEdge)&&!sec.hidden){S.sel=null;S.selEdge=null;render()}});
+
+/* マウスではドラッグでも置ける */
+var drag=null;
+sec.addEventListener('pointerdown',function(e){
+  if(e.pointerType!=='mouse'||e.button!==0||S.answer)return;
+  var c=e.target.closest('.pc[data-id]');if(!c||!sec.contains(c))return;
+  drag={id:c.dataset.id,x:e.clientX,y:e.clientY,src:c,g:null};
+});
+window.addEventListener('pointermove',function(e){
+  if(!drag)return;
+  if(!drag.g){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6)return;
+    var g=drag.src.cloneNode(true);g.classList.add('ghost');g.classList.remove('sel');document.body.appendChild(g);drag.g=g;
+    S.sel=drag.id;S.selEdge=null;render();}
+  drag.g.style.left=(e.clientX-drag.g.offsetWidth/2)+'px';drag.g.style.top=(e.clientY-drag.g.offsetHeight/2)+'px';
+});
+window.addEventListener('pointerup',function(e){
+  if(!drag)return;var d=drag;drag=null;if(!d.g)return;
+  d.g.remove();suppress=true;setTimeout(function(){suppress=false},0);
+  var t=document.elementFromPoint(e.clientX,e.clientY),c=t&&t.closest('#a-dg .pc'),z=t&&t.closest('#a-dg [data-zone]');
+  if(t&&t.closest('#a-tray')){if(S.place[d.id])unplace(d.id);else{S.sel=null;render()}return}
+  if(c&&c.dataset.id!==d.id&&S.place[c.dataset.id]){place(d.id,S.place[c.dataset.id]);return}
+  if(z){place(d.id,z.dataset.zone);return}
+  S.sel=null;render();
+});
+
+function setAnswer(on){
+  if(on){if(!S.res||S.stale)grade();S.answer=true;S.sel=null;S.selEdge=null;S.focusReq=null;S.focusEdge=null}
+  else{S.answer=false;S.focusReq=null;S.focusEdge=null}
+  render();
+}
+function flashZone(z){var el=dg.querySelector('[data-zone="'+z+'"]');if(!el)return;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');el.scrollIntoView({behavior:'smooth',block:'nearest'});setTimeout(function(){el.classList.remove('flash')},2600)}
+$('#a-hint').addEventListener('click',function(){
+  if(S.answer)return;
+  var r=evaluate(),sc=S.sc,inv=r.inv;
+  var p=S.parts.filter(function(p){return p.at&&!r.pok[p.id]})[0];
+  if(p){var u=inv[p.id]||p.id,z=p.at[0],pr=(sc.apart||[]).filter(function(x){return x[1]===p.id})[0],other=pr&&S.place[inv[pr[0]]||pr[0]];
+    if(other)z=p.at.filter(function(q){return ZI[q].az!==ZI[other].az})[0]||z;S.hints++;
+    say('ヒント (−5点): 「'+nm(u)+'」は「'+ZI[z].l+'」に置きます。',true);render();flashZone(z);return}
+  for(var j=0;j<sc.edges.length;j++)if(!r.sat[j]){var e=sc.edges[j],ua=inv[e[0]]||e[0],ub=inv[e[1]]||e[1];S.hints++;S.hintPairs.push([ua,ub]);
+    say('ヒント (−5点): 「'+nm(ua)+'」から「'+nm(ub)+'」へ矢印を引きます (要件 '+(e[2]+1)+')。'+((e[4]||{}).via?'途中に「'+nm(e[4].via)+'」を挟んでもよい。':''),true);render();return}
+  say('ヒントで出せることはもうありません。答え合わせをしてみましょう。',true);
+});
+var clearArm=0;
+$('#a-clear').addEventListener('click',function(){
+  if(!Object.keys(S.place).length)return;
+  if(Date.now()-clearArm>3000){clearArm=Date.now();this.textContent='もう一度押すと消えます';var t=this;setTimeout(function(){t.textContent='全部やり直す'},3000);return}
+  clearArm=0;this.textContent='全部やり直す';S.place={};S.links={};S.sel=null;S.selEdge=null;S.hintPairs=[];changed('置いた部品と矢印を全部消しました');
+});
+$('#a-check').addEventListener('click',function(){if(S.answer){setAnswer(false);return}grade();result.scrollIntoView({behavior:'smooth',block:'nearest'})});
+$('#a-rnd').addEventListener('click',function(){load(randomIndex())});
+$('#a-pick').addEventListener('change',function(){load(+this.value)});
+result.addEventListener('click',function(e){
+  var b=e.target.closest('button[data-a]');if(!b)return;
+  if(b.dataset.a==='ans'){setAnswer(!S.answer);if(S.answer)dg.scrollIntoView({behavior:'smooth',block:'start'})}
+  else if(b.dataset.a==='retry'){S.graded=false;S.stale=false;S.res=null;render();tray.scrollIntoView({behavior:'smooth',block:'nearest'})}
+  else if(b.dataset.a==='next'){load(randomIndex());sec.scrollIntoView({behavior:'smooth',block:'start'})}
+});
+if(window.ResizeObserver){var ro=new ResizeObserver(function(){if(S.sc)drawLines()});ro.observe(dg)}
+window.addEventListener('resize',function(){if(S.sc)drawLines()});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){if(S.sc)drawLines()});
+$('#a-legend').innerHTML=Object.keys(ACAT).map(function(k){return '<span><i style="background:'+ACAT[k][1]+'"></i>'+ACAT[k][0]+'</span>'}).join('')+'<span class="zl"><i class="z region"></i>リージョン</span><span class="zl"><i class="z vpc"></i>VPC</span><span class="zl"><i class="z az"></i>AZ</span><span class="zl"><i class="z pub"></i>パブリック</span><span class="zl"><i class="z pri"></i>プライベート</span>';
+
+/* ==== モードの切り替え ==== */
+function setMode(m,push){
+  var arch=m!=='puzzle';
+  $('#mode-arch').setAttribute('aria-selected',String(arch));$('#mode-flow').setAttribute('aria-selected',String(!arch));
+  sec.hidden=!arch;$('#arch-how').hidden=!arch;$('#game').hidden=arch;$('#legacy-how').hidden=arch;
+  LS.set('awsp_mode',arch?'arch':'puzzle');
+  if(push)try{history.replaceState(null,'','#'+(arch?'arch':'puzzle'))}catch(e){}
+  if(arch){if(!S.sc)load(randomIndex());else drawLines()}else if(window.startLegacyPuzzle)window.startLegacyPuzzle();
+}
+$('#mode-arch').addEventListener('click',function(){setMode('arch',true)});
+$('#mode-flow').addEventListener('click',function(){setMode('puzzle',true)});
+var h=location.hash.replace('#','');
+setMode(h==='puzzle'||h==='arch'?h:LS.get('awsp_mode','arch'),false);
+window.__arch={AS:AS,S:function(){return S},load:load,evaluate:evaluate,place:place,toggleLink:toggleLink,ZI:function(){return ZI},render:render,setAnswer:setAnswer};
+
 })();
 </script>
 </body>
