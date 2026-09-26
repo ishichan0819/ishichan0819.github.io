@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>AWS 基盤パズル — プラットフォームエンジニアリングを組み立てて学ぶ</title>
-<meta name="description" content="ランダムに出るお題に合わせて、AWSのサービスのブロックを線でつなぎ、プラットフォーム(共通基盤)を組み立てる学習パズル。答え合わせでは線ごとの理由と、AWS公式資料や大手ITの事例を示す。">
+<meta name="description" content="AWS Cloud・リージョン・VPC・AZ・サブネットにサービスを配置し、通信経路を矢印でつなぐ構成図演習。従来のAWSサービス接続問題も39問収録。">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
 <style>
 :root{
@@ -20,6 +20,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}}
 :root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--rule:#26304A;--room:#0E1522;--room-deep:#080D17}
 *,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
 body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
 main{max-width:1080px;margin:0 auto;padding:28px 16px 72px}
 .top{font-size:.85rem;margin:0 0 10px}
@@ -128,6 +129,52 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 .refs .k.aws{color:var(--led);border-color:var(--led)}.refs .k.case{color:var(--wave);border-color:var(--wave)}.refs .k.doc{color:var(--silk-dim);border-color:var(--silk-dim)}
 .refs a{color:var(--silk)}
 .point{background:#0E1626;border-left:3px solid var(--led);padding:8px 12px;border-radius:0 8px 8px 0}
+.mode-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.mode-tabs button{font:inherit;font-family:var(--dot);font-size:.85rem;cursor:pointer;border:1px solid var(--rule);border-radius:999px;padding:7px 15px;background:transparent;color:var(--ink)}
+.mode-tabs button[aria-selected="true"]{background:var(--led);border-color:var(--led);color:#1A1200}
+.arch-intro{color:#C9D1E3;font-size:.9rem;margin:0 0 12px}
+.arch-steps{display:flex;flex-wrap:wrap;gap:6px 12px;color:var(--silk-dim);font-size:.78rem;margin:2px 0 10px}
+.arch-steps b{color:var(--led);font-weight:400}
+.arch-tray{display:flex;flex-wrap:wrap;gap:6px;background:var(--room-deep);border:1px solid var(--edge);border-radius:10px;padding:9px;min-height:80px;margin:8px 0}
+.arch-tray-title{width:100%;font-family:var(--dot);font-size:.78rem;color:var(--silk-dim)}
+.arch-scroll{overflow:auto;border:1px solid var(--edge);border-radius:12px;background:#0A0F1A}
+.arch-board{position:relative;width:1040px;height:770px;background-image:radial-gradient(rgba(238,242,250,.075) 1px,transparent 1px);background-size:22px 22px}
+.arch-zone{position:absolute;border:1.5px dashed var(--zc);border-radius:8px;background:var(--zb);pointer-events:none}
+.arch-zone.cloud{border-style:solid}.arch-zone.vpc{border-style:solid}
+.arch-zone .arch-zone-title{position:absolute;top:3px;left:9px;font-family:var(--dot);font-size:12px;line-height:1.3;color:var(--zc);background:#0A0F1A;padding:0 4px}
+.arch-zone.subnet .arch-zone-title{background:transparent}
+.arch-outside-label{position:absolute;font-family:var(--dot);font-size:11px;color:var(--silk-dim);pointer-events:none}
+.arch-board .arch-lines{position:absolute;inset:0;width:1040px;height:770px;z-index:5;pointer-events:none;overflow:visible}
+.arch-board .arch-lines .arch-hit{pointer-events:stroke;cursor:pointer}
+.arch-card{width:120px;height:58px;display:flex;align-items:center;gap:6px;text-align:left;background:#131C2E;color:var(--silk);border:1.5px solid #344260;border-radius:8px;padding:5px;cursor:pointer;user-select:none;font:inherit;line-height:1.2}
+.arch-card .arch-icon{flex:none;width:31px;height:31px;display:grid;place-items:center;background:var(--ac);color:#08111C;border-radius:5px;font-family:var(--dot);font-size:10px;font-weight:700}
+.arch-card .arch-name{font-size:11px;font-weight:700;overflow-wrap:anywhere}
+.arch-card .arch-sub{display:block;color:var(--silk-dim);font-size:9px;font-weight:400;margin-top:2px}
+.arch-card.selected{border-color:var(--led);box-shadow:0 0 0 3px rgba(255,197,61,.3)}
+.arch-card.correct{border-color:var(--ok)}.arch-card.wrong{border-color:var(--bad)}
+.arch-board .arch-card{position:absolute;z-index:10;display:flex;flex-direction:column;justify-content:center;gap:2px;text-align:center;background:transparent;border-color:transparent;padding:0}
+.arch-board .arch-card .arch-icon{width:36px;height:36px;font-size:11px;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.arch-board .arch-card .arch-name{max-width:118px;font-size:11px;line-height:1.12;text-shadow:0 1px 3px #000}
+.arch-board .arch-card .arch-sub{display:none}
+.arch-board .arch-card.selected{border-color:var(--led);background:rgba(255,197,61,.08)}
+.arch-board .arch-card.correct{border-color:var(--ok)}
+.arch-board .arch-card.wrong{border-color:var(--bad)}
+.arch-tray .arch-card{flex:none}
+.arch-controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:8px 0}
+.arch-controls .arch-count{font-family:var(--dot);font-size:.78rem;color:var(--silk-dim);margin-right:auto}
+.arch-controls .btn.active{background:var(--led);border-color:var(--led);color:#1A1200}
+.arch-place-picker{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.78rem;color:var(--silk-dim);margin:8px 0 4px}
+.arch-place-picker select{min-width:200px}
+.arch-result{margin-top:12px;padding:12px;border:1px solid var(--edge);border-radius:10px;background:var(--room-deep)}
+.arch-result h3{font-family:var(--dot);font-weight:400;color:var(--led);font-size:1rem;margin:8px 0}
+.arch-result p{font-size:.85rem;margin:5px 0;color:var(--silk-dim)}
+.arch-result ul{margin:4px 0 10px;padding-left:1.3em;font-size:.82rem}
+.arch-result li{margin:3px 0}
+.arch-result .good{color:var(--ok)}.arch-result .bad{color:var(--bad)}
+.arch-result .flow-list{margin-top:7px}
+.arch-result .flow-list button{cursor:default}
+.arch-board-note{font-size:.75rem;color:var(--silk-dim);margin:6px 0 0}
+.arch-board-note a{color:var(--wave)}
 .notes{margin-top:26px;font-size:.85rem;color:var(--muted)}
 .notes ul{padding-left:1.3em}
 @media (prefers-reduced-motion:reduce){.blk{transition:none}}
@@ -137,14 +184,38 @@ h2.t{font-family:var(--dot);font-weight:400;font-size:1.45rem;line-height:1.35;m
 <main>
 <p class="top"><a href="../">← トップ</a></p>
 <h1>AWS 基盤パズル</h1>
-<p class="lede">プラットフォームエンジニアリングは、開発者が安全に速く届けられる「道」を社内に用意する仕事です。ここでは、よくある課題(お題)に対して AWS のサービスや道具のブロックを線でつなぎ、基盤を組み立てます。<b>お題は全39問。ページを開くたびに、まだ出ていないお題からランダムに選ばれます。</b></p>
-<div class="how">
+<p class="lede">AWS の構成図を、サービスの配置と通信経路から組み立てる演習です。外部、AWS Cloud、リージョン、VPC、AZ、サブネットの関係を考えながら部品を置いてください。<b>従来のサービス接続問題も全39問残しています。</b></p>
+<div class="mode-tabs" role="tablist" aria-label="演習モード">
+  <button type="button" id="mode-arch" role="tab" aria-selected="true" aria-controls="arch-game">構成図を組み立てる</button>
+  <button type="button" id="mode-flow" role="tab" aria-selected="false" aria-controls="game">サービス接続問題（39問）</button>
+</div>
+<div class="how" id="arch-how">
+  <div><b>1. 配置を考える</b>部品を選び、図の領域をクリックして置きます。ドラッグでも配置できます。AWS の外側、リージョン、VPC、AZ、サブネットを見分けましょう。</div>
+  <div><b>2. 経路をつなぐ</b>「経路をつなぐ」に切り替え、始点と終点を順に選びます。矢印が通信やデータの向きを示します。</div>
+  <div><b>3. 答え合わせ</b>配置と経路を別々に採点します。解答例では二つの AZ にまたがる構成と、矢印ごとの理由を確認できます。</div>
+</div>
+<section class="panel" id="arch-game" aria-label="AWS 構成図を組み立てる">
+  <div class="bar"><div class="l"><span class="pill lv1">構成図演習</span><span class="pill">マルチ AZ の Web システム</span></div></div>
+  <h2 class="t">二つの AZ で動く Web システムを組み立てる</h2>
+  <p class="arch-intro">利用者向けの Web サイトを東京リージョンに構築します。CloudFront は静的ファイルを S3 から配信し、動的リクエストは ALB から二つの AZ の EC2 に渡します。DB は非公開サブネットで冗長化し、社内データセンターとは VPN で接続します。</p>
+  <ol class="reqs"><li><span class="no">1</span><span>利用者からの入口と静的・動的コンテンツの経路を表す</span></li><li><span class="no">2</span><span>VPC と二つの AZ、それぞれの公開・非公開サブネットに適切な部品を置く</span></li><li><span class="no">3</span><span>二つの EC2、RDS の主系・待機系、オンプレミス接続を矢印で表す</span></li></ol>
+  <div class="arch-steps"><span><b>配置:</b> 部品を選択 → 図の領域をクリック</span><span><b>接続:</b> 始点 → 終点</span><span>スマートフォンでは下の「配置先」も使えます</span></div>
+  <div class="arch-controls"><span class="arch-count" id="arch-count"></span><button class="btn active" id="arch-place-mode" type="button" aria-pressed="true">部品を配置</button><button class="btn sub" id="arch-link-mode" type="button" aria-pressed="false">経路をつなぐ</button><button class="btn sub" id="arch-reset" type="button">やり直す</button><button class="btn pri" id="arch-check" type="button">答え合わせ</button></div>
+  <div class="arch-tray" id="arch-tray" aria-label="配置する部品"><span class="arch-tray-title">部品トレイ：図の領域に置く部品を選んでください。使わない部品もあります。</span></div>
+  <div class="arch-scroll"><div class="arch-board" id="arch-board" aria-label="AWS 構成図のキャンバス"><div id="arch-zones"></div><svg class="arch-lines" id="arch-lines" viewBox="0 0 1040 770" aria-hidden="true"></svg><div id="arch-cards"></div></div></div>
+  <div class="arch-place-picker"><span id="arch-selected">選択中：なし</span><label>配置先 <select id="arch-target"><option value="">領域を選ぶ</option></select></label></div>
+  <p class="arch-board-note">図は横にスクロールできます。矢印は通信・データの向きです。AWS Cloud や VPC の枠そのものは接続線ではありません。<a href="https://d1.awsstatic.com/Developer%20Marketing/jp/magazine/2022/img_way-to-draw-architecture_03.08e1366ebaecaf76a333002acbe1e2bd363acd4b.png" target="_blank" rel="noopener">参考にした AWS の構成図</a></p>
+  <div class="live" id="arch-live" aria-live="polite"></div>
+  <div class="arch-result" id="arch-result" hidden></div>
+</section>
+
+<div class="how" id="legacy-how" hidden>
   <div><b>1. お題を読む</b>会社の状況と要件を読んで、どのブロックが必要か考えます。使わない「ひっかけ」のブロックも混ざっています。</div>
   <div><b>2. ブロックをつなぐ</b>役割別の領域にあるブロックを2つタップすると線が引けます。線をタップすると消えます。ドラッグで並べ替え。</div>
   <div><b>3. 答え合わせ</b>要件ごとの達成度を確認。解答例は矢印付きの構成図で、要件ごとの経路と線の意味を追えます。</div>
 </div>
 
-<section class="panel" id="game" aria-label="お題">
+<section class="panel" id="game" aria-label="お題" hidden>
   <div class="bar">
     <div class="l"><span class="pill" id="lv"></span><span class="pill" id="theme"></span><span class="pill" id="no"></span><span class="pill" id="prog"></span></div>
     <div class="l"><select id="pick" aria-label="お題を選ぶ"></select><button class="btn sub" id="rnd" type="button">別のお題 🎲</button></div>
@@ -1235,7 +1306,123 @@ function renderResult(){
 
 /* ==== 凡例と開始 ==== */
 $('#legend').innerHTML=Object.keys(CAT).map(function(k){return '<span><i style="background:'+CAT[k][1]+'"></i>'+CAT[k][0]+'</span>'}).join('');
-load(randomIndex());
+window.startLegacyPuzzle=function(){if(!S.sc)load(randomIndex())};
+})();
+</script>
+<script>
+(function(){
+'use strict';
+/* 参考図のように、包含関係と経路の両方を組み立てる演習。 */
+var N=[
+  {id:'users',name:'利用者',sub:'Web ブラウザー',icon:'USR',color:'#94A3B8',scope:'outside',slot:0,x:5,y:92},
+  {id:'route53',name:'Route 53',sub:'DNS',icon:'53',color:'#A78BFA',scope:'cloud',slot:0,x:300,y:88},
+  {id:'cloudfront',name:'CloudFront',sub:'CDN',icon:'CF',color:'#A78BFA',scope:'cloud',slot:1,x:505,y:88},
+  {id:'s3',name:'Amazon S3',sub:'静的ファイル',icon:'S3',color:'#71D6A3',scope:'region',slot:0,x:688,y:190},
+  {id:'igw',name:'Internet Gateway',sub:'公開入口',icon:'IGW',color:'#A78BFA',scope:'vpc',slot:0,x:465,y:278},
+  {id:'alb',name:'ALB（2 AZ）',sub:'HTTP 負荷分散',icon:'ALB',color:'#A78BFA',scope:'public-a',accept:['public-a','public-b'],slot:0,x:465,y:375},
+  {id:'ec2a',name:'Amazon EC2',sub:'AZ a / アプリ',icon:'EC2',color:'#FFC53D',scope:'private-a',slot:0,x:335,y:493},
+  {id:'ec2b',name:'Amazon EC2',sub:'AZ b / アプリ',icon:'EC2',color:'#FFC53D',scope:'private-b',slot:0,x:595,y:493},
+  {id:'rdsa',name:'Amazon RDS',sub:'AZ a / 主系',icon:'RDS',color:'#7AB8FF',scope:'private-a',slot:1,x:335,y:585},
+  {id:'rdsb',name:'Amazon RDS',sub:'AZ b / 待機系',icon:'RDS',color:'#7AB8FF',scope:'private-b',slot:1,x:595,y:585},
+  {id:'vpn',name:'VPN Gateway',sub:'閉域接続の入口',icon:'VPN',color:'#A78BFA',scope:'vpc',slot:1,x:745,y:437},
+  {id:'dc',name:'社内データセンター',sub:'オンプレミス',icon:'DC',color:'#94A3B8',scope:'outside',slot:1,x:905,y:437},
+  {id:'nat',name:'NAT Gateway',sub:'今回は使わない',icon:'NAT',color:'#A78BFA',scope:null}
+];
+var E=[
+  ['users','route53','利用者がドメイン名を問い合わせる。'],
+  ['route53','cloudfront','DNS が CloudFront の配信先を返す。'],
+  ['cloudfront','s3','静的ファイルは S3 オリジンから取得する。'],
+  ['cloudfront','igw','動的リクエストは公開 ALB に届く。'],
+  ['igw','alb','インターネットからの通信を公開サブネットの ALB が受ける。'],
+  ['alb','ec2a','ALB が AZ a のアプリへ振り分ける。'],
+  ['alb','ec2b','ALB が AZ b のアプリへ振り分ける。'],
+  ['ec2a','rdsa','AZ a のアプリが DB 主系へアクセスする。'],
+  ['ec2b','rdsa','AZ b のアプリも DB 主系へアクセスする。'],
+  ['rdsa','rdsb','DB の主系から別 AZ の待機系へ複製する。'],
+  ['dc','vpn','社内データセンターから VPN で AWS に接続する。'],
+  ['vpn','ec2a','VPN 経由で非公開サブネットのアプリに到達する。']
+];
+var Z=[
+  {id:'cloud',title:'AWS Cloud / グローバルサービス',x:135,y:28,w:750,h:715,cls:'cloud',line:'#9AA6C2',fill:'rgba(27,37,57,.27)',drop:true},
+  {id:'region',title:'Region: 東京 (ap-northeast-1)',x:173,y:160,w:676,h:550,cls:'region',line:'#7AB8FF',fill:'rgba(42,75,111,.12)',drop:true},
+  {id:'vpc',title:'VPC 10.0.0.0/16',x:255,y:270,w:560,h:415,cls:'vpc',line:'#5CE39A',fill:'rgba(37,89,66,.12)',drop:true},
+  {id:'az-a',title:'Availability Zone a',x:277,y:320,w:246,h:345,cls:'az',line:'#8FBEE9',fill:'rgba(60,91,127,.07)'},
+  {id:'az-b',title:'Availability Zone b',x:539,y:320,w:246,h:345,cls:'az',line:'#8FBEE9',fill:'rgba(60,91,127,.07)'},
+  {id:'public-a',title:'Public subnet',x:287,y:356,w:226,h:95,cls:'subnet',line:'#5CE39A',fill:'rgba(92,227,154,.09)',drop:true},
+  {id:'public-b',title:'Public subnet',x:549,y:356,w:226,h:95,cls:'subnet',line:'#5CE39A',fill:'rgba(92,227,154,.09)',drop:true},
+  {id:'private-a',title:'Private subnet',x:287,y:468,w:226,h:184,cls:'subnet',line:'#7AB8FF',fill:'rgba(122,184,255,.09)',drop:true},
+  {id:'private-b',title:'Private subnet',x:549,y:468,w:226,h:184,cls:'subnet',line:'#7AB8FF',fill:'rgba(122,184,255,.09)',drop:true}
+];
+var SLOTS={outside:[[5,92],[905,437],[5,437],[905,92]],cloud:[[300,88],[505,88],[680,88]],region:[[688,190],[450,190]],vpc:[[465,278],[745,437],[260,278]],'public-a':[[340,382],[285,382]],'public-b':[[610,382],[650,382]],'private-a':[[335,493],[335,585],[380,540]],'private-b':[[595,493],[595,585],[640,540]]};
+var S={placed:{},links:{},mode:'place',selected:null,graded:false,answer:false,score:0,goodPlaces:0,goodLinks:0};
+var byId={};N.forEach(function(n){byId[n.id]=n});
+var board=document.getElementById('arch-board'),tray=document.getElementById('arch-tray'),cards=document.getElementById('arch-cards'),lines=document.getElementById('arch-lines'),result=document.getElementById('arch-result'),picker=document.getElementById('arch-target');
+function esc(s){return String(s).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
+function good(n,scope){return n.scope!=null&&(n.accept?n.accept.indexOf(scope)>=0:n.scope===scope)}
+function pair(a,b){return a+'>'+b}
+function positions(){var p={};if(S.answer){N.forEach(function(n){if(n.scope!=null)p[n.id]={x:n.x,y:n.y}});return p}
+  Object.keys(SLOTS).forEach(function(scope){var slots=SLOTS[scope],used={},group=N.filter(function(n){return S.placed[n.id]===scope});
+    group.filter(function(n){return good(n,scope)}).concat(group.filter(function(n){return !good(n,scope)})).forEach(function(n){
+      var i=good(n,scope)&&n.slot!=null&&!used[n.slot]?n.slot:slots.findIndex(function(_,j){return !used[j]});if(i<0)i=slots.length+Object.keys(used).length;
+      used[i]=1;var z=Z.filter(function(x){return x.id===scope})[0],v=slots[i]||[z?z.x+8:5,Math.min(700,510+60*i)];p[n.id]={x:v[0],y:v[1]};
+    });
+  });return p}
+function zoneAt(x,y){if(x>=513&&x<549&&y>=356&&y<451)return 'public-a';for(var i=Z.length-1;i>=0;i--){var z=Z[i];if(z.drop&&x>=z.x&&x<z.x+z.w&&y>=z.y&&y<z.y+z.h)return z.id}return 'outside'}
+function card(n,placed,pos){var selected=S.selected===n.id,mark=S.graded&&!S.answer&&placed?(good(n,S.placed[n.id])?' correct':' wrong'):'';
+  return '<button type="button" draggable="'+(!S.answer)+'" class="arch-card'+(selected?' selected':'')+mark+'" data-id="'+n.id+'" aria-label="'+esc(n.name+'、'+(placed?'配置先 '+scopeName(S.answer?n.scope:S.placed[n.id]):'未配置'))+'" style="--ac:'+n.color+(pos?';left:'+pos.x+'px;top:'+pos.y+'px':'')+'"><span class="arch-icon">'+esc(n.icon)+'</span><span class="arch-name">'+esc(n.name)+'<span class="arch-sub">'+esc(n.sub)+'</span></span></button>'}
+function scopeName(id){return {outside:'AWS の外',cloud:'AWS グローバル',region:'リージョン内・VPC 外',vpc:'VPC 境界','public-a':'AZ a 公開サブネット','public-b':'AZ b 公開サブネット','private-a':'AZ a 非公開サブネット','private-b':'AZ b 非公開サブネット'}[id]||'未配置'}
+function path(a,b){var ax=a.x+60,ay=a.y+29,bx=b.x+60,by=b.y+29,x1,y1,x2,y2,m;
+  if(Math.abs(bx-ax)>Math.abs(by-ay)*.8&&Math.abs(bx-ax)>120){x1=bx>ax?a.x+123:a.x-3;y1=ay;x2=bx>ax?b.x-3:b.x+123;y2=by;m=(x1+x2)/2;return 'M'+x1+' '+y1+' L'+m+' '+y1+' L'+m+' '+y2+' L'+x2+' '+y2}
+  x1=ax;y1=by>ay?a.y+61:a.y-3;x2=bx;y2=by>ay?b.y-3:b.y+61;m=(y1+y2)/2;return 'M'+x1+' '+y1+' L'+x1+' '+m+' L'+x2+' '+m+' L'+x2+' '+y2}
+function renderLines(p){var out='<defs><marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#E9EEF8"/></marker><marker id="arch-answer-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#FFC53D"/></marker><marker id="arch-good-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5CE39A"/></marker></defs>';
+  var list=S.answer?E.map(function(e){return {a:e[0],b:e[1],why:e[2],good:!!S.links[pair(e[0],e[1])]}}):Object.keys(S.links).map(function(k){var a=k.split('>');return {a:a[0],b:a[1],why:'クリックして消す',good:false}});
+  list.forEach(function(e,i){if(!p[e.a]||!p[e.b])return;var d=path(p[e.a],p[e.b]),color=S.answer?(e.good?'#5CE39A':'#FFC53D'):'#E9EEF8',marker=S.answer?(e.good?'arch-good-arrow':'arch-answer-arrow'):'arch-arrow',k=pair(e.a,e.b);
+    out+='<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" '+(S.answer&&!e.good?'stroke-dasharray="7 5" ':'')+'marker-end="url(#'+marker+')"><title>'+esc(byId[e.a].name+' → '+byId[e.b].name+'。'+e.why)+'</title></path>';
+    if(!S.answer)out+='<path class="arch-hit" data-link="'+k+'" d="'+d+'" fill="none" stroke="transparent" stroke-width="16"><title>クリックして線を消す</title></path>';
+  });lines.innerHTML=out}
+function render(){var p=positions(),required=N.filter(function(n){return n.scope!=null}),placed=required.filter(function(n){return !!S.placed[n.id]}).length;
+  tray.innerHTML='<span class="arch-tray-title">部品トレイ：図の領域に置く部品を選んでください。使わない部品もあります。</span>'+N.filter(function(n){return S.answer?n.scope==null:!S.placed[n.id]}).map(function(n){return card(n,false)}).join('');
+  cards.innerHTML=N.filter(function(n){return !!p[n.id]}).map(function(n){return card(n,true,p[n.id])}).join('');
+  renderLines(p);document.getElementById('arch-count').textContent='配置 '+placed+' / '+required.length+' ・ 経路 '+Object.keys(S.links).length+' / '+E.length;
+  document.getElementById('arch-selected').textContent='選択中：'+(S.selected?byId[S.selected].name:'なし');picker.value=S.selected?(S.placed[S.selected]||''):'';
+  ['place','link'].forEach(function(m){var b=document.getElementById('arch-'+m+'-mode');b.classList.toggle('active',S.mode===m);b.classList.toggle('sub',S.mode!==m);b.setAttribute('aria-pressed',String(S.mode===m))});
+  document.getElementById('arch-check').textContent=S.answer?'演習に戻る':'答え合わせ';renderResult()}
+function renderResult(){result.hidden=!S.graded;if(!S.graded)return;
+  var needed=N.filter(function(n){return n.scope!=null}).length,extra=Object.keys(S.links).filter(function(k){return !E.some(function(e){return pair(e[0],e[1])===k})}).length;
+  var html='<h3>'+S.score+' 点</h3><p>配置 '+S.goodPlaces+' / '+needed+' ・ 正しい経路 '+S.goodLinks+' / '+E.length+' ・ 余計な経路 '+extra+'</p>';
+  if(!S.answer)html+='<p>部品の置き場所と矢印の向きを確認してください。解答例を開くと正しい包含関係と経路を表示します。</p><button class="btn pri" type="button" id="arch-show-answer">解答例を見る</button>';
+  else{html+='<h3>配置の考え方</h3><ul><li>Route 53 と CloudFront はリージョンの枠外に置くグローバルな入口です。</li><li>S3 はリージョン内のサービスですが、この図では VPC・サブネットには入れません。</li><li>ALB は二つの AZ の公開サブネットにまたがる入口、EC2 と RDS は非公開サブネットに置きます。</li><li>Internet Gateway と VPN Gateway は VPC の境界を表し、社内データセンターは AWS Cloud の外です。</li><li>NAT Gateway はこの課題の通信経路に不要です。</li></ul><h3>矢印の意味</h3><div class="flow-list">';
+    E.forEach(function(e,i){html+='<button type="button" tabindex="-1"><span class="flow-no">'+(i+1)+'</span>'+esc(byId[e[0]].name)+' → '+esc(byId[e[1]].name)+'<span class="flow-why"><strong>'+(S.links[pair(e[0],e[1])]?'接続済み':'未接続')+'</strong> ・ '+esc(e[2])+'</span></button>'});
+    html+='</div><p>この図は通信経路と配置の関係を学ぶために単純化した構成例です。</p>'}
+  result.innerHTML=html}
+function changed(message){S.graded=false;S.answer=false;render();document.getElementById('arch-live').textContent=message}
+function place(id,scope){if(S.answer)return;S.placed[id]=scope;S.selected=null;changed(byId[id].name+'を'+scopeName(scope)+'に配置しました')}
+function selectCard(id){if(S.answer)return;if(S.mode==='place'){S.selected=S.selected===id?null:id;render();return}
+  if(!S.placed[id]){document.getElementById('arch-live').textContent='経路をつなぐ前に部品を配置してください';return}
+  if(!S.selected){S.selected=id;render();return}
+  if(S.selected===id){S.selected=null;render();return}
+  var a=S.selected,k=pair(a,id);S.selected=null;if(S.links[k])delete S.links[k];else S.links[k]=1;changed(byId[a].name+' → '+byId[id].name+'の経路を'+(S.links[k]?'追加':'削除')+'しました')}
+document.getElementById('arch-zones').innerHTML='<span class="arch-outside-label" style="left:8px;top:28px">AWS の外</span><span class="arch-outside-label" style="left:907px;top:370px">社内環境</span>'+Z.map(function(z){return '<div class="arch-zone '+z.cls+'" style="left:'+z.x+'px;top:'+z.y+'px;width:'+z.w+'px;height:'+z.h+'px;--zc:'+z.line+';--zb:'+z.fill+'"><span class="arch-zone-title">'+esc(z.title)+'</span></div>'}).join('');
+picker.innerHTML='<option value="">領域を選ぶ</option>'+[['outside','AWS の外'],['cloud','AWS グローバル'],['region','リージョン内・VPC 外'],['vpc','VPC 境界'],['public-a','AZ a 公開サブネット'],['public-b','AZ b 公開サブネット'],['private-a','AZ a 非公開サブネット'],['private-b','AZ b 非公開サブネット']].map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join('');
+tray.addEventListener('click',function(e){var b=e.target.closest('[data-id]');if(b)selectCard(b.dataset.id)});
+board.addEventListener('click',function(e){var hit=e.target.closest('[data-link]');if(hit&&!S.answer){delete S.links[hit.dataset.link];changed('経路を削除しました');return}
+  var b=e.target.closest('[data-id]');if(b){selectCard(b.dataset.id);return}if(S.answer||S.mode!=='place'||!S.selected)return;
+  var r=board.getBoundingClientRect(),scope=zoneAt(e.clientX-r.left,e.clientY-r.top);place(S.selected,scope)});
+[tray,board].forEach(function(el){el.addEventListener('dragstart',function(e){var b=e.target.closest('[data-id]');if(!b||S.answer)return;e.dataTransfer.setData('text/plain',b.dataset.id);e.dataTransfer.effectAllowed='move'})});
+board.addEventListener('dragover',function(e){if(!S.answer)e.preventDefault()});
+board.addEventListener('drop',function(e){if(S.answer)return;e.preventDefault();var id=e.dataTransfer.getData('text/plain');if(!byId[id])return;var r=board.getBoundingClientRect();place(id,zoneAt(e.clientX-r.left,e.clientY-r.top))});
+picker.addEventListener('change',function(){if(S.selected&&this.value)place(S.selected,this.value)});
+document.getElementById('arch-place-mode').addEventListener('click',function(){S.mode='place';S.selected=null;render()});
+document.getElementById('arch-link-mode').addEventListener('click',function(){S.mode='link';S.selected=null;render()});
+document.getElementById('arch-reset').addEventListener('click',function(){S={placed:{},links:{},mode:'place',selected:null,graded:false,answer:false,score:0,goodPlaces:0,goodLinks:0};render();document.getElementById('arch-live').textContent='演習を最初からやり直しました'});
+document.getElementById('arch-check').addEventListener('click',function(){if(S.answer){S.answer=false;render();return}
+  var required=N.filter(function(n){return n.scope!=null});S.goodPlaces=required.filter(function(n){return good(n,S.placed[n.id])}).length;
+  S.goodLinks=E.filter(function(e){return !!S.links[pair(e[0],e[1])]}).length;
+  var extra=Object.keys(S.links).filter(function(k){return !E.some(function(e){return pair(e[0],e[1])===k})}).length;
+  S.score=Math.max(0,Math.round(50*S.goodPlaces/required.length+50*S.goodLinks/E.length)-5*extra-(S.placed.nat?5:0));S.graded=true;S.selected=null;render();result.scrollIntoView({behavior:'smooth',block:'nearest'})});
+result.addEventListener('click',function(e){if(e.target.id==='arch-show-answer'){S.answer=true;S.selected=null;render();board.scrollIntoView({behavior:'smooth',block:'center'})}});
+['arch','flow'].forEach(function(mode){document.getElementById('mode-'+mode).addEventListener('click',function(){var isArch=mode==='arch';document.getElementById('mode-arch').setAttribute('aria-selected',String(isArch));document.getElementById('mode-flow').setAttribute('aria-selected',String(!isArch));document.getElementById('arch-game').hidden=!isArch;document.getElementById('arch-how').hidden=!isArch;document.getElementById('game').hidden=isArch;document.getElementById('legacy-how').hidden=isArch;if(!isArch)window.startLegacyPuzzle()})});
+render();
 })();
 </script>
 </body>
