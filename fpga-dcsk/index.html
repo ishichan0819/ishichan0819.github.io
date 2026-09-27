@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FPGA で色を送る</title>
+<meta name="description" content="FPGA(Zybo / Eclypse Z7)で書いた DCSK 送信回路の Verilog を、ブラウザの仮想ボードで1クロックずつ動かす。分周カウンタ、LFSR の乱数、LED 9個の色の表を書き換えて Verilog を作り、受信側で誤りを数える。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --r:#FF4D5E;--g:#4DE07A;--b:#4D8CFF;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:44em}
+code{font-family:var(--mono);font-size:.88em}
+code,pre,.bits,.rv,.rn,.en,.tr,.board b,.lamp span,.er .k,.er .info,.stat b{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim);text-align:right}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.9rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:8px 0 2px}
+.lab b{color:var(--silk);font-weight:400}
+input[type=range]{width:100%;accent-color:var(--led)}
+select{font:inherit;font-size:.95rem;padding:6px 8px;border-radius:8px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk);max-width:100%}
+.btn{font:inherit;font-size:.9rem;font-weight:700;min-height:40px;padding:4px 14px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn.sm{min-height:34px;font-size:.8rem;padding:2px 10px;border-color:var(--silk-dim);color:var(--silk-dim)}
+.btn:disabled{opacity:.4;cursor:default}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 14px;margin-top:12px;align-items:end}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pnote{font-size:.85rem;color:var(--silk-dim);margin:8px 0 12px;min-height:1.5em}
+.pnote b{color:var(--silk);font-weight:400}
+.pnote code{color:var(--led)}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim);min-height:1.5em}
+.stat{font-size:.82rem;color:var(--silk-dim);margin-top:10px;display:flex;flex-wrap:wrap;gap:4px 16px}
+.stat b{color:var(--silk);font-weight:400;font-family:var(--mono)}
+
+/* ① 仮想ボード */
+.simg{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.1fr) minmax(0,1.15fr);gap:12px}
+@media (max-width:959px){.simg{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.simg .code{grid-column:1/-1}}
+@media (max-width:639px){.simg{grid-template-columns:minmax(0,1fr)}}
+.board{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.78rem;color:var(--silk-dim);margin-bottom:10px}
+.board b{color:var(--silk);font-weight:400;font-family:var(--mono);font-size:.76rem}
+.leds{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0}
+.lg{background:#151D2E;border:1.5px solid var(--edge);border-radius:8px;padding:6px 4px 4px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.lg .m{font-family:var(--dot);font-size:.68rem;color:var(--silk-dim)}
+.lg .cs{display:flex;gap:6px}
+.lamp{display:flex;flex-direction:column;align-items:center;gap:1px}
+.lamp i{display:block;width:24px;height:24px;border-radius:50%;border:2px solid #333;background:#1E2230}
+.lamp span{font-family:var(--mono);font-size:.55rem;color:var(--silk-dim);line-height:1.2}
+.big1{width:92px;height:92px;border-radius:50%;margin:8px auto 4px;border:3px solid #333;background:#1E2230;position:relative}
+.big1::after{content:"";position:absolute;left:18px;top:14px;width:24px;height:14px;border-radius:50%;background:rgba(255,255,255,.25)}
+.bits3{display:flex;justify-content:center;gap:8px;margin-top:4px}
+.mix{height:26px;border-radius:6px;border:1.5px solid var(--edge);background:#1E2230}
+.rstbtn{margin-top:10px;width:100%}
+
+.reg{margin-bottom:10px}
+.rn{font-family:var(--mono);font-size:.78rem;color:var(--silk);display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.rn small{font-family:var(--body);color:var(--silk-dim);font-size:.72rem}
+.bits{display:flex;flex-wrap:wrap;gap:2px;margin-top:3px}
+.bits i{font-style:normal;font-family:var(--mono);font-size:.62rem;width:15px;height:18px;line-height:18px;text-align:center;border-radius:3px;background:#1B2336;color:var(--silk-dim)}
+.bits i.on{background:#3A4A6E;color:#fff}
+.bits.q i{width:auto;min-width:28px;height:auto;line-height:1.2;padding:2px 2px}
+.bits.q i small{display:block;font-size:.5rem;opacity:.7}
+.bits.q i.sel{outline:2px solid var(--led);outline-offset:-2px}
+.bits.q i.tap{box-shadow:inset 0 -3px 0 var(--wave)}
+.prog{height:6px;border-radius:3px;background:#1B2336;margin-top:4px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--led)}
+.rv{font-family:var(--mono);font-size:.7rem;color:var(--silk-dim);margin-top:2px}
+.en{display:inline-block;font-family:var(--mono);font-size:.75rem;padding:0 8px;border-radius:4px;background:#1B2336;color:var(--silk-dim)}
+.en.on{background:var(--led);color:#1A1200}
+.fb{font-size:.7rem;color:var(--silk-dim);margin-top:3px;line-height:1.5}
+.tab{display:grid;gap:3px;margin-top:4px}
+.tr{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-family:var(--mono);font-size:.7rem;padding:2px 6px;border-radius:5px;border:1.5px solid transparent;color:var(--silk-dim)}
+.tr.cur{border-color:var(--led);color:var(--silk);background:#1B2336}
+.tr .pat{display:flex;gap:2px}
+.tr .pat i{width:9px;height:9px;border-radius:50%;background:#262D40}
+.tr .sw{width:26px;height:14px;border-radius:3px;border:1px solid var(--edge)}
+
+.code pre{margin:0;max-height:470px;overflow:auto;font-family:var(--mono);font-size:.68rem;line-height:1.55;color:#AEB9D3;background:#070B14;border-radius:8px;padding:8px 0;tab-size:4}
+.code .ln{display:block;padding:0 10px;white-space:pre;border-left:3px solid transparent}
+.code .ln.hi{background:rgba(255,197,61,.16);border-left-color:var(--led);color:#FFF3D0}
+.code .ln.hc{background:rgba(94,231,255,.10);border-left-color:var(--wave);color:#E4FBFF}
+
+.wave{margin-top:12px}
+canvas{display:block;width:100%}
+
+/* ② 設計 */
+.dgn{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:12px}
+@media (max-width:799px){.dgn{grid-template-columns:minmax(0,1fr)}}
+.ed{display:grid;gap:5px}
+.er{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;background:#151D2E;border:1.5px solid var(--edge);border-radius:8px;padding:5px 8px}
+.er .k{font-family:var(--mono);font-size:.72rem;color:var(--silk-dim)}
+.er .cp{display:flex;gap:3px;flex-wrap:wrap}
+.chip{width:24px;height:24px;border-radius:50%;border:2px solid #333;background:#1E2230;cursor:pointer;padding:0}
+.chip.gap{margin-left:6px}
+.chip.r.on{background:var(--r);border-color:#FF8A94;box-shadow:0 0 8px 2px rgba(255,77,94,.6)}
+.chip.g.on{background:var(--g);border-color:#9AF0B4;box-shadow:0 0 8px 2px rgba(77,224,122,.6)}
+.chip.b.on{background:var(--b);border-color:#9DBCFF;box-shadow:0 0 8px 2px rgba(77,140,255,.6)}
+.er .info{font-family:var(--mono);font-size:.7rem;color:var(--silk-dim);text-align:right;line-height:1.3}
+.er .info .w{color:var(--bad);font-family:var(--body)}
+.er .info .sw{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:-1px;border:1px solid var(--edge)}
+.tri svg{display:block;width:100%;max-width:360px;margin:0 auto;height:auto}
+.tri .out{fill:#0D1320;stroke:var(--edge);stroke-width:2}
+.tri text{font-family:var(--dot);fill:var(--silk-dim);font-size:11px;text-anchor:middle}
+.tri .pt circle{stroke:#0D1320;stroke-width:1.5}
+.tri .pt text{font-size:10px;fill:#fff;font-family:var(--mono);font-weight:600;stroke:#0D1320;stroke-width:2.5px;paint-order:stroke}
+.tri .pt.dup circle{stroke:var(--bad);stroke-width:3}
+.warns{font-size:.8rem;color:var(--bad);margin-top:6px;min-height:1.4em}
+.warns.ok{color:var(--ok)}
+.vcode pre{margin:0;max-height:320px;overflow:auto;font-family:var(--mono);font-size:.68rem;line-height:1.5;color:#AEB9D3;background:#070B14;border-radius:8px;padding:8px 10px;white-space:pre}
+
+/* ③ 受信 */
+.rxg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:799px){.rxg{grid-template-columns:minmax(0,1fr)}}
+.big{font-family:var(--dot);font-size:1.5rem;text-align:center;margin:4px 0}
+.big.ng{color:var(--bad)}.big.okc{color:var(--ok)}
+.rxmsg{font-size:.85rem;color:var(--silk-dim);text-align:center;min-height:1.4em}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px}
+.ref li{margin:.2em 0}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../csk/">色で文字を送る(CSK / DCSK)</a></p>
+<h1>FPGA で色を送る</h1>
+<p class="lede">「色で文字を送る」では DCSK の考え方を見ました。このページでは、それを実際に <b>FPGA</b> で作った回路を動かします。どれも Zybo と Eclypse Z7 というボード用に Verilog で書いた、実物のプログラムです。ブラウザの中の仮想ボードで、クロック1回ずつから実際の速さまで動かせます。</p>
+
+<h2>① 仮想ボードで動かす</h2>
+<p class="lede">プログラムを選んで ▶ を押してください。回路は、大きく3つの部品でできています。</p>
+<ul class="lede" style="margin-top:-10px;padding-left:1.4em">
+  <li><b>分周カウンタ</b>: 125MHz のクロックを数えて、ときどき「進め」の合図 <code>ledcnten</code> を出す</li>
+  <li><b>LFSR</b>: その合図で次の乱数に進む</li>
+  <li><b>色の表</b>: 乱数の下の数ビット <code>n</code> で、点ける LED を選ぶ</li>
+</ul>
+<div class="panel" id="sim">
+  <div class="ph"><span class="t">仮想ボード</span><span class="s" id="s-bd"></span></div>
+  <label class="lab" style="margin-top:0">プログラム (フォルダ名)</label>
+  <select id="s-prog" aria-label="動かすプログラム"></select>
+  <p class="pnote" id="s-note"></p>
+  <div class="simg">
+    <div class="side">
+      <div class="h"><span>ボードと LED</span><span id="s-out"></span></div>
+      <div class="board" id="s-board"></div>
+      <div id="s-leds"></div>
+      <div class="lab">目に見える色 (この1コマの平均)</div>
+      <div class="mix" id="s-mix"></div>
+      <div class="lab" id="s-cntl"></div>
+      <button class="btn sm rstbtn" type="button" id="s-rst">RST ボタンを押す</button>
+    </div>
+    <div class="side">
+      <div class="h"><span>レジスタ</span><span id="s-clk"></span></div>
+      <div class="reg"><div class="rn"><span id="r-cntn">cnt</span><small>分周カウンタ</small></div><div class="bits" id="r-cnt"></div><div class="prog"><i id="r-cntbar"></i></div><div class="rv" id="r-cntv"></div></div>
+      <div class="reg"><div class="rn"><span>ledcnten <span class="en" id="r-en">0</span></span><small id="r-env"></small></div></div>
+      <div class="reg" id="r-qbox"><div class="rn"><span>Q[9:1]</span><small>LFSR (9ビットの乱数)</small></div><div class="bits q" id="r-q"></div><div class="rv" id="r-qv"></div>
+        <div class="fb">合図1回で9回ずらす。1回ずらすと、Q[1] が Q[9] へ回り込み、Q[1] と Q[6] の XOR が Q[5] に入る。ほかのビットは右へ1つずつ動く (周期 511)。</div></div>
+      <div class="reg" id="r-csbox"><div class="rn"><span id="r-csn">cnt4</span><small>パターンの番号</small></div><div class="bits" id="r-cs"></div></div>
+      <div class="reg"><div class="rn"><span id="r-case">case(n)</span><small>色の表</small></div><div class="tab" id="r-tab"></div></div>
+    </div>
+    <div class="side code">
+      <div class="h"><span id="c-file">LED.v</span><span>黄 = いま動いた行 / 水色 = 選ばれている行</span></div>
+      <pre id="c-src"></pre>
+    </div>
+  </div>
+  <div class="ctl">
+    <div class="row"><button class="btn pri" type="button" id="b-play">▶ 動かす</button><button class="btn" type="button" id="b-clk">+1 クロック</button><button class="btn" type="button" id="b-sym">合図の直前へ</button></div>
+    <label class="lab">速さ: <b id="spv"></b><input type="range" id="sp" min="0" max="8.097" step="0.001" value="6" aria-label="シミュレーションの速さ"></label>
+    <div class="row"><button class="btn sm" type="button" id="b-s1">1秒に1シンボル</button><button class="btn sm" type="button" id="b-rt">実際の速さ</button></div>
+  </div>
+  <div class="stat" id="s-stat"></div>
+  <div class="side wave"><div class="h"><span>タイミングチャート (直近16シンボル分)</span><span id="w-span"></span></div><canvas id="s-wave" height="210"></canvas></div>
+</div>
+
+<h2>② 設計を変えて書き込む</h2>
+<p class="lede">分周のビット数と色の表を変えると、Verilog がその場で書き変わります。「① のボードに書き込む」を押すと、上の仮想ボードでその回路を動かせます。入出力の名前は元の LED.v と同じなので、LED.v をこれに置き換えれば、制約ファイル (.xdc) はそのままで Vivado で使えます。</p>
+<div class="panel" id="dgn">
+  <div class="ctl" style="margin-top:0">
+    <label class="lab">色の数 <select id="d-m"><option value="2">4色 (1シンボル 2ビット)</option><option value="3">8色 (1シンボル 3ビット)</option></select></label>
+    <label class="lab">分周カウンタ: <b id="d-bv"></b><input type="range" id="d-b" min="4" max="26" step="1" value="20" aria-label="分周カウンタのビット数"></label>
+    <div class="row"><button class="btn sm" type="button" id="d-l4">random の表にする</button><button class="btn sm" type="button" id="d-l8">8M の表にする</button></div>
+  </div>
+  <div class="dgn" style="margin-top:12px">
+    <div class="side"><div class="h"><span>色の表 (丸を押すと ON/OFF)</span><span>左から [8] … [0]</span></div><div class="ed" id="d-ed"></div><div class="warns" id="d-warn"></div></div>
+    <div class="side"><div class="h"><span>信号点 (R・G・B の比)</span><span>赤い枠 = 同じ色が2つ</span></div><div class="tri" id="d-tri"></div>
+      <div class="stat" id="d-stat" style="justify-content:center"></div></div>
+  </div>
+  <div class="side vcode" style="margin-top:12px"><div class="h"><span>できた Verilog (LED.v)</span><span class="row"><button class="btn sm" type="button" id="d-copy">コピー</button><button class="btn pri" type="button" id="d-write" style="min-height:34px;font-size:.8rem">① のボードに書き込む</button></span></div><pre id="d-code"></pre></div>
+</div>
+
+<h2>③ 受信して誤りを数える</h2>
+<p class="lede">① で選んでいるプログラムの光を、赤・緑・青のフィルタを付けた3つの受光素子で受けます。各シンボルの最後に強さを測り、色の表でいちばん近い色を選びます。受信側も同じ LFSR を持っているので、「送られたはずのシンボル」と比べて誤りを数えられます。乱数の列を通信の試験に使うのは、このためです。</p>
+<div class="panel" id="rx">
+  <div class="ph"><span class="t">受信側</span><span class="s" id="x-prog"></span></div>
+  <div class="ctl" style="margin-top:0">
+    <label class="lab">距離: <b id="x-dv"></b><input type="range" id="x-d" min="0.2" max="3" step="0.05" value="1" aria-label="LED と受光素子の距離"></label>
+    <label class="lab">外光: <b id="x-av"></b><input type="range" id="x-a" min="0" max="1" step="0.05" value="0.2" aria-label="外光の強さ"></label>
+    <label class="lab">受光素子の応答の速さ (帯域): <b id="x-bv"></b><input type="range" id="x-b" min="1" max="8" step="0.05" value="4" aria-label="受光素子の帯域"></label>
+  </div>
+  <div class="rxg">
+    <div class="side"><div class="h"><span>受けた光 (最初の20シンボル)</span><span>点 = 測った所</span></div><canvas id="x-wave" height="230"></canvas></div>
+    <div class="side"><div class="h"><span>シンボル誤り率</span><span id="x-n"></span></div><div class="big" id="x-ser"></div><div class="rxmsg" id="x-msg"></div>
+      <div class="h" style="margin-top:10px"><span>分周ビット数を変えたら (同じ受信条件)</span></div><canvas id="x-curve" height="190"></canvas></div>
+  </div>
+  <div class="note" id="x-note"></div>
+</div>
+
+<div class="after">見えたこと
+<ul>
+  <li><b>速さは分周カウンタのビット数で決まる</b>。b ビットなら 2<sup>b</sup> クロックに1回だけ合図が出るので、1シンボルは 2<sup>b</sup> ÷ 125MHz。20ビットで約 8.4ms、10ビットで約 8.2µs。</li>
+  <li><b>乱数は LFSR で作れる</b>。シフトと XOR だけの回路で、0 以外の 511 通りを全部めぐる。ただし全ビット 0 から始めると、0 のまま止まる (RGB_random)。blue_chika のように初期値を書くか、RST で 1 を入れる。</li>
+  <li><b>DCSK は表を引くだけ</b>。n で 9ビットのパターンを選ぶだけなので、アナログの調光がいらない。点いている LED の数が同じなら、明るさも変わらない。</li>
+  <li><b>速すぎると受信側が追いつかない</b>。受光素子が遅いと前のシンボルの光が残り、隣の色と混ざって化ける。速い素子は雑音も多く拾うので、距離を縮めるなどして光を強くする必要がある。</li>
+  <li><b>ゆっくりだと目に見える</b>。1秒に100回くらいより遅いと、色の切り替わりがちらついて見えやすい (目安)。速くすると混ざって白っぽく見える。</li>
+</ul>
+</div>
+<ul class="ref">
+  <li>回路は各フォルダの Verilog (LED.v / rgb.v) をそのまま動かしています。ヘッダのコメントと、コメントアウトされた行は表示から省いています。空のテンプレート (project_2) と、スイッチをそのまま LED に出すだけのもの (project_1) は載せていません。</li>
+  <li>クロックはどのボードも 125MHz として計算しています。ピン番号は各プロジェクトの制約ファイル (.xdc) のとおりです。</li>
+  <li>LED 9個の色は、信号点を確かめる版 (singoutenn の red / green / blue) から読み取りました。<code>[2:0]</code> が赤、<code>[5:3]</code> が緑、<code>[8:6]</code> が青です。RGB LED 1個のプログラムでは、出力の <code>[2] [1] [0]</code> を R・G・B として表示しています。実際の色の順は配線によります。</li>
+  <li>RST ボタンのあるプログラムは、RST を押した直後の状態から始めます。</li>
+  <li>受信側は説明用のモデルです。受光素子は1次の低域フィルタとし、雑音は帯域の平方根と外光に比例させています。距離による減衰は分かっているものとし、シンボルの区切りも正しく分かるものとしています。実際の測定値は使っていません。</li>
+</ul>
+</main>
+
+<script>
+(function(){
+'use strict';
+var CLK=125e6;
+var SRC={"notrandom": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[22:0] cnt23;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt23 <= 23'h0;\n        else\n            cnt23 <= cnt23 + 1'h1;\n    end\n\n    wire ledcnten = (cnt23==23'h7fffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    always @* begin\n        case(cnt4)\n            2'd0:   LED_RGB = 9'b100100100;\n            2'd1:   LED_RGB = 9'b010010010;\n            2'd2:   LED_RGB = 9'b001001001;\n            2'd3:   LED_RGB = 9'b001010100;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "random": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[19:0] cnt20;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt20 <= 20'h0;\n        else\n            cnt20 <= cnt20 + 1'h1;\n    end\n\n    wire ledcnten = (cnt20==20'hfffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b111000000;\n            2'd1:   LED_RGB = 9'b000111000;\n            2'd2:   LED_RGB = 9'b000000111;\n            2'd3:   LED_RGB = 9'b001010100;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "fast": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[9:0] cnt10;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt10 <= 10'h0;\n        else\n            cnt10 <= cnt10 + 1'h1;\n    end\n\n    wire ledcnten = (cnt10==10'h3ff);\n\n    reg[9:0] cnt10;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt10 <= 10'h0;\n        else\n            cnt10 <= cnt10 + 1'h1;\n    end\n\n    wire ledcnten = (cnt10==10'h3ff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b111000000;\n            2'd1:   LED_RGB = 9'b000111000;\n            2'd2:   LED_RGB = 9'b000000111;\n            2'd3:   LED_RGB = 9'b010010010;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "m8": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[23:0] cnt;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt <= 24'h0;\n        else\n            cnt <= cnt + 1'h1;\n    end\n\n    wire ledcnten = (cnt==24'h7fffff);\n\n    reg[2:0] cnt8;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt8 <= 3'h0;\n        else if(ledcnten)\n            if(cnt8==3'd7)\n                cnt8 <= 3'h0;\n            else\n                cnt8 <= cnt8 + 3'h1;\n\n    end\n\n    reg[2:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[3:1] ;\n    end\n\n    always @* begin\n        case(n)\n            3'd0:   LED_RGB = 9'b111000000;\n            3'd1:   LED_RGB = 9'b000111000;\n            3'd2:   LED_RGB = 9'b000000111;\n            3'd3:   LED_RGB = 9'b001010100;\n            3'd4:   LED_RGB = 9'b011000010;\n            3'd5:   LED_RGB = 9'b011010000;\n            3'd6:   LED_RGB = 9'b000110100;\n            3'd7:   LED_RGB = 9'b000100110;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "sslow": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[24:0] cnt25;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt25 <= 25'h0;\n        else\n            cnt25 <= cnt25 + 1'h1;\n    end\n\n    wire ledcnten = (cnt25==25'h1ffffff);\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b111000000;\n            2'd1:   LED_RGB = 9'b000111000;\n            2'd2:   LED_RGB = 9'b000000111;\n            2'd3:   LED_RGB = 9'b010010010;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "sfast": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[9:0] cnt10;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt10 <= 10'h0;\n        else\n            cnt10 <= cnt10 + 1'h1;\n    end\n\n    wire ledcnten = (cnt10==10'h3ff);\n\n    reg[9:0] cnt10;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt10 <= 10'h0;\n        else\n            cnt10 <= cnt10 + 1'h1;\n    end\n\n    wire ledcnten = (cnt10==10'h3ff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b111000000;\n            2'd1:   LED_RGB = 9'b000111000;\n            2'd2:   LED_RGB = 9'b000000111;\n            2'd3:   LED_RGB = 9'b010010010;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "red": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[19:0] cnt20;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt20 <= 20'h0;\n        else\n            cnt20 <= cnt20 + 1'h1;\n    end\n\n    wire ledcnten = (cnt20==20'hfffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b000000111;\n            2'd1:   LED_RGB = 9'b000000111;\n            2'd2:   LED_RGB = 9'b000000111;\n            2'd3:   LED_RGB = 9'b000000111;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "green": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[19:0] cnt20;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt20 <= 20'h0;\n        else\n            cnt20 <= cnt20 + 1'h1;\n    end\n\n    wire ledcnten = (cnt20==20'hfffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b000111000;\n            2'd1:   LED_RGB = 9'b000111000;\n            2'd2:   LED_RGB = 9'b000111000;\n            2'd3:   LED_RGB = 9'b000111000;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "blue": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[19:0] cnt20;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt20 <= 20'h0;\n        else\n            cnt20 <= cnt20 + 1'h1;\n    end\n\n    wire ledcnten = (cnt20==20'hfffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b111000000;\n            2'd1:   LED_RGB = 9'b111000000;\n            2'd2:   LED_RGB = 9'b111000000;\n            2'd3:   LED_RGB = 9'b111000000;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "w": "module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n    reg[19:0] cnt20;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt20 <= 20'h0;\n        else\n            cnt20 <= cnt20 + 1'h1;\n    end\n\n    wire ledcnten = (cnt20==20'hfffff);\n\n    reg[1:0] cnt4;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt4 <= 2'h0;\n        else if(ledcnten)\n            if(cnt4==2'd3)\n                cnt4 <= 2'h0;\n            else\n                cnt4 <= cnt4 + 2'h1;\n\n    end\n\n    reg[1:0] n;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK or posedge RST)begin\n        if (RST)\n            Q <= #P_DLY 9'h1ff  ;\n        else if(ledcnten)\n            Q <= #P_DLY lsf8;\n         n <= Q[2:1] ;\n    end\n\n    always @* begin\n        case(n)\n            2'd0:   LED_RGB = 9'b010001100;\n            2'd1:   LED_RGB = 9'b010001100;\n            2'd2:   LED_RGB = 9'b010001100;\n            2'd3:   LED_RGB = 9'b010001100;\n            default:LED_RGB = 9'b000000000;\n         endcase\n    end\nendmodule\n", "soto": "module LED(\n    input CLK,\n    input RST,\n    output reg[2:0] LED_RGB\n    );\n\n    reg[22:0] cnt23;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt23 <= 23'h0;\n        else\n            cnt23 <= cnt23 + 1'h1;\n    end\n\n    wire ledcnten = (cnt23==23'h7fffff);\n\n    reg[2:0] cnt3;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt3 <= 3'h0;\n        else if(ledcnten)\n            if(cnt3==3'd4)\n                cnt3 <= 3'h0;\n            else\n                cnt3 <= cnt3 + 3'h1;\n\n    end\n\n    always @* begin\n        case(cnt3)\n            3'd0:   LED_RGB = 3'b100;\n            3'd1:   LED_RGB = 3'b010;\n            3'd2:   LED_RGB = 3'b001;\n            3'd3:   LED_RGB = 3'b111;\n            3'd4:   LED_RGB = 3'b000;\n            default:LED_RGB = 3'b000;\n         endcase\n    end\nendmodule\n", "rgbr": "module rgb(\n    input CLK,\n    input RST,\n    output reg[2:0] RGB\n    );\n\n    reg[25:0] cnt;\n\n    always @(posedge CLK)begin\n        cnt <= cnt + 1'h1;\n    end\n\n    wire ledcnten = (cnt==26'h3ffffff);\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q;\n\n    reg[2:0] n;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK)begin\n        if(ledcnten)\n            Q <= #P_DLY lsf8;\n        n <= Q[3:1] ;\n    end\n\n    always @* begin\n        case(n)\n            3'd0:   RGB = 3'b001;\n            3'd1:   RGB = 3'b010;\n            3'd2:   RGB = 3'b011;\n            3'd3:   RGB = 3'b100;\n            3'd4:   RGB = 3'b101;\n            3'd5:   RGB = 3'b110;\n            3'd6:   RGB = 3'b111;\n            3'd7:   RGB = 3'b000;\n            default:RGB = 3'b000;\n         endcase\n    end\nendmodule\n", "chika": "module LED(\n    input CLK,\n    input RST,\n    output reg[2:0]LED\n    );\n\n    reg[25:0] cnt;\n\n    always @(posedge CLK) begin\n        if(cnt == 26'h3ffffff)\n            cnt <= 26'h0;\n        else\n            cnt <= cnt + 1'h1;\n    end\n\n    wire cnten = (cnt==26'h3ffffff);\n\n    reg[2:0] bin;\n\n    parameter P_DLY = 1 ;\n\n    wire [9:1]  lsf0        ;\n    wire [9:1]  lsf1        ;\n    wire [9:1]  lsf2        ;\n    wire [9:1]  lsf3        ;\n    wire [9:1]  lsf4        ;\n    wire [9:1]  lsf5        ;\n    wire [9:1]  lsf6        ;\n    wire [9:1]  lsf7        ;\n    wire [9:1]  lsf8        ;\n\n    reg  [9:1]  Q = 9'b111111111;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n    assign lsf1 = {lsf0[1],lsf0[9:7],(lsf0[1]^lsf0[6]),lsf0[5:2]} ;\n    assign lsf2 = {lsf1[1],lsf1[9:7],(lsf1[1]^lsf1[6]),lsf1[5:2]} ;\n    assign lsf3 = {lsf2[1],lsf2[9:7],(lsf2[1]^lsf2[6]),lsf2[5:2]} ;\n    assign lsf4 = {lsf3[1],lsf3[9:7],(lsf3[1]^lsf3[6]),lsf3[5:2]} ;\n    assign lsf5 = {lsf4[1],lsf4[9:7],(lsf4[1]^lsf4[6]),lsf4[5:2]} ;\n    assign lsf6 = {lsf5[1],lsf5[9:7],(lsf5[1]^lsf5[6]),lsf5[5:2]} ;\n    assign lsf7 = {lsf6[1],lsf6[9:7],(lsf6[1]^lsf6[6]),lsf6[5:2]} ;\n    assign lsf8 = {lsf7[1],lsf7[9:7],(lsf7[1]^lsf7[6]),lsf7[5:2]} ;\n\n    always @(posedge CLK)begin\n        if(cnten)\n            Q <= #P_DLY lsf8;\n         bin <= Q[3:1] ;\n    end\n\n    always @* begin\n        case(bin)\n            3'd0:   LED = 3'b000;\n            3'd1:   LED = 3'b001;\n            3'd2:   LED = 3'b010;\n            3'd3:   LED = 3'b011;\n            3'd4:   LED = 3'b100;\n            3'd5:   LED = 3'b101;\n            3'd6:   LED = 3'b110;\n            3'd7:   LED = 3'b111;\n         endcase\n    end\nendmodule\n", "ecl": "module LED(\n    input CLK,\n    output reg[2:0] LED\n    );\n\n    reg[23:0] cnt24;\n\n    always @(posedge CLK) begin\n        cnt24 <= cnt24 + 1'h1;\n    end\n\n    wire ledcnten = (cnt24==24'hffffff);\n\n    reg[2:0] cnt3;\n\n    always @(posedge CLK) begin\n        if(ledcnten)\n            if(cnt3==3'd4)\n                cnt3 <= 3'h0;\n            else\n                cnt3 <= cnt3 + 3'h1;\n\n    end\n\n    always @* begin\n        case(cnt3)\n            3'd0:   LED = 3'b100;\n            3'd1:   LED = 3'b010;\n            3'd2:   LED = 3'b001;\n            3'd3:   LED = 3'b111;\n            3'd4:   LED = 3'b000;\n            default:LED = 3'b000;\n         endcase\n    end\nendmodule\n"};
+function B(s){return parseInt(s,2)}
+function pc(x){var c=0;while(x){c+=x&1;x>>=1}return c}
+function bin(x,w){var s=x.toString(2);while(s.length<w)s='0'+s;return s}
+function hex(x){return x.toString(16)}
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtT(s){if(s>=1)return s.toFixed(s>=10?1:2)+' 秒';if(s>=1e-3)return (s*1e3).toFixed(s>=1e-2?1:2)+' ms';if(s>=1e-6)return (s*1e6).toFixed(s>=1e-5?1:2)+' µs';return (s*1e9).toFixed(0)+' ns'}
+function fmtF(f){if(f>=1e6)return (f/1e6).toFixed(f>=1e7?0:1)+' M';if(f>=1e3)return (f/1e3).toFixed(f>=1e4?0:1)+' k';if(f>=10)return f.toFixed(0)+' ';return f.toFixed(f>=1?1:2)+' '}
+function step(q){var b1=q&1,r=q>>1;r^=b1<<4;r|=b1<<8;return r} /* {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} */
+function step9(q){for(var i=0;i<9;i++)q=step(q);return q}
+
+/* ---- プログラム ---- */
+var ZY={name:'Zybo',chip:'XC7Z010',clk:'L16',rst:'Y16 (BTN3)'},EC={name:'Eclypse Z7',chip:'XC7Z020',clk:'D18',rst:'D20'};
+var PIN9=['J15','W16','V12','T14','T15','P14','T20','U20','V20'];
+var T4=['111000000','000111000','000000111','001010100'],T4b=['111000000','000111000','000000111','010010010'];
+var T8=['111000000','000111000','000000111','001010100','011000010','011010000','000110100','000100110'];
+function rep(p){return [p,p,p,p]}
+var D=[
+ {id:'notrandom',grp:'DCSK 送信 (LED 9個)',dir:'project_2_notrandom_DCSK',t:'順番に4パターン',bits:23,top:0x7fffff,sel:'cnt',cmax:3,nb:2,tab:['100100100','010010010','001001001','001010100'],
+  note:'乱数を使わず、<b>cnt4</b> で4つのパターンを順番に出します。4つとも赤・緑・青が1個ずつの白 (1,1,1) で、変わるのは点いている LED の位置だけです。'},
+ {id:'random',dir:'project_2_random_DCSK',t:'乱数で4色',bits:20,top:0xfffff,tab:T4,
+  note:'LFSR の下位2ビット <b>n</b> で、青3・緑3・赤3・白 (1,1,1) の4色から選びます。1シンボルで2ビットです。project_2_random_DCSK_slow も同じ中身です。<code>cnt4</code> は数えていますが、どこにも使われていません。'},
+ {id:'fast',dir:'project_2_random_DCSK_fast',t:'乱数で4色・速い',bits:10,top:0x3ff,tab:T4,
+  note:'分周を10ビットにして、random の約1000倍速くした版です。<code>reg[9:0] cnt10</code> と <code>ledcnten</code> が2回宣言されているので、このままでは Vivado でエラーになるはずです。ここでは1つとして動かしています。'},
+ {id:'m8',dir:'project_2_random_DCSK_8M',t:'乱数で8色',bits:24,top:0x7fffff,nb:3,tab:T8,
+  note:'LFSR の下位3ビットで8色から選び、1シンボルで3ビット送ります。カウンタは24ビットですが、比べる値が <code>24\'h7fffff</code> なので、合図は1周 (2<sup>24</sup> クロック) に1回です。'},
+ {id:'sslow',grp:'信号点の確認 (singoutenn)',dir:'singoutenn/project_2_random_DCSK_slow',t:'4色・ゆっくり',bits:25,top:0x1ffffff,tab:T4b,
+  note:'約0.27秒ごとに色が変わる、目で追える速さの版です。白は <code>9\'b010010010</code> (random とは別の位置の LED) を使います。'},
+ {id:'sfast',dir:'singoutenn/project_2_random_DCSK_fast',t:'4色・速い',bits:10,top:0x3ff,tab:T4b,
+  note:'上の「4色・ゆっくり」の速い版です。fast と同じく <code>cnt10</code> が2回宣言されています。'},
+ {id:'red',dir:'singoutenn/project_2_random_DCSK_red',t:'赤だけ',bits:20,top:0xfffff,tab:rep('000000111'),
+  note:'n が何でも同じパターンなので、赤3個が点いたままになります。1つの信号点の色を確かめるための版です。'},
+ {id:'green',dir:'singoutenn/project_2_random_DCSK_green',t:'緑だけ',bits:20,top:0xfffff,tab:rep('000111000'),note:'緑3個が点いたままになります。'},
+ {id:'blue',dir:'singoutenn/project_2_random_DCSK_blue',t:'青だけ',bits:20,top:0xfffff,tab:rep('111000000'),note:'青3個が点いたままになります。'},
+ {id:'w',dir:'singoutenn/project_2_random_DCSK_w',t:'白だけ',bits:20,top:0xfffff,tab:rep('010001100'),note:'赤・緑・青を1個ずつ点けた白 (1,1,1) が点いたままになります。'},
+ {id:'soto',grp:'RGB LED 1個',dir:'project_2_sotoLED',t:'外付け LED で5パターン',bits:23,top:0x7fffff,sel:'cnt',cmax:4,out:3,pins:['J15','W16','V12'],tab:['100','010','001','111','000'],
+  note:'<b>cnt3</b> で 0〜4 を数え、R → G → B → 白 → 消灯 を約67msずつ繰り返します。'},
+ {id:'ecl',dir:'eclypse_3',t:'Eclypse で5パターン',bd:EC,bits:24,top:0xffffff,sel:'cnt',cmax:4,out:3,rst:0,pins:['B17','B16','A17'],tab:['100','010','001','111','000'],
+  note:'soto と同じ5パターンを、Eclypse Z7 で約134msずつ出します。RST はありません。'},
+ {id:'rgbr',dir:'RGB_random',t:'乱数で8色 (初期値なし)',bd:EC,bits:26,top:0x3ffffff,nb:3,out:3,rst:0,q0:0,pins:['B17','B16','A17'],tab:['001','010','011','100','101','110','111','000'],
+  note:'<b>Q にリセットも初期値もありません</b>。FPGA のレジスタが 0 で始まると、LFSR は 0 のまま進まず、ずっと同じ色になります。このシミュレーションもそう動きます。RST の入力はありますが使われていません。'},
+ {id:'chika',dir:'blue_chika',t:'乱数で8色 (初期値あり)',bd:EC,bits:26,top:0x3ffffff,nb:3,out:3,rst:0,nm:'bin',pins:['A17','B17','B16'],tab:['000','001','010','011','100','101','110','111'],
+  note:'RGB_random と同じ仕組みで、<code>Q = 9\'b111111111</code> と初期値を書いたので乱数が進みます。約0.54秒ごとに色が変わり、<code>bin</code> が 0 のときは消えます。'}
+];
+var last={};
+D.forEach(function(d){
+  d.grp=d.grp||last.grp;d.bd=d.bd||(last.bd&&d.grp===last.grp?last.bd:ZY);
+  if(d.sel==null)d.sel='lfsr';if(d.nb==null)d.nb=d.sel==='lfsr'?2:0;if(d.out==null)d.out=9;if(d.rst==null)d.rst=1;if(d.q0==null)d.q0=0x1ff;
+  d.pins=d.pins||PIN9;d.nm=d.nm||'n';d.src=SRC[d.id];last=d;
+});
+D.forEach(function(d){d.pat=d.tab.map(B)});
+
+/* パターン → R,G,B の強さ (0〜1) */
+function vec(d,p){if(d.out===9)return [pc(p&7)/3,pc((p>>3)&7)/3,pc((p>>6)&7)/3];return [(p>>2)&1,(p>>1)&1,p&1]}
+function cnts(p){return [pc(p&7),pc((p>>3)&7),pc((p>>6)&7)]}
+function css(v){var m=Math.max(v[0],v[1],v[2]);if(m<=0.001)return '#1E2230';var s=Math.min(1,v[0]+v[1]+v[2]);var k=255*(0.35+0.65*s)/m;
+  return 'rgb('+Math.round(Math.min(255,v[0]*k))+','+Math.round(Math.min(255,v[1]*k))+','+Math.round(Math.min(255,v[2]*k))+')'}
+var LEDC=['#FF4D5E','#4DE07A','#4D8CFF'];
+function colOf(d,i){return d.out===9?(i<3?0:i<6?1:2):(i===2?0:i===1?1:2)}
+function lampCss(c,a){if(a<=0.004)return '';var rgb=[[255,77,94],[77,224,122],[77,140,255]][c];
+  return 'background:rgba('+rgb+','+(0.15+0.85*a).toFixed(2)+');border-color:rgba('+rgb+','+(0.4+0.6*a).toFixed(2)+');box-shadow:0 0 '+Math.round(4+10*a)+'px '+Math.round(1+3*a)+'px rgba('+rgb+','+(0.7*a).toFixed(2)+')'}
+
+/* ---- シミュレータ ---- */
+var S={d:null,run:false,rate:1e6,carry:0};
+var M={};
+function ctrName(d){var m=/wire\s+\w*cnten\s*=\s*\((\w+)\s*==/.exec(d.src||'');return m?m[1]:'cnt'}
+function csName(d){if(d.sel!=='cnt')return '';var m=/case\s*\((\w+)\)/.exec(d.src||'');return m?m[1]:'cnt'}
+function reset(power){
+  var d=S.d,P=Math.pow(2,d.bits);
+  M.P=P;M.cnt=0;M.cs=0;if(power){M.Q=d.q0;M.n=0;M.cyc=0;M.nen=0;M.hist=[];M.ens=[];M.acc=new Float64Array(d.out);M.f0=0;M.lastC=0}
+  else{M.n=M.Q&((1<<d.nb)-1);M.Q=0x1ff}
+  M.lastP=pat();M.hist.push({c:M.cyc,p:M.lastP,i:idx()});M.lastC=M.cyc;M.enAt=-1e18;M.clkAt=-1e18;
+}
+function idx(){return S.d.sel==='lfsr'?M.n:M.cs}
+function pat(){var i=idx();return i<S.d.pat.length?S.d.pat[i]:0}
+function integ(){var d=S.d,dt=M.cyc-M.lastC;if(dt>0){for(var i=0;i<d.out;i++)if((M.lastP>>i)&1)M.acc[i]+=dt}M.lastC=M.cyc}
+function chk(){var p=pat();if(p!==M.lastP||idx()!==M.hist[M.hist.length-1].i){integ();M.lastP=p;M.hist.push({c:M.cyc,p:p,i:idx()})}}
+function one(){
+  var d=S.d,en=M.cnt===d.top,mask=(1<<d.nb)-1;
+  integ();
+  if(d.sel==='lfsr'){var nq=en?step9(M.Q):M.Q;M.n=M.Q&mask;M.Q=nq}
+  else if(en)M.cs=M.cs>=d.cmax?0:M.cs+1;
+  M.cnt=(M.cnt+1)%M.P;M.cyc++;
+  if(en){M.nen++;M.ens.push(M.cyc);M.enAt=performance.now()}
+  chk();
+}
+function adv(k){
+  var d=S.d,mask=(1<<d.nb)-1;
+  if(k>0)M.clkAt=performance.now();
+  while(k>0){
+    if(d.sel==='lfsr'&&M.n!==(M.Q&mask)){one();k--;continue}
+    var d0=((d.top-M.cnt)%M.P+M.P)%M.P;
+    if(k<=d0){M.cnt=(M.cnt+k)%M.P;M.cyc+=k;k=0;break}
+    if(d0>0){M.cnt=d.top;M.cyc+=d0;k-=d0}
+    one();k--;
+  }
+  var W=16*M.P,cut=0;while(cut<M.hist.length-2&&M.hist[cut+1].c<M.cyc-W)cut++;if(cut)M.hist.splice(0,cut);
+  cut=0;while(cut<M.ens.length&&M.ens[cut]<M.cyc-W)cut++;if(cut)M.ens.splice(0,cut);
+}
+
+/* ---- 表示の組み立て ---- */
+var sel=$('s-prog');
+function fillSel(){var h='',g='';D.forEach(function(d,i){if(d.grp!==g){if(g)h+='</optgroup>';g=d.grp;h+='<optgroup label="'+esc(g)+'">'}h+='<option value="'+i+'">'+esc(d.dir+' — '+d.t)+'</option>'});sel.innerHTML=h+'</optgroup>'}
+var lines=[];
+function buildCode(d){
+  var cn=ctrName(d),csn=csName(d),L=d.src.replace(/\n$/,'').split('\n'),h='';lines=[];
+  var reClk=new RegExp('^\\s*'+cn+'\\s*<=\\s*'+cn+'\\s*\\+'),reEn=/wire\s+\w*cnten/;
+  L.forEach(function(l,i){var k='';
+    if(reClk.test(l))k='clk';else if(reEn.test(l))k='en';
+    else if(/Q\s*<=.*lsf8/.test(l)||/(cnt[348]|cnt3)\s*<=\s*\1\s*\+/.test(l)||/cnt\s*<=\s*26'h0/.test(l))k='en';
+    else if(new RegExp('^\\s*'+d.nm+'\\s*<=\\s*Q').test(l))k='clk';
+    var m=/^\s*(\d)'d(\d+)\s*:/.exec(l);var cv=m?+m[2]:-1;
+    lines.push({k:k,cv:cv});h+='<span class="ln">'+(esc(l)||' ')+'</span>'});
+  $('c-src').innerHTML=h;$('c-file').textContent=(d.id==='rgbr'?'rgb.v':'LED.v')+(d.id==='custom'?' (② で作った回路)':'');
+}
+function load(i){
+  S.d=D[i];var d=S.d;S.run=false;$('b-play').textContent='▶ 動かす';
+  reset(true);
+  $('s-bd').textContent=d.bd.name+' · '+d.bd.chip+' · 125MHz';
+  $('s-note').innerHTML=d.note;
+  $('s-board').innerHTML='<span>クロック</span><b>'+d.bd.clk+' · 125MHz</b><span>RST</span><b>'+(d.rst?d.bd.rst:'なし')+'</b><span>出力ピン</span><b>'+
+    (d.out===9?'青 '+d.pins.slice(6).reverse().join(' ')+'<br>緑 '+d.pins.slice(3,6).reverse().join(' ')+'<br>赤 '+d.pins.slice(0,3).reverse().join(' '):
+     '[2] '+d.pins[2]+' · [1] '+d.pins[1]+' · [0] '+d.pins[0])+'</b>';
+  var h='';
+  if(d.out===9){h='<div class="leds">';[2,1,0].forEach(function(c){h+='<div class="lg"><span class="m">'+['赤','緑','青'][c]+' ×3</span><div class="cs">';for(var j=2;j>=0;j--){var b=c*3+j;h+='<span class="lamp"><i id="l'+b+'"></i><span>['+b+']</span></span>'}h+='</div></div>'});h+='</div>';$('s-out').textContent='LED_RGB[8:0]'}
+  else{h='<div class="big1" id="lbig"></div><div class="bits3">';for(var b=2;b>=0;b--)h+='<span class="lamp"><i id="l'+b+'"></i><span>['+b+'] '+'RGB'[2-b]+'</span></span>';h+='</div>';$('s-out').textContent=(d.id==='rgbr'?'RGB':d.id==='soto'?'LED_RGB':'LED')+'[2:0]'}
+  $('s-leds').innerHTML=h;
+  $('s-rst').disabled=!d.rst;$('s-rst').textContent=d.rst?'RST ボタンを押す ('+d.bd.rst+')':'このプログラムには RST がない';
+  $('r-cntn').textContent=ctrName(d)+'  ('+d.bits+'ビット、合図は == '+d.bits+"'h"+hex(d.top)+')';
+  $('r-qbox').style.display=d.sel==='lfsr'?'':'none';$('r-csbox').style.display=d.sel==='cnt'?'':'none';
+  $('r-csn').textContent=csName(d);$('r-case').textContent='case('+(d.sel==='lfsr'?d.nm:csName(d))+')';
+  var t='';d.pat.forEach(function(p,k){t+='<div class="tr" id="t'+k+'"><span>'+(d.sel==='lfsr'?d.nb:(d.cmax>3?3:2))+"'d"+k+'</span><span class="pat">';
+    for(var b=d.out-1;b>=0;b--)t+='<i style="background:'+LEDC[colOf(d,b)]+';opacity:'+((p>>b)&1?1:.12)+'"></i>';
+    t+='</span><span class="sw" style="background:'+css(vec(d,p))+'"></span></div>'});
+  $('r-tab').innerHTML=t;
+  buildCode(d);
+  setRate(M.P);
+  frameDraw(true);rxUpdate();
+}
+function setRate(r){S.rate=Math.min(CLK,Math.max(1,r));$('sp').value=Math.log10(S.rate).toFixed(3);
+  var perSym=M.P/S.rate;
+  $('spv').innerHTML=(S.rate>=CLK*0.999?'実際の速さ':'実際の '+fmtRatio(CLK/S.rate)+' 分の1')+' (1秒に '+fmtF(S.rate)+'クロック、1シンボル '+(perSym>=1?perSym.toFixed(perSym>=10?0:1)+' 秒':'1/'+(1/perSym).toFixed(0)+' 秒')+')'}
+function fmtRatio(x){if(x>=1e8)return (x/1e8).toFixed(1)+'億';if(x>=1e5)return Math.round(x/1e4)+'万';if(x>=1e4)return (x/1e4).toFixed(1)+'万';return x>=10?Math.round(x).toLocaleString('ja-JP'):x.toFixed(1)}
+
+/* ---- 1コマ ---- */
+var lastT=0,wasEn=false;
+function frameDraw(force){
+  var d=S.d,now=performance.now();integ();
+  var span=M.cyc-M.f0,avg=[];for(var i=0;i<d.out;i++)avg.push(span>0?M.acc[i]/span:((M.lastP>>i)&1));
+  M.acc=new Float64Array(d.out);M.f0=M.cyc;M.lastC=M.cyc;
+  for(i=0;i<d.out;i++){var el=$('l'+i);if(el)el.style.cssText=lampCss(colOf(d,i),avg[i])}
+  var v=d.out===9?[(avg[0]+avg[1]+avg[2])/3,(avg[3]+avg[4]+avg[5])/3,(avg[6]+avg[7]+avg[8])/3]:[avg[2],avg[1],avg[0]];
+  $('s-mix').style.background=css(v);if($('lbig')){$('lbig').style.background=css(v);$('lbig').style.boxShadow=v[0]+v[1]+v[2]>0.01?'0 0 26px 8px '+css(v).replace('rgb(','rgba(').replace(')',',.4)'):'none'}
+  var c=d.out===9?cnts(M.lastP):[(M.lastP>>2)&1,(M.lastP>>1)&1,M.lastP&1];
+  $('s-cntl').innerHTML=d.out===9?'いま点いている数 (R,G,B) = <b>('+c.join(',')+')</b>':'いまの出力 [2][1][0] = <b>'+bin(M.lastP,3)+'</b>';
+  /* レジスタ */
+  var cb='';for(i=d.bits-1;i>=0;i--)cb+='<i class="'+((Math.floor(M.cnt/Math.pow(2,i))%2)?'on':'')+'">'+(Math.floor(M.cnt/Math.pow(2,i))%2)+'</i>';
+  $('r-cnt').innerHTML=cb;$('r-cntbar').style.width=(M.cnt/(M.P-1)*100).toFixed(2)+'%';
+  $('r-cntv').textContent=d.bits+"'h"+hex(M.cnt)+'  ('+M.cnt.toLocaleString('ja-JP')+' / '+(M.P-1).toLocaleString('ja-JP')+')';
+  var en=M.cnt===d.top,flash=now-M.enAt<350;
+  $('r-en').textContent=en?'1':'0';$('r-en').className='en'+(en||flash?' on':'');
+  var eps=S.run?S.rate/M.P:0;$('r-env').textContent=S.run?(eps>=1?'1秒に '+fmtF(eps)+'回':(1/Math.max(eps,1e-9)).toFixed(1)+' 秒に1回'):'';
+  if(d.sel==='lfsr'){var qb='';for(i=9;i>=1;i--){var bit=(M.Q>>(i-1))&1;qb+='<i class="'+(bit?'on':'')+(i<=d.nb?' sel':'')+(i===1||i===6||i===5?' tap':'')+'">'+bit+'<small>Q['+i+']</small></i>'}
+    $('r-q').innerHTML=qb;$('r-qv').innerHTML="9'h"+hex(M.Q)+(M.Q===0?' <span style="color:var(--bad)">← 0 のまま進まない</span>':'')+'  → '+d.nm+' = Q['+d.nb+':1] = '+bin(M.Q&((1<<d.nb)-1),d.nb)+(M.n!==(M.Q&((1<<d.nb)-1))?' (次のクロックで '+d.nm+' に入る)':'')}
+  else{var sb='';var w=d.cmax>3?3:2;for(i=w-1;i>=0;i--)sb+='<i class="'+((M.cs>>i)&1?'on':'')+'">'+((M.cs>>i)&1)+'</i>';$('r-cs').innerHTML=sb+' <span class="rv" style="margin-left:6px">= '+M.cs+'</span>'}
+  var ci=idx();d.pat.forEach(function(p,k){var e=$('t'+k);if(e)e.className='tr'+(k===ci?' cur':'')});
+  /* コード */
+  var clkOn=now-M.clkAt<250,spans=$('c-src').children;
+  for(i=0;i<lines.length;i++){var L=lines[i],on=(L.k==='clk'&&clkOn)||(L.k==='en'&&(flash||en)),cur=L.cv===ci;
+    var cls='ln'+(on?' hi':cur?' hc':'');if(spans[i].className!==cls)spans[i].className=cls}
+  /* 統計 */
+  var sec=M.cyc/CLK,sym=M.P/CLK;
+  $('s-clk').textContent=M.cyc.toLocaleString('ja-JP')+' クロック';
+  var distinct={};d.pat.forEach(function(p){distinct[vec(d,p).join()]=1});var nd=Object.keys(distinct).length;
+  var bps=d.sel==='lfsr'&&nd===d.pat.length&&M.Q!==0?d.nb/sym:0;
+  $('s-stat').innerHTML='<span>ボードの時間 <b>'+fmtT(sec)+'</b></span><span>合図の回数 <b>'+M.nen.toLocaleString('ja-JP')+'</b></span><span>1シンボル <b>'+fmtT(sym)+'</b></span><span>シンボルレート <b>'+fmtF(1/sym)+'Hz</b></span>'+
+    '<span>データ <b>'+(bps?fmtF(bps)+'bps':'なし')+'</b>'+(bps?'':' ('+(nd===1||M.Q===0&&d.sel==='lfsr'?'色が変わらない':d.sel==='cnt'?'決まった順番':'同じ色がある')+')')+'</span>';
+  drawWave();
+}
+function loop(t){
+  if(!S.run){lastT=0;return}
+  if(lastT){var dt=Math.min(0.1,(t-lastT)/1000);S.carry+=dt*S.rate;var k=Math.floor(S.carry);S.carry-=k;if(k>0)adv(k)}
+  lastT=t;frameDraw();requestAnimationFrame(loop);
+}
+
+/* ---- タイミングチャート ---- */
+var wv=$('s-wave');
+function fit(cv){var r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,h=+cv.getAttribute('height');cv.width=Math.max(10,Math.round(r.width*dpr));cv.height=Math.round(h*dpr);cv.style.height=h+'px';var x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return {x:x,w:r.width,h:h}}
+function drawWave(){
+  var d=S.d,C=fit(wv),x=C.x,W=C.w,H=C.h,L=74,R=W-8,span=16*M.P,t0=M.cyc-span;
+  x.clearRect(0,0,W,H);x.font='11px "JetBrains Mono",monospace';x.textBaseline='middle';
+  var rows=[{n:'ledcnten'},{n:d.sel==='lfsr'?d.nm:csName(d)}],order=[];
+  for(var b=d.out-1;b>=0;b--)order.push(b);
+  order.forEach(function(b){rows.push({n:(d.out===9?'LED_RGB':'')+'['+b+']',b:b})});
+  var rh=(H-18)/rows.length;
+  function X(c){return L+(c-t0)/span*(R-L)}
+  rows.forEach(function(r,ri){var y=6+ri*rh;x.fillStyle='#9AA6C2';x.fillText(r.n,4,y+rh/2);x.strokeStyle='#1B2336';x.beginPath();x.moveTo(L,y+rh-1);x.lineTo(R,y+rh-1);x.stroke()});
+  /* ledcnten */
+  x.strokeStyle='#FFC53D';x.lineWidth=1.5;var y0=6+rh-3;
+  M.ens.forEach(function(c){var px=X(c);if(px<L)return;x.beginPath();x.moveTo(px,y0);x.lineTo(px,y0-rh+6);x.stroke()});
+  /* n と LED */
+  var H0=M.hist,segs=[];for(var i=0;i<H0.length;i++){var a=Math.max(t0,H0[i].c),e=i+1<H0.length?H0[i+1].c:M.cyc;if(e<=t0)continue;segs.push({a:a,e:e,p:H0[i].p,i:H0[i].i})}
+  var yn=6+rh;
+  segs.forEach(function(s){var xa=X(s.a),xe=X(s.e);x.strokeStyle='#5EE7FF';x.lineWidth=1;x.strokeRect(xa+.5,yn+3,Math.max(1,xe-xa-1),rh-7);
+    if(xe-xa>16){x.fillStyle='#E4FBFF';x.textAlign='center';x.fillText(String(s.i),(xa+xe)/2,yn+rh/2);x.textAlign='left'}});
+  order.forEach(function(b,k){var y=6+(k+2)*rh,col=LEDC[colOf(d,b)];
+    x.fillStyle=col;segs.forEach(function(s){if((s.p>>b)&1)x.fillRect(X(s.a),y+3,Math.max(1,X(s.e)-X(s.a)),rh-7)})});
+  x.fillStyle='#9AA6C2';x.textAlign='right';x.fillText('いま',R,H-6);x.textAlign='left';x.fillText('← '+fmtT(span/CLK)+' 前',L,H-6);
+  $('w-span').textContent='横幅 = ボードの時間 '+fmtT(span/CLK);
+}
+
+/* ---- 操作 ---- */
+fillSel();
+sel.addEventListener('change',function(){load(+this.value)});
+$('b-play').addEventListener('click',function(){S.run=!S.run;this.textContent=S.run?'⏸ 止める':'▶ 動かす';if(S.run){lastT=0;requestAnimationFrame(loop)}else frameDraw()});
+$('b-clk').addEventListener('click',function(){adv(1);frameDraw()});
+$('b-sym').addEventListener('click',function(){var d=S.d,d0=((d.top-M.cnt)%M.P+M.P)%M.P;if(d0===0)adv(1),d0=((d.top-M.cnt)%M.P+M.P)%M.P;adv(d0);frameDraw()});
+$('sp').addEventListener('input',function(){setRate(Math.pow(10,+this.value));if(!S.run)frameDraw()});
+$('b-s1').addEventListener('click',function(){setRate(M.P)});
+$('b-rt').addEventListener('click',function(){setRate(CLK)});
+$('s-rst').addEventListener('click',function(){integ();reset(false);chk();frameDraw()});
+window.addEventListener('resize',function(){if(!S.run)frameDraw();drawRx()});
+
+/* ================= ② 設計 ================= */
+var G={nb:2,bits:20,tab:T4.map(B)};
+function vec9(p){return [pc(p&7)/3,pc((p>>3)&7)/3,pc((p>>6)&7)/3]}
+var VR=[22,236],VG=[150,20],VB=[278,236];
+function txy(v){var s=v[0]+v[1]+v[2];if(s<=0)return [150,164];var r=v[0]/s,g=v[1]/s,b=v[2]/s;return [r*VR[0]+g*VG[0]+b*VB[0],r*VR[1]+g*VG[1]+b*VB[1]]}
+function edBuild(){
+  var h='';G.tab.forEach(function(p,k){h+='<div class="er"><span class="k">'+G.nb+"'d"+k+'</span><span class="cp">';
+    for(var b=8;b>=0;b--){var c=colOf({out:9},b);h+='<button type="button" class="chip '+'rgb'[c]+((p>>b)&1?' on':'')+(b===5||b===2?' gap':'')+'" data-k="'+k+'" data-b="'+b+'" aria-label="'+['赤','緑','青'][c]+' ['+b+']" aria-pressed="'+(((p>>b)&1)?'true':'false')+'"></button>'}
+    h+='</span><span class="info" id="di'+k+'"></span></div>'});
+  $('d-ed').innerHTML=h;edInfo();
+}
+function edInfo(){
+  var tot={},col={},warn=[];
+  G.tab.forEach(function(p){var c=cnts(p).join(',');col[c]=(col[c]||0)+1;tot[pc(p)]=1});
+  G.tab.forEach(function(p,k){var c=cnts(p),dup=col[c.join(',')]>1;$('di'+k).innerHTML='<span class="sw" style="background:'+css(vec9(p))+'"></span> ('+c.join(',')+')'+(dup?'<br><span class="w">同じ色あり</span>':p===0?'<br><span class="w">全部消灯</span>':'')});
+  var nt=Object.keys(tot).length,dups=Object.keys(col).filter(function(k){return col[k]>1}).length;
+  if(dups)warn.push('同じ色の行があります。色だけを見る受信側では区別できません。');
+  if(nt>1)warn.push('点く LED の数が行によって違うので、明るさが変わります (照明としてちらつく)。');
+  $('d-warn').className='warns'+(warn.length?'':' ok');$('d-warn').textContent=warn.length?warn.join(' '):'すべて違う色で、点く数もそろっています。';
+  /* 三角形 */
+  var s='<svg viewBox="0 0 300 256"><polygon class="out" points="'+VR+' '+VG+' '+VB+'"/><text x="7" y="'+(VR[1]+4)+'">R</text><text x="'+(VG[0]+20)+'" y="'+(VG[1]+4)+'">G</text><text x="293" y="'+(VB[1]+4)+'">B</text>';
+  var seen={};G.tab.forEach(function(p,k){var v=vec9(p);if(p===0)return;var q=txy(v),key=cnts(p).join(','),off=(seen[key]||0)*7;seen[key]=(seen[key]||0)+1;
+    s+='<g class="pt'+(col[key]>1?' dup':'')+'"><circle cx="'+(q[0]+off)+'" cy="'+(q[1]-off)+'" r="11" fill="'+css(v)+'"/><text x="'+(q[0]+off)+'" y="'+(q[1]-off+3.5)+'">'+k+'</text></g>'});
+  $('d-tri').innerHTML=s+'</svg>';
+  var sym=Math.pow(2,G.bits)/CLK;
+  $('d-stat').innerHTML='<span>1シンボル <b>'+fmtT(sym)+'</b></span><span>シンボルレート <b>'+fmtF(1/sym)+'Hz</b></span><span>最大 <b>'+fmtF(G.nb/sym)+'bps</b></span>';
+  $('d-code').textContent=gen();
+}
+function gen(){
+  var b=G.bits,k=G.nb,top=hex(Math.pow(2,b)-1),o='module LED(\n    input CLK,\n    input RST,\n    output reg[8:0] LED_RGB\n    );\n\n'+
+  '    reg['+(b-1)+':0] cnt;\n\n    always @(posedge CLK) begin\n        if(RST)\n            cnt <= '+b+"'h0;\n        else\n            cnt <= cnt + 1'h1;\n    end\n\n"+
+  "    wire ledcnten = (cnt=="+b+"'h"+top+');\n\n    reg['+(k-1)+':0] n;\n\n';
+  var i;for(i=0;i<9;i++)o+='    wire [9:1]  lsf'+i+';\n';
+  o+='\n    reg  [9:1]  Q;\n\n    assign lsf0 = {Q[1],Q[9:7],(Q[1]^Q[6]),Q[5:2]} ;\n';
+  for(i=1;i<9;i++){var p='lsf'+(i-1);o+='    assign lsf'+i+' = {'+p+'[1],'+p+'[9:7],('+p+'[1]^'+p+'[6]),'+p+'[5:2]} ;\n'}
+  o+="\n    always @(posedge CLK or posedge RST) begin\n        if (RST)\n            Q <= 9'h1ff;\n        else if(ledcnten)\n            Q <= lsf8;\n    end\n\n"+
+  '    always @(posedge CLK) begin\n        n <= Q['+k+':1];\n    end\n\n    always @* begin\n        case(n)\n';
+  G.tab.forEach(function(p,j){o+='            '+k+"'d"+j+':   LED_RGB = 9\'b'+bin(p,9)+';\n'});
+  o+="            default:LED_RGB = 9'b000000000;\n        endcase\n    end\nendmodule\n";
+  return o;
+}
+function setNb(nb,tab){G.nb=nb;$('d-m').value=String(nb);G.tab=tab||(nb===2?T4.map(B):T8.map(B));edBuild()}
+$('d-ed').addEventListener('click',function(e){var t=e.target.closest('.chip');if(!t)return;var k=+t.dataset.k,b=+t.dataset.b;G.tab[k]^=(1<<b);t.classList.toggle('on');t.setAttribute('aria-pressed',t.classList.contains('on')?'true':'false');edInfo()});
+$('d-m').addEventListener('change',function(){var nb=+this.value,old=G.tab.slice();var base=(nb===2?T4:T8).map(B);for(var i=0;i<base.length&&i<old.length;i++)base[i]=old[i];setNb(nb,base)});
+$('d-b').addEventListener('input',function(){G.bits=+this.value;$('d-bv').textContent=G.bits+' ビット';edInfo()});
+$('d-l4').addEventListener('click',function(){setNb(2,T4.map(B))});
+$('d-l8').addEventListener('click',function(){setNb(3,T8.map(B))});
+$('d-copy').addEventListener('click',function(){var btn=this,txt=gen();function ok(){btn.textContent='コピーしました';setTimeout(function(){btn.textContent='コピー'},1500)}
+  try{navigator.clipboard.writeText(txt).then(ok,function(){fallback()})}catch(e){fallback()}
+  function fallback(){var r=document.createRange();r.selectNodeContents($('d-code'));var s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='選択しました'}});
+$('d-write').addEventListener('click',function(){
+  var d={id:'custom',grp:'② で作った回路',dir:'custom',t:'② で作った回路 ('+G.bits+'ビット・'+(1<<G.nb)+'色)',bd:ZY,bits:G.bits,top:Math.pow(2,G.bits)-1,sel:'lfsr',nb:G.nb,out:9,rst:1,q0:0x1ff,pins:PIN9,nm:'n',
+    tab:G.tab.map(function(p){return bin(p,9)}),pat:G.tab.slice(),src:gen(),note:'② で作った回路です。分周 '+G.bits+' ビット、'+(1<<G.nb)+' 色。'};
+  var at=D.length&&D[D.length-1].id==='custom'?D.length-1:D.length;D[at]=d;fillSel();sel.value=String(at);load(at);
+  $('sim').scrollIntoView({behavior:'smooth',block:'start'});
+});
+$('d-bv').textContent=G.bits+' ビット';
+
+/* ================= ③ 受信 ================= */
+var X0={d:1,a:0.2,bw:1e4},SIG0=0.004;
+function rng(seed){var s=seed>>>0;return function(){s=(s+0x6D2B79F5)>>>0;var t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+function gaussF(r){return function(){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(6.283185307*v)}}
+function seqOf(d,N){var o=[],q=d.q0,cs=0,m=(1<<d.nb)-1;for(var k=0;k<N;k++){if(d.sel==='lfsr'){q=step9(q);o.push(q&m)}else{cs=cs>=d.cmax?0:cs+1;o.push(cs)}}return o}
+function rxRun(d,bits,N,keep){
+  var T=Math.pow(2,bits)/CLK,tau=1/(2*Math.PI*X0.bw),a=Math.exp(-T/tau),g=Math.pow(0.5/X0.d,2),sig=SIG0*Math.sqrt(X0.bw/1e3)*Math.sqrt(1+4*X0.a),sg=sig/g;
+  var seq=seqOf(d,N),pts=d.pat.map(function(p){return vec(d,p)}),gs=gaussF(rng(12345+bits)),y=pts[seq[0]]?pts[seq[0]].slice():[0,0,0],err=0,rec=[];
+  for(var k=0;k<N;k++){var s=seq[k],x=pts[s]||[0,0,0],y0=y.slice();for(var c=0;c<3;c++)y[c]=x[c]+(y[c]-x[c])*a;
+    var m=[y[0]+sg*gs(),y[1]+sg*gs(),y[2]+sg*gs()],bi=0,bd=1e9;
+    for(var j=0;j<pts.length;j++){var dd=Math.pow(m[0]-pts[j][0],2)+Math.pow(m[1]-pts[j][1],2)+Math.pow(m[2]-pts[j][2],2);if(dd<bd-1e-12){bd=dd;bi=j}}
+    var ok=bi===s;if(!ok)err++;if(keep&&k<20)rec.push({x:x,y0:y0,m:m,ok:ok})}
+  return {ser:err/N,err:err,N:N,rec:rec,a:a,tau:tau,T:T,sg:sg};
+}
+function kind(d){var seq=seqOf(d,64),ps={},pp={};seq.forEach(function(i){ps[vec(d,d.pat[i]).join()]=1;pp[d.pat[i]]=1});var cols={};d.pat.forEach(function(p){cols[vec(d,p).join()]=1});
+  if(Object.keys(ps).length===1)return d.sel==='lfsr'&&d.q0===0?'stuck':Object.keys(pp).length>1?'pos':'one';
+  if(d.sel==='cnt')return 'order';if(Object.keys(cols).length<d.pat.length)return 'dup';return 'ok'}
+var RX=null;
+function rxUpdate(){
+  var d=S.d;if(!d)return;
+  $('x-dv').textContent=X0.d.toFixed(2)+' m';$('x-av').textContent=X0.a<0.05?'なし (暗い部屋)':X0.a<0.5?'弱い':X0.a<0.85?'ふつうの室内':'強い';
+  $('x-bv').textContent=fmtF(X0.bw)+'Hz (時定数 '+fmtT(1/(2*Math.PI*X0.bw))+')';
+  $('x-prog').textContent=d.dir+' — '+d.t;
+  RX={d:d,k:kind(d),r:rxRun(d,d.bits,4000,true)};drawRx();
+}
+function drawRx(){
+  if(!RX)return;var d=RX.d,r=RX.r,k=RX.k;
+  var ser=$('x-ser'),msg=$('x-msg'),note=$('x-note');
+  if(k==='one'||k==='stuck'||k==='pos'){ser.textContent='—';ser.className='big';msg.textContent=k==='stuck'?'LFSR が 0 のまま止まっていて、色が変わりません。データは運べません。':k==='pos'?'点く LED の位置は変わりますが、色はずっと同じ白です。色を見る受信側には何も届きません。':'色が1つしか出ないので、データは運べません (信号点の確認用)。'}
+  else{ser.textContent=r.err?(r.ser*100).toFixed(r.ser<0.01?2:1)+' %':'0 %';ser.className='big '+(r.ser<0.001?'okc':r.ser>0.05?'ng':'');
+    msg.textContent=r.err+' / '+r.N+' シンボルを取り違え'+(k==='dup'?' — 同じ色の行があり、色だけでは区別できません':k==='order'?' — 決まった順番なので、本当はデータを運んでいません':'')}
+  $('x-n').textContent='1シンボル '+fmtT(r.T);
+  var ratio=r.T/r.tau;
+  note.innerHTML=k==='one'||k==='stuck'||k==='pos'?'':ratio<2?'<b style="color:var(--bad)">受光素子が遅すぎます</b>: 1シンボル ('+fmtT(r.T)+') が時定数 ('+fmtT(r.tau)+') の '+ratio.toFixed(1)+' 倍しかなく、前の色が残ります。帯域を上げると追いつきますが、雑音も増えます。':
+    r.ser>0.001?'応答は間に合っていますが、雑音で隣の色と取り違えています。距離を縮めるか、外光を減らすか、帯域を必要なだけに絞ってください。':'応答も雑音も十分です。帯域を上げすぎると雑音が増え、下げすぎると応答が遅れます。';
+  /* 波形 */
+  var C=fit($('x-wave')),x=C.x,W=C.w,H=C.h,L=18,R=W-6,rh=(H-8)/3,n=r.rec.length||1,sw=(R-L)/n;
+  x.clearRect(0,0,W,H);x.font='11px "JetBrains Mono",monospace';x.textBaseline='middle';
+  var gs=gaussF(rng(99));
+  [0,1,2].forEach(function(c){var y0=4+c*rh,top=y0+6,bot=y0+rh-6;function Y(v){return bot-(Math.max(-.2,Math.min(1.25,v)))/1.2*(bot-top)}
+    x.fillStyle=LEDC[c];x.fillText('RGB'[c],3,y0+rh/2);x.strokeStyle='#1B2336';x.beginPath();x.moveTo(L,bot+3);x.lineTo(R,bot+3);x.stroke();
+    x.strokeStyle='rgba(255,255,255,.28)';x.lineWidth=1;x.beginPath();r.rec.forEach(function(s,i){var xa=L+i*sw;if(i===0)x.moveTo(xa,Y(s.x[c]));else x.lineTo(xa,Y(s.x[c]));x.lineTo(xa+sw,Y(s.x[c]))});x.stroke();
+    x.strokeStyle=LEDC[c];x.lineWidth=1.5;x.beginPath();r.rec.forEach(function(s,i){for(var j=0;j<=12;j++){var t=j/12,v=s.x[c]+(s.y0[c]-s.x[c])*Math.pow(r.a,t)+(j<12?r.sg*gs()*.7:0);var px=L+(i+t)*sw;if(i===0&&j===0)x.moveTo(px,Y(v));else x.lineTo(px,Y(v))}});x.stroke();
+    r.rec.forEach(function(s,i){x.fillStyle=s.ok?'#5CE39A':'#FF6B7A';x.beginPath();x.arc(L+(i+1)*sw,Y(s.m[c]),2.6,0,6.3);x.fill()})});
+  /* 分周ビット数と誤り率 */
+  var C2=fit($('x-curve')),z=C2.x,W2=C2.w,H2=C2.h,l=34,rr=W2-8,tp=8,bt=H2-30;z.clearRect(0,0,W2,H2);z.font='10px "JetBrains Mono",monospace';
+  function BX(b){return l+(b-6)/(26-6)*(rr-l)}function SY(s){var v=Math.max(1e-4,s);return tp+(-Math.log10(v))/4*(bt-tp)}
+  z.fillStyle='rgba(255,197,61,.08)';z.fillRect(BX(20.3),tp,rr-BX(20.3),bt-tp);z.fillStyle='#9AA6C2';z.textAlign='right';z.fillText('目でちらつきが見えやすい',rr-2,tp+8);
+  z.strokeStyle='#1B2336';z.textAlign='right';[1,1e-1,1e-2,1e-3,1e-4].forEach(function(s){var y=SY(s);z.beginPath();z.moveTo(l,y);z.lineTo(rr,y);z.stroke();z.fillStyle='#9AA6C2';z.fillText(s===1e-4?'≦0.01%':s>=0.01?(s*100)+'%':(s*100).toFixed(s<1e-2?1:0)+'%',l-3,y)});
+  z.textAlign='center';for(var b=6;b<=26;b+=2){z.fillStyle='#9AA6C2';z.fillText(b,BX(b),bt+10)}z.fillText('分周ビット数 (右ほど遅い)',(l+rr)/2,bt+23);
+  if(k==='one'||k==='stuck'||k==='pos')return;
+  var pts=[];for(b=6;b<=26;b++){pts.push([BX(b),SY(rxRun(d,b,2500,false).ser)])}
+  z.strokeStyle='#5EE7FF';z.lineWidth=2;z.beginPath();pts.forEach(function(p,i){if(i)z.lineTo(p[0],p[1]);else z.moveTo(p[0],p[1])});z.stroke();
+  var marks=[[10,'fast'],[20,'random'],[24,'8M'],[25,'信号点 slow']];
+  marks.forEach(function(m){var px=BX(m[0]);z.strokeStyle='rgba(154,166,194,.35)';z.lineWidth=1;z.setLineDash([3,3]);z.beginPath();z.moveTo(px,tp);z.lineTo(px,bt);z.stroke();z.setLineDash([]);z.fillStyle='#9AA6C2';z.save();z.translate(px+3,bt-4);z.rotate(-Math.PI/2);z.textAlign='left';z.fillText(m[1],0,0);z.restore()});
+  var cx=BX(d.bits),cy=SY(r.ser);z.fillStyle='#FFC53D';z.beginPath();z.arc(cx,cy,5,0,6.3);z.fill();
+}
+function bindX(id,fn){$(id).addEventListener('input',function(){fn(+this.value);rxUpdate()})}
+bindX('x-d',function(v){X0.d=v});bindX('x-a',function(v){X0.a=v});bindX('x-b',function(v){X0.bw=Math.pow(10,v)});
+
+setNb(2,T4.map(B));
+sel.value='1';load(1);
+})();
+</script>
+</body>
+</html>

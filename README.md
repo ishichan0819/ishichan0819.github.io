@@ -13,6 +13,7 @@ https://ishichan0819.github.io/
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
 - [Indoor VLC: 部屋じゅうに光を届ける](https://ishichan0819.github.io/indoor-vlc/) — 天井のLED照明から部屋のあちこちへ光でデータを届ける室内可視光通信のシミュレータ。照度とSNRの地図、壁の反射による遅延の広がり、人の影とハンドオーバー
 - [Optical OFDM: 狭い帯域で速く送る](https://ishichan0819.github.io/ofdm/) — 帯域が数MHzしかないLEDで速く送る光OFDMのアクティビティ。OOKのアイパターン、エルミート対称、DCO/ACO-OFDMのBER比較、ビット割り当て
+- [FPGA DCSK: FPGA で色を送る](https://ishichan0819.github.io/fpga-dcsk/) — Zybo / Eclypse Z7 用に書いた DCSK 送信回路 (分周カウンタ・LFSR・LED 9個の色の表) の Verilog を、仮想ボードでクロック単位から実時間まで動かすアクティビティ。色の表を書き換えて Verilog を作り、受信側の帯域・距離・外光で誤り率がどう変わるかを確かめる
 - [AWS 基盤パズル](https://ishichan0819.github.io/aws-platform/) — AWS 公式の実装ガイド・リファレンスアーキテクチャや企業の事例 (SeatGeek、Slack) で紹介されている構成を、枠に部品を置いて矢印でつないで組み立てる構成図の演習 (全16問)。解答例と元にした資料へのリンクつき
 - [競プロ アルゴリズム図鑑](https://ishichan0819.github.io/algo/) — AtCoder 茶色から青色を目指す 12 のアルゴリズム。ステップ実行できる図と C++ / Python の実装
   - [競プロ 5分ドリル](https://ishichan0819.github.io/algo/drill.html) — 図鑑の12のアルゴリズムを、読む・穴埋め・並べる・組み立ての4段階で自分で書けるまで練習するスマホ向けドリル (Python / C++、復習つき、ホーム画面に追加してオフラインでも使える)
