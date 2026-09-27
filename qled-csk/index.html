@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>4色で色を送る</title>
+<meta name="description" content="IEEE 802.15.7 の3色 CSK (TLED) と、青・シアン・黄・赤の4色 LED で四角形の信号点を作る QLED CSK を、色度図・信号空間の距離・誤り率で比べる可視光通信のアクティビティ。">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --lb:#4D8CFF;--lc:#22D3EE;--ly:#FACC15;--lr:#FF4D5E;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:1060px;margin:0 auto;padding:28px 16px 72px}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:44em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+.num,.mono,table{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+
+.panel{background:var(--room);border-radius:14px;padding:14px 12px 12px;color:var(--silk);border:1px solid var(--edge)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.ph .t{font-family:var(--dot);font-size:1.1rem}
+.ph .s{font-family:var(--dot);font-size:.75rem;color:var(--silk-dim);text-align:right}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.9rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:8px 0 2px}
+.lab b{color:var(--silk);font-weight:400}
+input[type=range]{width:100%;accent-color:var(--led)}
+.btn{font:inherit;font-size:.9rem;font-weight:700;min-height:40px;padding:4px 14px;border-radius:8px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.seg{display:inline-flex;border:1.5px solid var(--edge);border-radius:9px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:inherit;font-size:.85rem;min-height:36px;padding:2px 12px;background:transparent;color:var(--silk-dim);border:0;border-right:1px solid var(--edge);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:#233050;color:var(--silk)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px 14px;align-items:end}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.note{margin-top:10px;font-size:.85rem;color:var(--silk-dim)}
+.note b{color:var(--silk);font-weight:400}
+canvas{display:block;width:100%;touch-action:manipulation}
+
+.g1{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:799px){.g1{grid-template-columns:minmax(0,1fr)}}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;font-size:.8rem;margin-top:6px}
+.bars .bar{height:12px;border-radius:6px;background:#1B2336;overflow:hidden}
+.bars .bar i{display:block;height:100%;width:0;transition:width .15s}
+.bars .n{font-family:var(--mono);font-size:.72rem;color:var(--silk-dim);min-width:3.4em;text-align:right}
+.sw{height:34px;border-radius:8px;border:1.5px solid var(--edge);margin-top:10px}
+.kv{font-size:.82rem;color:var(--silk-dim);margin-top:8px;line-height:1.7}
+.kv b{color:var(--silk);font-weight:400;font-family:var(--mono);font-size:.8rem}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--silk-dim);margin-top:6px}
+.leg i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:4px}
+
+table.dm{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:4px}
+.dm th,.dm td{padding:6px 8px;border-bottom:1px solid var(--edge);text-align:right;font-family:var(--mono);font-size:.8rem}
+.dm th{font-family:var(--body);font-weight:400;color:var(--silk-dim);font-size:.78rem}
+.dm td:first-child,.dm th:first-child{text-align:left;font-family:var(--body)}
+.dm .up{color:var(--ok)}
+.dm tr.cur td{background:#18223A}
+.tw{overflow-x:auto}
+
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:699px){.g2{grid-template-columns:minmax(0,1fr)}}
+.big{font-family:var(--dot);font-size:1.4rem;text-align:center;margin:6px 0 0}
+.big.ng{color:var(--bad)}.big.okc{color:var(--ok)}
+.sub{font-size:.78rem;color:var(--silk-dim);text-align:center}
+
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.15em 0}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px;padding-left:1.2em}
+.ref li{margin:.25em 0}
+.ref a{color:inherit}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../csk/">色で文字を送る(CSK / DCSK)</a></p>
+<h1>4色で色を送る</h1>
+<p class="lede">CSK は、LED の色を信号点にして送る変調方式です。IEEE 802.15.7 の CSK は、3色の LED で色度図の上に<b>三角形</b>を作り、その中に信号点を置きます(ここでは TLED と呼びます)。Singh らは、<b>青・シアン・黄・赤の4色</b>で<b>四角形</b>を作る方式を提案しました(QLED CSK)。このページでは2つを並べて、何が良くなるのかを確かめます。</p>
+
+<h2>① 三角形と四角形</h2>
+<p class="lede">色度図の上の信号点です。点を押すと、その色を出すために各 LED をどれだけ光らせるかが分かります。どちらの方式も、LED の光の合計はいつも同じです(1W)。そのため、色が変わっても明るさはちらつきません。</p>
+<div class="panel" id="p1">
+  <div class="row" style="justify-content:space-between">
+    <div class="row"><span class="seg" id="s1-sys" role="group" aria-label="方式"><button type="button" data-v="both" aria-pressed="true">両方</button><button type="button" data-v="T" aria-pressed="false">TLED (3色)</button><button type="button" data-v="Q" aria-pressed="false">QLED (4色)</button></span></div>
+    <span class="seg" id="s1-m" role="group" aria-label="信号点の数"><button type="button" data-v="4" aria-pressed="true">4-CSK</button><button type="button" data-v="8" aria-pressed="false">8-CSK</button><button type="button" data-v="16" aria-pressed="false">16-CSK</button></span>
+  </div>
+  <div class="g1">
+    <div class="side"><div class="h"><span>CIE 1931 色度図</span><span>点を押すと詳細</span></div><canvas id="c1" height="420"></canvas>
+      <div class="leg"><span><i style="border-color:#fff;border-top-style:dashed"></i>TLED の三角形</span><span><i style="border-color:#5EE7FF"></i>QLED の四角形</span><span>◇ = 信号点の平均の色</span></div></div>
+    <div class="side"><div class="h"><span id="d-title">信号点</span><span id="d-sys"></span></div>
+      <div class="bars" id="d-bars"></div>
+      <div class="sw" id="d-sw"></div>
+      <div class="kv" id="d-kv"></div>
+      <div class="note" id="d-note"></div>
+    </div>
+  </div>
+</div>
+
+<h2>② 距離を比べる</h2>
+<p class="lede">雑音に強いかどうかは、<b>いちばん近い信号点どうしの距離</b>(最小距離)で決まります。色度図の上では、四角形は三角形より少し広いだけです。ところが受信側は、色ではなく、色フィルタを付けた受光素子で<b>各 LED の強さ</b>を測ります。強さの空間(信号空間)で測ると、差ははっきり開きます。</p>
+<div class="panel">
+  <div class="tw"><table class="dm" id="dm"></table></div>
+  <div class="note">QLED の 4-CSK は、どのシンボルも LED を1色だけ光らせます。4つのシンボルは4次元の空間で互いに直交し、距離は √2 = 1.414 です。TLED の 4-CSK は、白 (1/3, 1/3, 1/3) が残りの3点に近く、距離は 0.816 です。4色目の LED が、信号を置く次元を1つ増やしています。</div>
+</div>
+
+<h2>③ 送って受ける</h2>
+<p class="lede">ランダムなシンボルを送り、LED の数と同じ数の受光素子で受けます。点は受けた強さを色度図に写したもので、赤は取り違えたシンボルです。条件は2つの方式で同じにしています。</p>
+<div class="panel" id="p3">
+  <div class="ctl">
+    <div><span class="lab">信号点の数</span><span class="seg" id="s3-m" role="group" aria-label="信号点の数"><button type="button" data-v="4" aria-pressed="false">4</button><button type="button" data-v="8" aria-pressed="false">8</button><button type="button" data-v="16" aria-pressed="true">16</button></span></div>
+    <label class="lab">SNR: <b id="snrv"></b><input type="range" id="snr" min="0" max="40" step="0.5" value="22" aria-label="SNR"></label>
+    <label class="lab">反射による遅延の広がり (÷ シンボル時間): <b id="dtv"></b><input type="range" id="dt" min="0" max="0.5" step="0.01" value="0" aria-label="遅延の広がり"></label>
+  </div>
+  <div class="ctl" style="margin-top:6px">
+    <div><span class="lab">受信部品</span><span class="seg" id="s3-g" role="group" aria-label="受信部品"><button type="button" data-v="0" aria-pressed="true">理想</button><button type="button" data-v="1" aria-pressed="false">損失ともれあり</button></span></div>
+    <div><span class="lab">判定のしかた</span><span class="seg" id="s3-det" role="group" aria-label="判定のしかた"><button type="button" data-v="sig" aria-pressed="true">強さで判定</button><button type="button" data-v="xy" aria-pressed="false">色度で判定</button></span></div>
+    <div class="row"><button class="btn" type="button" id="again">もう一度送る</button></div>
+  </div>
+  <div class="g2">
+    <div class="side"><div class="h"><span>TLED (3色)</span><span>受光素子 3つ</span></div><canvas id="c3t" height="300"></canvas><div class="big" id="ser-t"></div><div class="sub" id="sub-t"></div></div>
+    <div class="side"><div class="h"><span>QLED (4色)</span><span>受光素子 4つ</span></div><canvas id="c3q" height="300"></canvas><div class="big" id="ser-q"></div><div class="sub" id="sub-q"></div></div>
+  </div>
+  <div class="note" id="n3"></div>
+</div>
+
+<h2>④ 誤り率の曲線</h2>
+<p class="lede">③ と同じ条件で、SNR を変えたときのシンボル誤り率です。同じ誤り率 (0.1%) を出すのに必要な SNR を比べると、QLED がどれだけ得かが分かります。</p>
+<div class="panel">
+  <canvas id="c4" height="300"></canvas>
+  <div class="leg"><span><i style="border-color:#fff;border-top-style:dashed"></i>TLED</span><span><i style="border-color:#5EE7FF"></i>QLED</span><span><i style="border-color:#FFC53D;border-top-width:1px"></i>いまの SNR</span></div>
+  <div class="note" id="n4"></div>
+</div>
+
+<div class="after">見えたこと
+<ul>
+  <li><b>4色目は「次元」を増やす</b>。色度図では四角形は三角形より少し広いだけでも、強さの空間では次元が1つ増えるので、信号点どうしを大きく離せる。</li>
+  <li><b>一度に点ける LED は3色まで</b>。QLED は四角形を4つの三角形に分けて考え、それぞれの三角形の3色で色を作る。光の合計はいつも同じなので、ちらつかない。</li>
+  <li><b>判定は色度より強さで</b>。強さを色度 (x, y) に直すと雑音が混ざり合うので、強さのまま判定したほうが誤りが少ない。</li>
+  <li><b>反射にも強い</b>。部屋の反射で前のシンボルの光が残ると点がずれるが、点どうしが離れている QLED のほうが崩れにくい。</li>
+  <li><b>平均の色が白に近い</b>。QLED の信号点の平均は (0.33, 0.33) の白に近い。照明としても使いやすい。</li>
+  <li><b>代わりに部品が増える</b>。LED、フィルタ、受光素子が1組ずつ増える。</li>
+</ul>
+</div>
+<ul class="ref">
+  <li>QLED の4色の座標と、4・8・16-CSK の信号点(各 LED の強さ)は、R. Singh, T. O'Farrell, J. P. R. David, "An Enhanced Colour Shift Keying Modulation Scheme for High Speed Wireless Visible Light Communications", IEEE/OSA Journal of Lightwave Technology, 2014 (<a href="https://eprints.whiterose.ac.uk/97226/">著者版</a>) の Table I と Table V の値です。「損失ともれあり」の行列も、同じ論文の式 (12) (13) の値を、LED の並び順 (青から赤) に当てはめて使っています。</li>
+  <li>TLED は IEEE 802.15.7 の CSK で、上の論文と同じ色の組 (青 0.169, 0.007 / 黄 0.402, 0.597 / 赤 0.734, 0.265) です。4-CSK は3つの頂点と中心の4点です。8-CSK と 16-CSK は、規格の信号点の位置を確かめられませんでした。そこで、上の論文にある最小距離 (0.47 と 0.27) と同じになる格子の配置で代用しています。</li>
+  <li>色は、規格と同じく各 LED の強さの重み付き平均 (x = Σ P<sub>i</sub>x<sub>i</sub>) で計算しています。色度図の外周は CIE 1931 等色関数 (CIE, <a href="https://doi.org/10.25039/CIE.DS.xvudnb9b">DOI 10.25039/CIE.DS.xvudnb9b</a>, CC BY-SA 4.0) から計算しました。背景の色は目安です。</li>
+  <li>SNR は「LED の光の合計 (1W) と、受光素子1つあたりの雑音」の比 10 log<sub>10</sub>(1/σ²) としています。受光素子の感度は 1 A/W です。論文の横軸は E<sub>b</sub>/N<sub>0</sub> なので、dB の値はそのままは比べられません。論文では、QLED の利得は E<sub>b</sub>/N<sub>0</sub> で約 2.9〜4.4 dB と報告されています。</li>
+  <li>反射による遅延の広がりは、論文と同じ指数減衰のインパルス応答 (rms 遅延の広がり = 時定数の半分) で、等化はしていません。受信側は各シンボルの時間ぶん光を積分するものとしています。論文の D<sub>t</sub> はビット時間で割った値ですが、このページの受信モデルではその定義だと影響がほとんど出ないため、シンボル時間で割った値にしています。そのため、数値は論文と直接比べられません。</li>
+</ul>
+</main>
+
+<script>
+(function(){
+'use strict';
+function $(id){return document.getElementById(id)}
+var LOCUS=[[380, 0.1741, 0.005], [385, 0.174, 0.005], [390, 0.1738, 0.0049], [395, 0.1736, 0.0049], [400, 0.1733, 0.0048], [405, 0.173, 0.0048], [410, 0.1726, 0.0048], [415, 0.1721, 0.0048], [420, 0.1714, 0.0051], [425, 0.1703, 0.0058], [430, 0.1689, 0.0069], [435, 0.1669, 0.0086], [440, 0.1644, 0.0109], [445, 0.1611, 0.0138], [450, 0.1566, 0.0177], [455, 0.151, 0.0227], [460, 0.144, 0.0297], [465, 0.1355, 0.0399], [470, 0.1241, 0.0578], [475, 0.1096, 0.0868], [480, 0.0913, 0.1327], [485, 0.0687, 0.2007], [490, 0.0454, 0.295], [495, 0.0235, 0.4127], [500, 0.0082, 0.5384], [505, 0.0039, 0.6548], [510, 0.0139, 0.7502], [515, 0.0389, 0.812], [520, 0.0743, 0.8338], [525, 0.1142, 0.8262], [530, 0.1547, 0.8059], [535, 0.1929, 0.7816], [540, 0.2296, 0.7543], [545, 0.2658, 0.7243], [550, 0.3016, 0.6923], [555, 0.3374, 0.6588], [560, 0.3731, 0.6245], [565, 0.4087, 0.5896], [570, 0.4441, 0.5547], [575, 0.4788, 0.5202], [580, 0.5125, 0.4866], [585, 0.5448, 0.4544], [590, 0.5752, 0.4242], [595, 0.6029, 0.3965], [600, 0.627, 0.3725], [605, 0.6482, 0.3514], [610, 0.6658, 0.334], [615, 0.6801, 0.3197], [620, 0.6915, 0.3083], [625, 0.7006, 0.2993], [630, 0.7079, 0.292], [635, 0.714, 0.2859], [640, 0.719, 0.2809], [645, 0.723, 0.2769], [650, 0.726, 0.274], [655, 0.7283, 0.2717], [660, 0.73, 0.27], [665, 0.7311, 0.2689], [670, 0.732, 0.268], [675, 0.7327, 0.2673], [680, 0.7334, 0.2666], [685, 0.734, 0.266], [690, 0.7344, 0.2656], [695, 0.7346, 0.2654], [700, 0.7347, 0.2653]];
+var LEDS={B:{xy:[0.169,0.007],c:'#4D8CFF',n:'青'},C:{xy:[0.011,0.460],c:'#22D3EE',n:'シアン'},Y:{xy:[0.402,0.597],c:'#FACC15',n:'黄'},R:{xy:[0.734,0.265],c:'#FF4D5E',n:'赤'}};
+/* QLED: 論文 Table I / V (強さ B, C, Y, R) */
+var Q={4:[[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]],
+  8:[[1,0,0,0],[.5,.5,0,0],[0,.5,.5,0],[0,1,0,0],[.5,0,0,.5],[0,0,0,1],[0,0,1,0],[0,0,.5,.5]],
+  16:[[1,0,0,0],[.6667,.3333,0,0],[0,1,0,0],[.3333,.6667,0,0],[.6667,0,0,.3333],[.3787,.3247,0,.2966],[0,.6667,.3333,0],[.3202,.2915,.3882,0],
+      [0,0,0,1],[0,0,.3333,.6667],[0,0,1,0],[0,0,.6667,.3333],[.3333,0,0,.6667],[.2934,0,.3428,.3638],[0,.3333,.6667,0],[0,.3955,.2563,.3483]]};
+/* TLED: 4-CSK は頂点+中心。8・16 は論文の最小距離に合う格子 (強さ B, Y, R) */
+var T={4:[[1,0,0],[1/3,1/3,1/3],[0,0,1],[0,1,0]],8:[[1,0,0],[0,1,0],[0,0,1],[1/3,1/3,1/3],[2/3,0,1/3],[1/3,0,2/3],[2/3,1/3,0],[0,1/3,2/3]],16:[]};
+(function(){var i,j,k;for(i=3;i>=0;i--)for(j=0;j<=3-i;j++)T[16].push([i/3,j/3,(3-i-j)/3]);
+  for(i=0;i<3;i++)for(j=0;j<3;j++)for(k=0;k<3;k++)if(i+j+k===2)T[16].push([(i+1/3)/3,(j+1/3)/3,(k+1/3)/3])})();
+var SYS={T:{keys:['B','Y','R'],S:T,name:'TLED (3色)',G:[[0.271,0.030,0],[0,0.255,0],[0,0,0.200]]},
+         Q:{keys:['B','C','Y','R'],S:Q,name:'QLED (4色)',G:[[0.271,0.030,0,0],[0,0.255,0.002,0],[0,0.003,0.220,0.007],[0,0,0.003,0.200]]}};
+function chrom(p,keys){var s=0,x=0,y=0;for(var i=0;i<p.length;i++){s+=p[i];x+=p[i]*LEDS[keys[i]].xy[0];y+=p[i]*LEDS[keys[i]].xy[1]}if(s<=1e-9)return [1/3,1/3];return [x/s,y/s]}
+function dist(a,b){var s=0;for(var i=0;i<a.length;i++)s+=(a[i]-b[i])*(a[i]-b[i]);return Math.sqrt(s)}
+function dmin(L){var m=1e9;for(var i=0;i<L.length;i++)for(var j=i+1;j<L.length;j++)m=Math.min(m,dist(L[i],L[j]));return m}
+
+/* ---- 色 ---- */
+function xyToRgb(x,y,Yl){var X=x/y*Yl,Z=(1-x-y)/y*Yl,r=3.2406*X-1.5372*Yl-0.4986*Z,g=-0.9689*X+1.8758*Yl+0.0415*Z,b=0.0557*X-0.2040*Yl+1.0570*Z;
+  var mn=Math.min(r,g,b);if(mn<0){r-=mn;g-=mn;b-=mn}var mx=Math.max(r,g,b,1e-9);r/=mx;g/=mx;b/=mx;
+  function gm(v){return Math.round(255*(v<=0.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-0.055))}return [gm(r),gm(g),gm(b)]}
+function css(xy){var c=xyToRgb(xy[0],xy[1],1);return 'rgb('+c+')'}
+function inLocus(x,y){var n=LOCUS.length,c=false;for(var i=0,j=n-1;i<n;j=i++){var xi=LOCUS[i][1],yi=LOCUS[i][2],xj=LOCUS[j][1],yj=LOCUS[j][2];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c}return c}
+
+/* ---- 色度図 ---- */
+var bgCache={};
+function fit(cv){var r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1,h=+cv.getAttribute('height');var w=r.width;if(w<10)w=300;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);cv.style.height=h+'px';var x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return {x:x,w:w,h:h,dpr:dpr}}
+function Dia(cv){this.cv=cv}
+Dia.prototype.frame=function(){
+  var C=fit(this.cv),pad=28,W=C.w,H=C.h,sx=(W-pad-10)/0.8,sy=(H-pad-10)/0.9,s=Math.min(sx,sy);
+  this.C=C;this.s=s;this.ox=pad+((W-pad-10)-0.8*s)/2;this.oy=H-pad;
+  var self=this;this.X=function(x){return self.ox+x*s};this.Y=function(y){return self.oy-y*s};
+  var key=Math.round(W)+'x'+H+'@'+C.dpr,bg=bgCache[key];
+  if(!bg){bg=document.createElement('canvas');bg.width=C.x.canvas.width;bg.height=C.x.canvas.height;var bx=bg.getContext('2d'),img=bx.createImageData(bg.width,bg.height),d=img.data,step=2;
+    for(var py=0;py<bg.height;py+=step)for(var px=0;px<bg.width;px+=step){var x=(px/C.dpr-this.ox)/s,y=(this.oy-py/C.dpr)/s;if(y<=0.001||!inLocus(x,y))continue;var c=xyToRgb(x,y,1);
+      for(var dy=0;dy<step;dy++)for(var dx=0;dx<step;dx++){var o=((py+dy)*bg.width+(px+dx))*4;d[o]=c[0]*.55;d[o+1]=c[1]*.55;d[o+2]=c[2]*.55;d[o+3]=255}}
+    bx.putImageData(img,0,0);bgCache[key]=bg}
+  var x=C.x;x.clearRect(0,0,W,H);x.save();x.setTransform(1,0,0,1,0,0);x.drawImage(bg,0,0);x.restore();
+  x.strokeStyle='#26304A';x.lineWidth=1;x.font='10px "JetBrains Mono",monospace';x.fillStyle='#9AA6C2';x.textAlign='center';
+  for(var t=0;t<=0.8+1e-9;t+=0.2){x.beginPath();x.moveTo(this.X(t),this.oy);x.lineTo(this.X(t),this.oy+4);x.stroke();x.fillText(t.toFixed(1),this.X(t),this.oy+15)}
+  x.textAlign='right';for(t=0;t<=0.9+1e-9;t+=0.2){x.beginPath();x.moveTo(this.ox-4,this.Y(t));x.lineTo(this.ox,this.Y(t));x.stroke();x.fillText(t.toFixed(1),this.ox-6,this.Y(t)+3)}
+  x.strokeStyle='rgba(238,242,250,.55)';x.lineWidth=1.2;x.beginPath();LOCUS.forEach(function(p,i){var X=self.X(p[1]),Y=self.Y(p[2]);if(i)x.lineTo(X,Y);else x.moveTo(X,Y)});x.closePath();x.stroke();
+  x.fillStyle='rgba(238,242,250,.6)';x.textAlign='left';[460,480,490,500,520,540,580,600,620].forEach(function(l){var p=LOCUS.filter(function(q){return q[0]===l})[0];if(!p)return;
+    var dx=p[1]<0.3?-26:6,dy=p[2]>0.75?-4:3;x.fillText(l,self.X(p[1])+dx,self.Y(p[2])+dy)});
+  return x;
+};
+Dia.prototype.poly=function(keys,style){var x=this.C.x,self=this;x.save();x.strokeStyle=style.c;x.lineWidth=style.w||2;if(style.dash)x.setLineDash(style.dash);x.beginPath();
+  var order=keys.length===4?['B','C','Y','R']:['B','Y','R'];order.forEach(function(k,i){var p=LEDS[k].xy;if(i)x.lineTo(self.X(p[0]),self.Y(p[1]));else x.moveTo(self.X(p[0]),self.Y(p[1]))});x.closePath();x.stroke();x.restore()};
+Dia.prototype.vert=function(keys){var x=this.C.x,self=this;keys.forEach(function(k){var p=LEDS[k].xy,X=self.X(p[0]),Y=self.Y(p[1]);x.fillStyle=LEDS[k].c;x.beginPath();x.arc(X,Y,4,0,6.3);x.fill();
+  x.fillStyle='#EEF2FA';x.font='11px "Zen Kaku Gothic New",sans-serif';x.textAlign='left';x.fillText(LEDS[k].n,X+(k==='B'?12:8),Y+(k==='B'?12:k==='Y'?-10:4))})};
+Dia.prototype.pts=function(list,keys,o){var x=this.C.x,self=this,out=[];o=o||{};
+  list.forEach(function(p,i){var c=chrom(p,keys),X=self.X(c[0]),Y=self.Y(c[1]);out.push([X,Y]);
+    x.beginPath();if(o.sq){x.rect(X-o.r,Y-o.r,2*o.r,2*o.r)}else x.arc(X,Y,o.r||7,0,6.3);x.fillStyle=css(c);x.fill();x.lineWidth=i===o.sel?3:1.5;x.strokeStyle=i===o.sel?'#FFC53D':o.stroke||'#0D1320';x.stroke();
+    if(o.label){x.fillStyle='#0D1320';x.font='bold 9px "JetBrains Mono",monospace';x.textAlign='center';x.fillText(i,X,Y+3)}});return out};
+Dia.prototype.mean=function(list,keys,col){var sx=0,sy=0;list.forEach(function(p){var c=chrom(p,keys);sx+=c[0];sy+=c[1]});var X=this.X(sx/list.length),Y=this.Y(sy/list.length),x=this.C.x;
+  x.save();x.translate(X,Y);x.rotate(Math.PI/4);x.fillStyle=col;x.strokeStyle='#0D1320';x.lineWidth=1.5;x.fillRect(-5,-5,10,10);x.strokeRect(-5,-5,10,10);x.restore()};
+
+/* ================= ① ================= */
+var S1={sys:'both',M:4,selSys:'Q',sel:0,hit:[]};
+var d1=new Dia($('c1'));
+function seg(id,fn){var el=$(id);el.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(el.children,function(c){c.setAttribute('aria-pressed',c===b?'true':'false')});fn(b.dataset.v)})}
+function draw1(){
+  d1.frame();var show=S1.sys==='both'?['T','Q']:[S1.sys];S1.hit=[];
+  if(show.indexOf('T')>=0)d1.poly(['B','Y','R'],{c:'#fff',dash:[5,4],w:1.6});
+  if(show.indexOf('Q')>=0)d1.poly(['B','C','Y','R'],{c:'#5EE7FF',w:2});
+  d1.vert(show.indexOf('Q')>=0?['B','C','Y','R']:['B','Y','R']);
+  show.forEach(function(k){var sy=SYS[k],L=sy.S[S1.M];
+    var xy=d1.pts(L,sy.keys,{r:k==='Q'?8:6,sq:k==='T',sel:S1.selSys===k?S1.sel:-1,label:k==='Q'||S1.sys==='T',stroke:k==='T'?'#fff':'#0D1320'});
+    xy.forEach(function(p,i){S1.hit.push({k:k,i:i,x:p[0],y:p[1]})})});
+  show.forEach(function(k){var sy=SYS[k];d1.mean(sy.S[S1.M],sy.keys,k==='Q'?'#5EE7FF':'#fff')});
+  detail();
+}
+function detail(){
+  var k=S1.selSys,sy=SYS[k],L=sy.S[S1.M];if(S1.sel>=L.length)S1.sel=0;var p=L[S1.sel],c=chrom(p,sy.keys);
+  $('d-title').textContent='シンボル S'+S1.sel;$('d-sys').textContent=sy.name+' · '+S1.M+'-CSK';
+  var h='';['B','C','Y','R'].forEach(function(key){var i=sy.keys.indexOf(key);if(i<0)return;var v=p[i];
+    h+='<span style="color:'+LEDS[key].c+'">'+LEDS[key].n+'</span><div class="bar"><i style="width:'+(v*100).toFixed(1)+'%;background:'+LEDS[key].c+'"></i></div><span class="n">'+v.toFixed(3)+' W</span>'});
+  $('d-bars').innerHTML=h;$('d-sw').style.background=css(c);
+  var on=p.filter(function(v){return v>1e-6}).length;
+  $('d-kv').innerHTML='色度 (x, y) = <b>('+c[0].toFixed(3)+', '+c[1].toFixed(3)+')</b><br>光の合計 = <b>'+p.reduce(function(a,b){return a+b},0).toFixed(3)+' W</b> · 点いている LED = <b>'+on+' 色</b>';
+  $('d-note').textContent=k==='Q'?(on===1?'頂点のシンボルは LED を1色だけ光らせます。':on===2?'2色の間の線の上の色です。':'四角形の中の色は、4色のうち3色だけで作ります (4色を同時には点けません)。'):
+    (on===3&&S1.M===4?'中心の白は3色を同じ強さで光らせます。ほかの3点とは、強さの空間で 0.816 しか離れていません。':'三角形の中の色は、3色の強さの比で決まります。');
+}
+seg('s1-sys',function(v){S1.sys=v;if(v!=='both')S1.selSys=v;draw1()});
+seg('s1-m',function(v){S1.M=+v;S1.sel=0;draw1();drawDm()});
+$('c1').addEventListener('click',function(e){var r=this.getBoundingClientRect(),X=e.clientX-r.left,Y=e.clientY-r.top,b=null,bd=16;
+  S1.hit.forEach(function(q){var d=Math.hypot(q.x-X,q.y-Y);if(d<bd||(d===bd&&q.k===S1.selSys)){bd=d;b=q}});if(b){S1.selSys=b.k;S1.sel=b.i;draw1()}});
+
+/* ================= ② ================= */
+function drawDm(){
+  var h='<tr><th></th><th>TLED 色度</th><th>QLED 色度</th><th>TLED 強さ</th><th>QLED 強さ</th><th>強さの比</th></tr>';
+  [4,8,16].forEach(function(M){var t=T[M],q=Q[M],tx=dmin(t.map(function(p){return chrom(p,SYS.T.keys)})),qx=dmin(q.map(function(p){return chrom(p,SYS.Q.keys)})),ts=dmin(t),qs=dmin(q);
+    h+='<tr'+(M===S1.M?' class="cur"':'')+'><td>'+M+'-CSK</td><td>'+tx.toFixed(3)+'</td><td>'+qx.toFixed(3)+'</td><td>'+ts.toFixed(3)+'</td><td class="up">'+qs.toFixed(3)+'</td><td class="up">×'+(qs/ts).toFixed(2)+' ('+(20*Math.log10(qs/ts)).toFixed(1)+' dB)</td></tr>'});
+  $('dm').innerHTML=h;
+}
+
+/* ================= ③ ④ シミュレーション ================= */
+var S3={M:16,snr:22,dt:0,g:0,det:'sig',seed:1};
+function rng(seed){var s=seed>>>0;return function(){s=(s+0x6D2B79F5)>>>0;var t=s;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}}
+function inv(A){var n=A.length,M=A.map(function(r,i){return r.concat(A.map(function(_,j){return i===j?1:0}))});
+  for(var c=0;c<n;c++){var p=c;for(var r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;var t=M[c];M[c]=M[p];M[p]=t;var d=M[c][c];for(var j=0;j<2*n;j++)M[c][j]/=d;
+    for(r=0;r<n;r++)if(r!==c){var f=M[r][c];for(j=0;j<2*n;j++)M[r][j]-=f*M[c][j]}}return M.map(function(r){return r.slice(n)})}
+function mv(A,v){return A.map(function(r){var s=0;for(var i=0;i<v.length;i++)s+=r[i]*v[i];return s})}
+function taps(dt){if(dt<=0)return [1];var a=1/(2*dt),c=[],m=0;while(true){var v=Math.exp(-m*a)*(1-Math.exp(-a));if(v<1e-4||m>60)break;c.push(v);m++}return c}
+function run(sk,o,N,keep){
+  var sy=SYS[sk],L=sy.S[o.M],n=sy.keys.length,k=Math.log2(o.M),sig=Math.pow(10,-o.snr/20),c=taps(o.dt),G=o.g?sy.G:null,Gi=G?inv(G):null;
+  var Lxy=L.map(function(p){return chrom(p,sy.keys)}),r=rng(o.seed*7919+(sk==='Q'?1:2)+o.M*31),hist=[],err=0,pts=[];
+  function gs(){var u=1-r(),v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(6.283185307*v)}
+  for(var t=0;t<N;t++){var s=Math.floor(r()*o.M);hist.unshift(s);if(hist.length>c.length)hist.pop();
+    var rx=new Array(n).fill(0);for(var m=0;m<hist.length;m++){var p=L[hist[m]];for(var i=0;i<n;i++)rx[i]+=c[m]*p[i]}
+    if(G)rx=mv(G,rx);for(i=0;i<n;i++)rx[i]+=sig*gs();if(Gi)rx=mv(Gi,rx);
+    var best=0,bd=1e18;
+    if(o.det==='sig'){for(var j=0;j<o.M;j++){var d=0,q=L[j];for(i=0;i<n;i++)d+=(rx[i]-q[i])*(rx[i]-q[i]);if(d<bd){bd=d;best=j}}}
+    else{var cx=chrom(rx.map(function(v){return Math.max(v,0)}),sy.keys);for(j=0;j<o.M;j++){d=(cx[0]-Lxy[j][0])*(cx[0]-Lxy[j][0])+(cx[1]-Lxy[j][1])*(cx[1]-Lxy[j][1]);if(d<bd){bd=d;best=j}}}
+    var ok=best===s;if(!ok)err++;if(keep&&t<keep)pts.push({xy:chrom(rx.map(function(v){return Math.max(v,0)}),sy.keys),ok:ok})}
+  return {ser:err/N,err:err,N:N,pts:pts};
+}
+var dT=new Dia($('c3t')),dQ=new Dia($('c3q'));
+function fmtSer(r){return r.err===0?'0 %':r.ser<0.001?(r.ser*100).toFixed(3)+' %':r.ser<0.01?(r.ser*100).toFixed(2)+' %':(r.ser*100).toFixed(1)+' %'}
+var R3={};
+function sim3(){
+  $('snrv').textContent=S3.snr.toFixed(1)+' dB (雑音 σ = '+Math.pow(10,-S3.snr/20).toFixed(3)+')';
+  $('dtv').textContent=S3.dt===0?'0 (反射なし)':S3.dt.toFixed(2);
+  ['T','Q'].forEach(function(k){R3[k]=run(k,S3,20000,500)});
+  draw3();curve();
+}
+function draw3(){
+  [['T',dT,'ser-t','sub-t'],['Q',dQ,'ser-q','sub-q']].forEach(function(a){var k=a[0],d=a[1],sy=SYS[k],res=R3[k];d.frame();
+    d.poly(sy.keys,{c:k==='Q'?'#5EE7FF':'#fff',dash:k==='T'?[5,4]:null,w:1.5});
+    var x=d.C.x;
+    res.pts.forEach(function(p){x.fillStyle=p.ok?'rgba(238,242,250,.35)':'rgba(255,107,122,.95)';x.beginPath();x.arc(d.X(p.xy[0]),d.Y(p.xy[1]),p.ok?1.6:2.4,0,6.3);x.fill()});
+    d.pts(sy.S[S3.M],sy.keys,{r:4.5,sq:k==='T',stroke:'#0D1320'});
+    $(a[2]).textContent='誤り '+fmtSer(res);$(a[2]).className='big '+(res.ser<0.001?'okc':res.ser>0.05?'ng':'');
+    $(a[3]).textContent=res.err+' / '+res.N+' シンボル · 最小距離 (強さ) '+dmin(sy.S[S3.M]).toFixed(3)});
+  var t=R3.T.ser,q=R3.Q.ser,msg='';
+  if(t===0&&q===0)msg='どちらも誤りなし。SNR を下げるか、遅延の広がりを増やしてみてください。';
+  else if(q===0)msg='同じ条件で、TLED は '+R3.T.err+' 個取り違え、QLED は1つも取り違えませんでした。';
+  else if(q<t)msg='同じ条件で、QLED の誤りは TLED の '+(q/t<0.01?'1/'+Math.round(t/q):(q/t*100).toFixed(0)+'%')+' です。';
+  else msg='この条件では、TLED と QLED の差は小さくなっています。';
+  if(S3.det==='xy')msg+=' 色度で判定すると、強さで判定するより誤りが増えます。強さを色度に直すと、各受光素子の雑音が混ざるためです。';
+  if(S3.g)msg+=' 「損失ともれあり」では、フィルタと受光素子で光が 2〜3 割しか届かず、その分だけ SNR が下がったのと同じになります。';
+  if(S3.dt>0)msg+=' 遅延の広がりがあると前のシンボルの光が残り、点がずれます (等化なし)。';
+  $('n3').textContent=msg;
+}
+/* ④ 曲線 */
+var curveJob=0;
+function curve(){
+  var job=++curveJob,o=Object.assign({},S3),snrs=[],res={T:[],Q:[]};for(var s=0;s<=40;s+=2)snrs.push(s);
+  var i=0;
+  function stepFn(){if(job!==curveJob)return;var t0=performance.now();
+    while(i<snrs.length&&performance.now()-t0<30){var oo=Object.assign({},o,{snr:snrs[i]});['T','Q'].forEach(function(k){var prev=res[k][i-1];res[k][i]=prev===0?0:run(k,oo,prev!=null&&prev<0.01?20000:5000,0).ser});i++}
+    drawCurve(snrs,res,o);if(i<snrs.length)setTimeout(stepFn,0)}
+  stepFn();
+}
+function need(snrs,arr,target){for(var i=1;i<arr.length;i++){if(arr[i]!=null&&arr[i-1]!=null&&arr[i]<=target&&arr[i-1]>target){var a=Math.log10(Math.max(arr[i-1],1e-9)),b=Math.log10(Math.max(arr[i],1e-6)),t=Math.log10(target);return snrs[i-1]+(snrs[i]-snrs[i-1])*(a-t)/(a-b)}}return null}
+function drawCurve(snrs,res,o){
+  var C=fit($('c4')),x=C.x,W=C.w,H=C.h,l=46,rr=W-10,tp=10,bt=H-34;x.clearRect(0,0,W,H);x.font='10px "JetBrains Mono",monospace';
+  function X(s){return l+s/40*(rr-l)}function Y(p){var v=Math.max(1e-5,p);return tp+(-Math.log10(v))/5*(bt-tp)}
+  x.strokeStyle='#1B2336';x.fillStyle='#9AA6C2';x.textAlign='right';
+  [1,1e-1,1e-2,1e-3,1e-4,1e-5].forEach(function(p,i){var y=Y(p);x.beginPath();x.moveTo(l,y);x.lineTo(rr,y);x.stroke();x.fillText(i===5?'≦0.001%':['100%','10%','1%','0.1%','0.01%'][i],l-4,y+3)});
+  x.textAlign='center';for(var s=0;s<=40;s+=5){x.fillText(s,X(s),bt+13)}x.fillText('SNR (dB)',(l+rr)/2,bt+27);
+  x.strokeStyle='#FFC53D';x.lineWidth=1;x.beginPath();x.moveTo(X(o.snr),tp);x.lineTo(X(o.snr),bt);x.stroke();
+  x.strokeStyle='rgba(255,197,61,.35)';x.setLineDash([2,3]);x.beginPath();x.moveTo(l,Y(1e-3));x.lineTo(rr,Y(1e-3));x.stroke();x.setLineDash([]);
+  [['T','#fff',[6,4]],['Q','#5EE7FF',null]].forEach(function(a){var arr=res[a[0]];x.strokeStyle=a[1];x.lineWidth=2;if(a[2])x.setLineDash(a[2]);x.beginPath();var started=false;
+    for(var i=0;i<arr.length;i++){if(arr[i]==null)break;var y=Y(arr[i]);if(!started){x.moveTo(X(snrs[i]),y);started=true}else x.lineTo(X(snrs[i]),y);if(arr[i]===0)break}x.stroke();x.setLineDash([])});
+  var nt=need(snrs,res.T,1e-3),nq=need(snrs,res.Q,1e-3);
+  $('n4').innerHTML=(o.M)+'-CSK · 遅延の広がり '+o.dt.toFixed(2)+' · '+(o.g?'損失ともれあり':'理想の受信部品')+' · '+(o.det==='sig'?'強さで判定':'色度で判定')+'<br>誤り率 0.1% に必要な SNR: TLED <b>'+(nt==null?'40 dB でも届かない':nt.toFixed(1)+' dB')+'</b>、QLED <b>'+(nq==null?'40 dB でも届かない':nq.toFixed(1)+' dB')+'</b>'+
+    (nt!=null&&nq!=null?' → QLED のほうが <b>'+(nt-nq).toFixed(1)+' dB</b> 少なくて済む':nt==null&&nq!=null?' → TLED はこの範囲では届かない':'');
+}
+
+/* ---- 操作 ---- */
+seg('s3-m',function(v){S3.M=+v;sim3()});
+seg('s3-g',function(v){S3.g=+v;sim3()});
+seg('s3-det',function(v){S3.det=v;sim3()});
+var tmr=null;function later(){clearTimeout(tmr);tmr=setTimeout(sim3,60)}
+$('snr').addEventListener('input',function(){S3.snr=+this.value;later()});
+$('dt').addEventListener('input',function(){S3.dt=+this.value;later()});
+$('again').addEventListener('click',function(){S3.seed++;sim3()});
+var rs=null;window.addEventListener('resize',function(){clearTimeout(rs);rs=setTimeout(function(){draw1();draw3()},120)});
+
+draw1();drawDm();sim3();
+})();
+</script>
+</body>
+</html>
