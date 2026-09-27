@@ -11,6 +11,7 @@ https://ishichan0819.github.io/
   - [内部をのぞく](https://ishichan0819.github.io/computer-basics/naibu-wo-nozoku.html) — キーボードを打つと内部の回路を電気が走り、モニターに文字が出るアクティビティ
 - [Visible Light: 光で文字を送る](https://ishichan0819.github.io/visible-light/) — LEDの点滅で文字を送って復号する、可視光通信(Li-Fi)のアクティビティ
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
+- [スマホ同士で光通信](https://ishichan0819.github.io/screen-camera/) — 1台の画面の色を切り替えて文字を送り、もう1台のカメラで読み取る画面→カメラ通信。色を必ず変える差動符号、パケットごとの色の見本による色較正、CRC つき。カメラの映像は端末の中だけで処理し、カメラなしで試すモードもある
 - [QLED CSK: 4色で色を送る](https://ishichan0819.github.io/qled-csk/) — IEEE 802.15.7 の3色 CSK (TLED) と、青・シアン・黄・赤の4色 LED で信号点を四角形に置く QLED CSK (Singh ら, 2014) を、CIE 1931 色度図、信号空間の最小距離、シンボル誤り率 (SNR・反射による遅延の広がり・受信部品の損失・判定方法) で比べるアクティビティ
 - [Indoor VLC: 部屋じゅうに光を届ける](https://ishichan0819.github.io/indoor-vlc/) — 天井のLED照明から部屋のあちこちへ光でデータを届ける室内可視光通信のシミュレータ。照度とSNRの地図、壁の反射による遅延の広がり、人の影とハンドオーバー
 - [Optical OFDM: 狭い帯域で速く送る](https://ishichan0819.github.io/ofdm/) — 帯域が数MHzしかないLEDで速く送る光OFDMのアクティビティ。OOKのアイパターン、エルミート対称、DCO/ACO-OFDMのBER比較、ビット割り当て

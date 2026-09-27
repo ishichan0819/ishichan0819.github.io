@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スマホ同士で光通信</title>
+<meta name="description" content="1台の画面の色を切り替えて文字を送り、もう1台のカメラで受けて読み取る。ブラウザだけで動く、本物の可視光通信(画面→カメラ通信)。">
+<meta name="theme-color" content="#070A12">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  --page:#EEF1F6;--ink:#141A2B;--muted:#59627A;
+  --room:#101826;--room-deep:#0A101B;--edge:#26304A;
+  --led:#FFC53D;--wave:#5EE7FF;--ok:#5CE39A;--bad:#FF6B7A;
+  --silk:#EEF2FA;--silk-dim:#9AA6C2;
+  --dot:"DotGothic16","Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,monospace;
+  --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}}
+:root[data-theme="dark"]{--page:#070A12;--ink:#E7EBF5;--muted:#9AA6C2;--room:#0E1522;--room-deep:#080D17}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.8}
+main{max-width:980px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top,0px)) 16px calc(72px + env(safe-area-inset-bottom,0px))}
+.top{font-size:.85rem;margin:0 0 10px}
+.top a{color:var(--muted);text-decoration:none}
+.top a:hover{color:var(--ink);text-decoration:underline}
+h1{font-family:var(--dot);font-weight:400;font-size:clamp(2rem,9vw,3rem);line-height:1.2;margin:0 0 .3em}
+h2{font-family:var(--dot);font-weight:400;font-size:1.4rem;margin:36px 0 10px}
+.lede{color:var(--muted);margin:0 0 18px;max-width:44em}
+:focus-visible{outline:3px solid var(--led);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:0 0 18px;padding:0;list-style:none;counter-reset:s}
+.steps li{background:var(--room);color:var(--silk);border:1px solid var(--edge);border-radius:12px;padding:10px 12px;font-size:.88rem;counter-increment:s}
+.steps li::before{content:counter(s);font-family:var(--dot);display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--led);color:#1A1200;margin-right:8px}
+
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;font:inherit;font-weight:700;font-size:1rem;min-height:52px;border-radius:12px;border:1.5px solid var(--edge);background:var(--room);color:var(--silk-dim);cursor:pointer}
+.tabs button[aria-selected="true"]{border-color:var(--led);color:var(--silk);background:#1A2338}
+.panel{background:var(--room);border-radius:14px;padding:14px 12px;color:var(--silk);border:1px solid var(--edge)}
+.side{background:var(--room-deep);border-radius:10px;padding:12px;border:1px solid var(--edge);min-width:0}
+.side .h{font-family:var(--dot);font-size:.9rem;color:var(--silk-dim);margin-bottom:8px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.lab{display:block;font-size:.8rem;color:var(--silk-dim);margin:10px 0 4px}
+.lab b{color:var(--silk);font-weight:400}
+input[type=text]{width:100%;font:inherit;font-size:1.1rem;padding:9px 12px;border-radius:10px;border:1.5px solid var(--edge);background:var(--room-deep);color:var(--silk)}
+input[type=range]{width:100%;accent-color:var(--led)}
+.seg{display:inline-flex;border:1.5px solid var(--edge);border-radius:9px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:inherit;font-size:.85rem;min-height:40px;padding:2px 12px;background:transparent;color:var(--silk-dim);border:0;border-right:1px solid var(--edge);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:#233050;color:var(--silk)}
+.btn{font:inherit;font-size:.95rem;font-weight:700;min-height:48px;padding:6px 18px;border-radius:10px;cursor:pointer;background:transparent;color:var(--silk);border:1.5px solid var(--silk)}
+.btn.pri{background:var(--led);border-color:var(--led);color:#1A1200}
+.btn:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.warn{margin-top:12px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--bad);background:rgba(255,107,122,.08);font-size:.85rem;color:var(--silk)}
+.warn b{color:var(--bad)}
+.est{font-size:.85rem;color:var(--silk-dim);margin-top:8px}
+.est b{color:var(--silk);font-weight:400;font-family:var(--mono)}
+.cnt{font-family:var(--mono);font-size:.75rem;color:var(--silk-dim);text-align:right;margin-top:2px}
+.cnt.over{color:var(--bad)}
+
+/* 送信画面 */
+#stage{position:fixed;inset:0;z-index:50;background:#000;display:none;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;touch-action:manipulation}
+#stage.on{display:flex}
+#sq{width:min(80vw,80vh);height:min(80vw,80vh);border-radius:6px;background:#fff}
+#stage.full #sq{width:100vw;height:100vh;border-radius:0}
+#cap{position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom,0px));text-align:center;font-size:.8rem;color:#777;font-family:var(--body)}
+#stage.full #cap{color:rgba(0,0,0,.55);text-shadow:0 0 3px rgba(255,255,255,.4)}
+
+/* 受信 */
+.rxg{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:759px){.rxg{grid-template-columns:minmax(0,1fr)}}
+.view{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:4/3;touch-action:manipulation}
+.view video,.view canvas.src{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.view canvas.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.view .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--silk-dim);font-size:.9rem}
+.now{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.now .sw{width:56px;height:56px;border-radius:10px;border:2px solid var(--edge)}
+.now .st{font-size:.9rem}
+.now .st b{display:block;font-family:var(--dot);font-weight:400;font-size:1.05rem;color:var(--silk)}
+.now .st span{color:var(--silk-dim);font-size:.8rem}
+.screen{margin-top:10px;background:#070B14;border:1.5px solid var(--edge);border-radius:10px;padding:10px 12px;min-height:3.2em;font-family:var(--dot);font-size:1.4rem;line-height:1.4;word-break:break-all;white-space:pre-wrap}
+.screen.ok{border-color:var(--ok)}.screen.ng{border-color:var(--bad)}
+.prog{height:8px;border-radius:4px;background:#1B2336;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;width:0;background:var(--wave);transition:width .1s}
+.stats{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--silk-dim);margin-top:8px}
+.stats b{color:var(--silk);font-weight:400;font-family:var(--mono)}
+.hist{margin:8px 0 0;padding:0;list-style:none;font-size:.82rem}
+.hist li{display:flex;gap:8px;padding:3px 0;border-top:1px solid var(--edge);color:var(--silk-dim)}
+.hist li b{font-weight:400;color:var(--silk);word-break:break-all}
+.hist .ok{color:var(--ok)}.hist .ng{color:var(--bad)}
+.hint{font-size:.82rem;color:var(--led);min-height:1.3em;margin-top:6px}
+canvas.strip{display:block;width:100%;height:46px;margin-top:10px;border-radius:6px;background:#070B14}
+details.adj{margin-top:10px;font-size:.85rem;color:var(--silk-dim)}
+details.adj summary{cursor:pointer}
+
+/* 仕組み */
+.fmt{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}
+.fmt span{font-size:.78rem;padding:6px 8px;border-radius:6px;border:1px solid var(--edge);background:#151D2E;color:var(--silk)}
+.fmt .w{background:#EEF2FA;color:#141A2B}
+.after{margin-top:22px;padding-left:14px;border-left:3px solid var(--led);font-size:.95rem}
+.after ul{margin:.4em 0 0;padding-left:1.4em}
+.after li{margin:.2em 0}
+.ref{font-size:.8rem;color:var(--muted);margin-top:14px;padding-left:1.2em}
+.ref li{margin:.25em 0}
+</style>
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a> · <a href="../csk/">色で文字を送る(CSK)</a></p>
+<h1>スマホ同士で光通信</h1>
+<p class="lede">ほかのページはシミュレーションでしたが、ここでは<b>本当に光でデータを送ります</b>。1台の画面の色を切り替えて文字を送り、もう1台のカメラでその色を読み取ります。電波もネットも使わず、光だけで届きます。スマホ2台、またはパソコンとスマホで試せます。</p>
+<ol class="steps">
+  <li>送る側でこのページを開き、「送る」で文字を入れて送信を始める</li>
+  <li>受ける側でこのページを開き、「受ける」でカメラを起動する</li>
+  <li>送る側の画面の色が、カメラの枠の中に入るように向ける (20〜40cm)</li>
+</ol>
+
+<div class="tabs" role="tablist">
+  <button type="button" role="tab" id="t-tx" aria-selected="true" aria-controls="p-tx">📤 送る</button>
+  <button type="button" role="tab" id="t-rx" aria-selected="false" aria-controls="p-rx">📷 受ける</button>
+</div>
+
+<section class="panel" id="p-tx" role="tabpanel" aria-labelledby="t-tx">
+  <label class="lab" for="msg">送る文字 (32バイトまで。日本語は1文字3バイト)</label>
+  <input type="text" id="msg" value="Hi Li-Fi" autocomplete="off" spellcheck="false">
+  <div class="cnt" id="msgc"></div>
+  <div class="row" style="gap:18px;align-items:flex-end">
+    <div><span class="lab">色の数</span><span class="seg" id="tx-k" role="group" aria-label="色の数"><button type="button" data-v="5" aria-pressed="true">5色 (速い)</button><button type="button" data-v="3" aria-pressed="false">3色 (確実)</button></span></div>
+    <div><span class="lab">1色を出す時間</span><span class="seg" id="tx-t" role="group" aria-label="1色を出す時間"><button type="button" data-v="400" aria-pressed="false">0.4秒</button><button type="button" data-v="250" aria-pressed="true">0.25秒</button><button type="button" data-v="170" aria-pressed="false">0.17秒</button><button type="button" data-v="120" aria-pressed="false">0.12秒</button></span></div>
+    <div><span class="lab">表示</span><span class="seg" id="tx-s" role="group" aria-label="表示の大きさ"><button type="button" data-v="sq" aria-pressed="true">大きな四角</button><button type="button" data-v="full" aria-pressed="false">画面全体</button></span></div>
+  </div>
+  <div class="est" id="est"></div>
+  <div class="warn"><b>点滅に注意</b>: 送信中は画面の色が1秒に数回切り替わります。光の点滅で気分が悪くなったことがある人、光過敏性発作の心配がある人は使わないでください。見続けず、受ける側のカメラに向けて置いてください。</div>
+  <div class="row" style="margin-top:12px"><button class="btn pri" type="button" id="go">送信を始める (点滅します)</button></div>
+  <p class="est">送信中は同じ文字をくり返し送ります。画面をタップすると止まります。画面の明るさは最大にしてください。</p>
+</section>
+
+<section class="panel" id="p-rx" role="tabpanel" aria-labelledby="t-rx" hidden>
+  <div class="row"><button class="btn pri" type="button" id="cam">📷 カメラを起動</button><button class="btn" type="button" id="sim">カメラなしで試す</button><button class="btn" type="button" id="stop" disabled>止める</button></div>
+  <div class="rxg">
+    <div>
+      <div class="view" id="view"><video id="vid" playsinline muted autoplay hidden></video><canvas class="src" id="simc" width="320" height="240" hidden></canvas><canvas class="ov" id="ov"></canvas>
+        <div class="msg" id="vmsg">「カメラを起動」を押してください。<br>カメラが使えないときは「カメラなしで試す」で、この画面の中だけで送受信を試せます。</div></div>
+      <div class="est">枠の中の色の平均を読みます。映像をタップすると枠が動きます。</div>
+      <canvas class="strip" id="strip"></canvas>
+      <div class="est">↑ 読み取った色の並び (右ほど新しい)。W = 白、数字 = 色の番号</div>
+    </div>
+    <div class="side">
+      <div class="now"><div class="sw" id="sw"></div><div class="st"><b id="state">待機中</b><span id="sub"></span></div></div>
+      <div class="prog"><i id="prog"></i></div>
+      <div class="screen" id="out"></div>
+      <div class="hint" id="hint"></div>
+      <div class="stats" id="stats"></div>
+      <ul class="hist" id="hist"></ul>
+      <details class="adj"><summary>調整</summary>
+        <label class="lab">色の変化を見分ける感度: <b id="thv"></b><input type="range" id="th" min="0.015" max="0.12" step="0.005" value="0.04" aria-label="感度"></label>
+        <div class="est">小さいほど小さな色の変化でも「切り替わった」と判断します。誤って切り替わりを数えるときは大きくしてください。</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<div id="stage" role="button" aria-label="送信を止める"><div id="sq"></div><div id="cap"></div></div>
+
+<h2>しくみ</h2>
+<p class="lede">送る側は、1回分のデータ (パケット) を次の順に色で出して、それをくり返します。</p>
+<div class="panel">
+  <div class="fmt"><span class="w">白 (区切り)</span><span>使う色を順に1回ずつ</span><span>長さ 1バイト</span><span>文字 (UTF-8)</span><span>CRC 1バイト</span><span class="w">白</span></div>
+  <ul style="margin:10px 0 0;padding-left:1.3em;font-size:.9rem;color:var(--silk)">
+    <li><b>色を必ず変える</b>: 次の色を「今の色以外のどれにするか」でビットを表します。3色なら残り2色で1ビット、5色なら残り4色で2ビットです。同じ色が続かないので、受ける側は色が変わるたびに1シンボルと数えられます。送る側と時計を合わせる必要がありません。</li>
+    <li><b>最初に色を見せる</b>: カメラによって色の見え方 (ホワイトバランスや明るさ) が違います。そこで白の直後に使う色を順に見せ、受ける側はその見え方を覚えてから読みます。「色で文字を送る」の CSK の色較正と同じ考え方です。</li>
+    <li><b>CRC で確かめる</b>: 最後の1バイトで、途中で読み間違えていないかを確かめます。合わなければ捨てて、次のくり返しを待ちます。</li>
+    <li><b>なぜ遅いか</b>: カメラは1秒に30枚ほどしか撮れません。色の切り替わりの途中を撮った1枚は混ざった色になるので、1色を2枚以上続けて撮れたときだけ数えています。そのため1色に0.1秒以上かかり、速さは1秒に数〜十数ビットです。</li>
+  </ul>
+</div>
+
+<div class="after">試してみよう
+<ul>
+  <li>1色の時間を短くしていくと、どこで読めなくなるか。受ける側に出る「1秒あたりのフレーム数」と比べてみる。</li>
+  <li>3色と5色で、読み違いの多さを比べる。色が多いほど速いが、似た色 (赤と黄、青と紫) を取り違えやすい。</li>
+  <li>部屋を暗くする、離す、斜めから撮る。画面が明るすぎて白く飛ぶと、色が読めなくなる。</li>
+  <li>本物の可視光通信 (Li-Fi) は、人の目に見えないほど速く LED を点滅させて、1秒に数百万ビット以上を送る。カメラより速い受光素子を使うため。</li>
+</ul>
+</div>
+<ul class="ref">
+  <li>カメラの映像はこの端末の中だけで処理します。どこにも送りません。</li>
+  <li>カメラを使うには、ブラウザでカメラの使用を許可してください。https のページでだけ使えます。端末やブラウザによって、1秒あたりのフレーム数や色の見え方が違います。</li>
+  <li>「カメラなしで試す」は、この画面の中に送る側と、色が少しくすんで揺らぐ仮想のカメラ (1秒に30枚) を作り、同じ読み取りの処理にかけます。</li>
+</ul>
+</main>
+
+<script>
+(function(){
+'use strict';
+function $(id){return document.getElementById(id)}
+var PAL={R:[255,0,0],G:[0,255,0],B:[0,0,255],Y:[255,255,0],M:[255,0,255],W:[255,255,255]};
+var ORDER={3:['R','G','B'],5:['B','G','R','Y','M']};
+var MAXB=32;
+function crc8(a){var c=0;for(var j=0;j<a.length;j++){c^=a[j];for(var i=0;i<8;i++)c=c&0x80?((c<<1)^0x07)&0xff:(c<<1)&0xff}return c}
+function utf8(s){return new TextEncoder().encode(s)}
+function clip(s){var o='';for(var ch of s){if(utf8(o+ch).length>MAXB)break;o+=ch}return o}
+function encode(text,K){
+  var u=Array.from(utf8(clip(text))),bytes=[u.length].concat(u);bytes.push(crc8(bytes));
+  var bits=[];bytes.forEach(function(b){for(var i=7;i>=0;i--)bits.push((b>>i)&1)});
+  var syms=[],prev=K-1,bp=K===3?1:2;
+  for(var i=0;i<bits.length;i+=bp){var v=bp===1?bits[i]:(bits[i]<<1)|bits[i+1],nx=(prev+1+v)%K;syms.push(nx);prev=nx}
+  return {bytes:bytes,syms:syms};
+}
+function schedule(text,K,T){var o=[{c:'W',d:Math.max(900,4*T)}];ORDER[K].forEach(function(c){o.push({c:c,d:T})});encode(text,K).syms.forEach(function(s){o.push({c:ORDER[K][s],d:T})});
+  var tot=0;o.forEach(function(e){e.t0=tot;tot+=e.d});return {list:o,total:tot}}
+function colorAt(S,t){t=((t%S.total)+S.total)%S.total;var L=S.list,lo=0,hi=L.length-1;while(lo<hi){var m=(lo+hi+1)>>1;if(L[m].t0<=t)lo=m;else hi=m-1}return L[lo].c}
+function seg(id,fn){var el=$(id);el.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;[].forEach.call(el.children,function(c){c.setAttribute('aria-pressed',c===b?'true':'false')});fn(b.dataset.v)})}
+
+/* ---- タブ ---- */
+function tab(which){['tx','rx'].forEach(function(k){$('t-'+k).setAttribute('aria-selected',k===which?'true':'false');$('p-'+k).hidden=k!==which})}
+$('t-tx').addEventListener('click',function(){tab('tx')});$('t-rx').addEventListener('click',function(){tab('rx')});
+
+/* ================= 送る ================= */
+var TX={K:5,T:250,size:'sq',run:false,S:null,t0:0,lock:null};
+function est(){var t=$('msg').value,c=clip(t),n=utf8(c).length,e=encode(c,TX.K),S=schedule(c,TX.K,TX.T),bp=TX.K===3?1:2;
+  $('msgc').textContent=utf8(t).length+' / '+MAXB+' バイト'+(c!==t?' (入りきらない分は送りません)':'');$('msgc').className='cnt'+(c!==t?' over':'');
+  $('est').innerHTML='1回分: <b>'+e.syms.length+'</b> シンボル · 約 <b>'+(S.total/1000).toFixed(1)+' 秒</b> (区切りと色の見本を含む) · 速さ <b>'+(bp*1000/TX.T).toFixed(1)+' bps</b>'}
+$('msg').addEventListener('input',est);
+seg('tx-k',function(v){TX.K=+v;est()});seg('tx-t',function(v){TX.T=+v;est()});seg('tx-s',function(v){TX.size=v});
+function txStart(){
+  TX.S=schedule($('msg').value,TX.K,TX.T);TX.t0=performance.now();TX.run=true;
+  var st=$('stage');st.className='on'+(TX.size==='full'?' full':'');
+  try{if(st.requestFullscreen)st.requestFullscreen().catch(function(){})}catch(e){}
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){TX.lock=l}).catch(function(){})}catch(e){}
+  requestAnimationFrame(txLoop);
+}
+function txStop(){TX.run=false;$('stage').className='';try{if(document.fullscreenElement)document.exitFullscreen().catch(function(){})}catch(e){}try{if(TX.lock){TX.lock.release();TX.lock=null}}catch(e){}}
+function txLoop(now){if(!TX.run)return;var t=now-TX.t0,c=colorAt(TX.S,t);$('sq').style.background='rgb('+PAL[c]+')';
+  $('cap').textContent='送信中 · '+(Math.floor(t/TX.S.total)+1)+' 回目 · タップで止める';requestAnimationFrame(txLoop)}
+$('go').addEventListener('click',txStart);$('stage').addEventListener('click',txStop);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&TX.run)txStop()});
+est();
+
+/* ================= 受ける ================= */
+var RX={on:false,mode:'',stream:null,roi:{x:.5,y:.5,s:.28},th:.04,
+  cur:null,cand:null,segs:[],st:'wait',pal:[],K:0,prev:0,bits:[],need:0,w:null,
+  fps:0,fc:0,fcT:0,last:null,ok:0,ng:0,segFrames:[],lastT:0,hot:0,dark:0};
+var gc=document.createElement('canvas');gc.width=16;gc.height=16;var gx=gc.getContext('2d',{willReadFrequently:true});
+function grab(src,w,h){var s=Math.min(w,h)*RX.roi.s,sx=Math.max(0,Math.min(w-s,RX.roi.x*w-s/2)),sy=Math.max(0,Math.min(h-s,RX.roi.y*h-s/2));
+  gx.drawImage(src,sx,sy,s,s,0,0,16,16);var d=gx.getImageData(0,0,16,16).data,r=0,g=0,b=0,n=d.length/4,hot=0;
+  for(var i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];if(d[i]>250&&d[i+1]>250&&d[i+2]>250)hot++}return {rgb:[r/n,g/n,b/n],hot:hot/n}}
+function chroma(c){var s=c[0]+c[1]+c[2]||1;return [c[0]/s,c[1]/s,c[2]/s]}
+function sat(c){var mx=Math.max(c[0],c[1],c[2]),mn=Math.min(c[0],c[1],c[2]);return mx>0?(mx-mn)/mx:0}
+function dist(a,b){return Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2])}
+function newSeg(f){return {n:1,cs:f.c.slice(),rs:f.rgb.slice(),mean:f.c.slice(),raw:f.rgb.slice(),t0:f.t,t1:f.t}}
+function addSeg(s,f){s.n++;for(var i=0;i<3;i++){s.cs[i]+=f.c[i];s.rs[i]+=f.rgb[i];s.mean[i]=s.cs[i]/s.n;s.raw[i]=s.rs[i]/s.n}s.t1=f.t}
+function wb(c){if(!RX.w)return c;var v=[c[0]/RX.w[0],c[1]/RX.w[1],c[2]/RX.w[2]],s=v[0]+v[1]+v[2];return [v[0]/s,v[1]/s,v[2]/s]}
+function classify(c){var b=-1,bd=1e9,cc=wb(c);RX.pal.forEach(function(p,i){var d=dist(cc,p);if(d<bd){bd=d;b=i}});return b}
+function isWhite(s){return sat(s.raw)<0.2&&(s.t1-s.t0)>=300}
+function frame(rgb,t,hot){
+  var sum=rgb[0]+rgb[1]+rgb[2];
+  RX.fc++;if(t-RX.fcT>=1000){RX.fps=RX.fc*1000/(t-RX.fcT);RX.fc=0;RX.fcT=t}
+  RX.hot=RX.hot*0.9+(hot>0.5?0.1:0);RX.dark=RX.dark*0.9+(sum<45?0.1:0);
+  var f={rgb:rgb,c:chroma(rgb),t:t};RX.last=f;
+  if(sum<45){return}
+  if(!RX.cur){RX.cur=newSeg(f);return}
+  if(dist(f.c,RX.cur.mean)<RX.th){addSeg(RX.cur,f);RX.cand=null;return}
+  if(RX.cand&&dist(f.c,RX.cand.mean)<RX.th){addSeg(RX.cand,f);if(RX.cand.n>=2){closeSeg(RX.cur);RX.cur=RX.cand;RX.cand=null}}
+  else RX.cand=newSeg(f);
+}
+function closeSeg(s){if(s.n<2)return;var info={raw:s.raw,mean:s.mean,n:s.n,dur:s.t1-s.t0,lab:'?',ok:true};
+  if(isWhite(s)){info.lab='W';if(RX.st==='data')fail('途中で白になった (読み落とし)');RX.st='pre';RX.pal=[];RX.K=0;RX.w=s.mean.slice();RX.bits=[];RX.need=0}
+  else if(RX.st==='pre'){
+    if(!RX.pal.length){RX.K=s.raw[0]>s.raw[2]?3:5}
+    RX.pal.push(wb(s.mean));info.lab='見'+RX.pal.length;
+    if(RX.pal.length===RX.K){RX.st='data';RX.prev=RX.K-1;RX.bits=[];RX.need=0;RX.t0=s.t1}
+  }else if(RX.st==='data'){
+    var i=classify(s.mean);info.lab=String(i);
+    if(i===RX.prev){info.ok=false;fail('同じ色が続いた (読み違い)')}
+    else{var v=(i-RX.prev-1+RX.K)%RX.K;if(RX.K===3){if(v>1){info.ok=false}RX.bits.push(v&1)}else{if(v>3)info.ok=false;RX.bits.push((v>>1)&1,v&1)}RX.prev=i;
+      if(RX.bits.length>=8&&!RX.need){var L=byteAt(0);if(L<1||L>MAXB){fail('長さが変 ('+L+')');}else RX.need=(L+2)*8}
+      if(RX.need&&RX.bits.length>=RX.need)finish()}
+  }else info.lab=sat(s.raw)<0.2?'W':'·';
+  RX.segFrames.push(s.n);if(RX.segFrames.length>30)RX.segFrames.shift();
+  RX.segs.push(info);if(RX.segs.length>80)RX.segs.shift();
+}
+function byteAt(k){var v=0;for(var i=0;i<8;i++)v=(v<<1)|(RX.bits[k*8+i]||0);return v}
+function finish(){var L=byteAt(0),bytes=[];for(var k=0;k<L+2;k++)bytes.push(byteAt(k));var ok=crc8(bytes.slice(0,L+1))===bytes[L+1];
+  var text=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(bytes.slice(1,L+1)));
+  var dt=(RX.last?RX.last.t:0)-RX.t0;
+  if(ok){RX.ok++;showOut(text,true);addHist(true,text,L,dt)}else{RX.ng++;showOut(text,false);addHist(false,text,L,dt)}
+  RX.st='wait';RX.bits=[];RX.need=0}
+function fail(why){if(RX.st!=='data')return;RX.ng++;addHist(false,'('+why+')',0,0);RX.st='wait';RX.bits=[];RX.need=0}
+function showOut(t,ok){var o=$('out');o.textContent=t;o.className='screen '+(ok?'ok':'ng')}
+function addHist(ok,t,L,dt){var li=document.createElement('li');li.innerHTML='<span class="'+(ok?'ok':'ng')+'">'+(ok?'✔':'✖')+'</span><b></b><span></span>';li.children[1].textContent=t;
+  li.children[2].textContent=ok&&dt>0?((L+2)*8/(dt/1000)).toFixed(1)+' bps':'';var h=$('hist');h.insertBefore(li,h.firstChild);while(h.children.length>6)h.lastChild.remove()}
+
+/* 表示 */
+var ov=$('ov'),strip=$('strip');
+function fitC(cv){var r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=Math.max(10,Math.round(r.width*dpr));cv.height=Math.max(10,Math.round(r.height*dpr));var x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return {x:x,w:r.width,h:r.height}}
+function srcRect(){var el=RX.mode==='sim'?$('simc'):$('vid'),vw=RX.mode==='sim'?320:(el.videoWidth||4),vh=RX.mode==='sim'?240:(el.videoHeight||3),V=$('view').getBoundingClientRect(),sc=Math.min(V.width/vw,V.height/vh);
+  return {vw:vw,vh:vh,sc:sc,ox:(V.width-vw*sc)/2,oy:(V.height-vh*sc)/2}}
+function drawUI(){
+  var C=fitC(ov),x=C.x;x.clearRect(0,0,C.w,C.h);
+  if(RX.on){var R=srcRect(),s=Math.min(R.vw,R.vh)*RX.roi.s*R.sc,cx=R.ox+RX.roi.x*R.vw*R.sc,cy=R.oy+RX.roi.y*R.vh*R.sc;
+    x.strokeStyle='#FFC53D';x.lineWidth=3;x.strokeRect(cx-s/2,cy-s/2,s,s);x.strokeStyle='rgba(0,0,0,.6)';x.lineWidth=1;x.strokeRect(cx-s/2-2,cy-s/2-2,s+4,s+4)}
+  var f=RX.last;$('sw').style.background=f?'rgb('+f.rgb.map(Math.round)+')':'#1E2230';
+  var st=RX.st,msg=!RX.on?'待機中':st==='wait'?'白の区切りを待っています':st==='pre'?(RX.pal.length?'色の見本を覚えています ('+RX.pal.length+'/'+RX.K+')':'区切りの白を見つけました'):'受信中';
+  $('state').textContent=msg;
+  var sub='';if(st==='data'){sub=(RX.K===3?'3色':'5色')+' · '+RX.bits.length+(RX.need?' / '+RX.need:'')+' ビット'}else if(RX.on)sub='送る側の画面の色を枠の中に入れてください';$('sub').textContent=sub;
+  $('prog').style.width=(st==='data'&&RX.need?Math.min(100,RX.bits.length/RX.need*100):0)+'%';
+  var avgF=RX.segFrames.length?RX.segFrames.reduce(function(a,b){return a+b},0)/RX.segFrames.length:0;
+  $('stats').innerHTML=RX.on?'<span>カメラ <b>'+RX.fps.toFixed(0)+'</b> フレーム/秒</span><span>1色あたり <b>'+avgF.toFixed(1)+'</b> フレーム</span><span>成功 <b>'+RX.ok+'</b> · 失敗 <b>'+RX.ng+'</b></span>':'';
+  var hint='';if(RX.on){if(RX.dark>0.5)hint='暗すぎます。送る側の画面を枠の中に入れてください。';else if(RX.hot>0.5)hint='明るすぎて白く飛んでいます。少し離すか、送る側の画面を少し暗くしてください。';else if(avgF&&avgF<2.6&&RX.segFrames.length>8)hint='1色あたりのフレームが少なすぎます。送る側で「1色を出す時間」を長くしてください。'}
+  $('hint').textContent=hint;
+  /* 色の並び */
+  var S=fitC(strip),y=S.x,n=RX.segs.length,wd=Math.max(8,Math.min(22,S.w/40));y.clearRect(0,0,S.w,S.h);y.font='10px "JetBrains Mono",monospace';y.textAlign='center';
+  for(var i=0;i<n;i++){var sg=RX.segs[n-1-i],px=S.w-(i+1)*(wd+2);if(px<-wd)break;var r=sg.raw,m=Math.max(r[0],r[1],r[2],1);y.fillStyle='rgb('+r.map(function(v){return Math.round(v/m*255)})+')';y.fillRect(px,6,wd,22);
+    if(!sg.ok){y.strokeStyle='#FF6B7A';y.lineWidth=2;y.strokeRect(px+1,7,wd-2,20)}y.fillStyle='#9AA6C2';y.fillText(sg.lab.replace('見',''),px+wd/2,41)}
+}
+function uiLoop(){if(!RX.on)return;drawUI();requestAnimationFrame(uiLoop)}
+
+/* 映像の入力 */
+function resetRx(){RX.cur=null;RX.cand=null;RX.segs=[];RX.st='wait';RX.pal=[];RX.K=0;RX.bits=[];RX.need=0;RX.w=null;RX.fc=0;RX.fcT=performance.now();RX.fps=0;RX.segFrames=[];RX.last=null;RX.hot=0;RX.dark=0}
+function startCam(){
+  stopRx();$('vmsg').textContent='カメラを起動しています…';
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('vmsg').textContent='このブラウザではカメラを使えません。「カメラなしで試す」を試してください。';return}
+  navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}}}).then(function(s){
+    RX.stream=s;var v=$('vid');v.srcObject=s;v.hidden=false;$('vmsg').textContent='';v.play().catch(function(){});
+    resetRx();RX.on=true;RX.mode='cam';$('stop').disabled=false;requestAnimationFrame(uiLoop);
+    var lastT=-1;
+    if('requestVideoFrameCallback' in HTMLVideoElement.prototype){var cb=function(now,meta){if(!RX.on||RX.mode!=='cam')return;if(v.videoWidth){var g=grab(v,v.videoWidth,v.videoHeight);frame(g.rgb,now,g.hot)}v.requestVideoFrameCallback(cb)};v.requestVideoFrameCallback(cb)}
+    else{var raf=function(now){if(!RX.on||RX.mode!=='cam')return;if(v.videoWidth&&v.currentTime!==lastT){lastT=v.currentTime;var g=grab(v,v.videoWidth,v.videoHeight);frame(g.rgb,now,g.hot)}requestAnimationFrame(raf)};requestAnimationFrame(raf)}
+  }).catch(function(e){$('vmsg').textContent='カメラを使えませんでした ('+(e&&e.name||'エラー')+')。ブラウザの設定でカメラを許可するか、「カメラなしで試す」を試してください。'})
+}
+/* 仮想カメラ: 送る側の設定をそのまま使い、くすみ・色かぶり・明るさの揺らぎ・雑音・露光中の色の混ざりを入れる */
+var SIM={S:null,t0:0,tm:null};
+function startSim(){
+  stopRx();SIM.S=schedule($('msg').value,TX.K,TX.T);SIM.t0=performance.now();var c=$('simc');c.hidden=false;$('vmsg').textContent='';
+  resetRx();RX.on=true;RX.mode='sim';$('stop').disabled=false;requestAnimationFrame(uiLoop);
+  var x=c.getContext('2d',{willReadFrequently:true}),next=performance.now();
+  function tick(){if(!RX.on||RX.mode!=='sim')return;var now=performance.now(),t=now-SIM.t0,exp=14,acc=[0,0,0];
+    for(var k=0;k<6;k++){var p=PAL[colorAt(SIM.S,t-exp*k/5)];acc[0]+=p[0]/6;acc[1]+=p[1]/6;acc[2]+=p[2]/6}
+    var m=(acc[0]+acc[1]+acc[2])/3,gain=0.78+0.08*Math.sin(t/1700),col=[acc[0]*0.62+m*0.38,acc[1]*0.62+m*0.38,acc[2]*0.62+m*0.38];
+    col=[col[0]*1.07*gain+10,col[1]*gain+10,col[2]*0.86*gain+12].map(function(v){return Math.max(0,Math.min(255,v+(Math.random()-0.5)*6))});
+    x.fillStyle='#15171c';x.fillRect(0,0,320,240);x.fillStyle='rgb('+col.map(Math.round)+')';x.fillRect(70,30,180,180);
+    x.fillStyle='rgba(0,0,0,.35)';x.font='12px sans-serif';x.fillText('仮想カメラ (30枚/秒)',8,232);
+    var g=grab(c,320,240);frame(g.rgb,now,g.hot);
+    next+=1000/30;var wait=next-performance.now()+(Math.random()-0.5)*6;SIM.tm=setTimeout(tick,Math.max(0,wait))}
+  tick();
+}
+function stopRx(){RX.on=false;clearTimeout(SIM.tm);if(RX.stream){RX.stream.getTracks().forEach(function(t){t.stop()});RX.stream=null}
+  $('vid').hidden=true;$('vid').srcObject=null;$('simc').hidden=true;$('stop').disabled=true;$('vmsg').textContent='止めました。';drawUI()}
+$('cam').addEventListener('click',startCam);$('sim').addEventListener('click',startSim);$('stop').addEventListener('click',stopRx);
+$('view').addEventListener('click',function(e){if(!RX.on)return;var R=srcRect(),V=this.getBoundingClientRect(),px=(e.clientX-V.left-R.ox)/(R.vw*R.sc),py=(e.clientY-V.top-R.oy)/(R.vh*R.sc);
+  if(px<0||px>1||py<0||py>1)return;RX.roi.x=px;RX.roi.y=py;RX.cur=null;RX.cand=null});
+$('th').addEventListener('input',function(){RX.th=+this.value;$('thv').textContent=RX.th.toFixed(3)});$('thv').textContent=RX.th.toFixed(3);
+document.addEventListener('visibilitychange',function(){if(document.hidden&&RX.on&&RX.mode==='cam')stopRx()});
+})();
+</script>
+</body>
+</html>
