@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>部品と道具 — 電子工作ノート</title>
+<meta name="description" content="秋月電子で揃えた部品の一覧と、どのプロジェクトで使うか。はんだ付けが必要な部品と、買い足すと楽になるもの。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>部品と道具</h1>
+<p class="lede">秋月電子通商で揃えた部品です。番号は秋月の販売コードで、<code>akizukidenshi.com/catalog/g/g<i>番号</i>/</code> で商品ページが開きます。価格は 2026 年 9 月時点の税込です。</p>
+
+<h2><span class="no">1</span>先に知っておくこと</h2>
+<div class="kp warn"><b class="h">はんだ付けが要るもの</b>
+<ul>
+  <li><b>DRV8835 モータードライバー (109848)</b>: 基板とピンヘッダーが別になっているので、12 か所はんだ付けしてからブレッドボードに挿す。障害物回避カーで必要。</li>
+  <li><b>ドライバー内蔵リレーモジュールキット (113573)</b>: 組み立てキット。</li>
+</ul>
+</div>
+<div class="kp warn"><b class="h">そのままではブレッドボードにつながらないもの</b>
+<ul>
+  <li><b>Grove ジョイスティック (109279)</b>: Grove 端子 (4 ピンのコネクタ) なので、Grove → ジャンパー線の変換ケーブルが要る。</li>
+  <li><b>HC-SR04 を車の前に付けるとき</b>と、<b>CdS をサーボの腕に付けるとき</b>: 部品の足やピンに挿すため、<b>オス-メス</b>のジャンパー線が要る (手元のジャンパー線はオス-オス)。</li>
+</ul>
+</div>
+<div class="kp"><b class="h">ジャンパー線は使う前に導通を見る</b>
+<p>オス-オスのジャンパー線セット (130088) は無選別品で、購入時の注意書きに「使用前にテスターの導通ブザーで 1 本ずつ確認」とあります。配線が正しいのに動かないときは、まず線を疑う。</p>
+</div>
+
+<h2><span class="no">2</span>買い足すと楽になるもの</h2>
+<div class="tbl"><table>
+<thead><tr><th>もの</th><th>秋月の番号</th><th>目安</th><th>何のため</th></tr></thead>
+<tbody>
+<tr><td>ジャンパーワイヤ (オス-メス) 15cm 10本</td><td class="mono">108932</td><td>¥280</td><td>HC-SR04 と CdS の延長。どちらのプロジェクトでも使う</td></tr>
+<tr><td>はんだごて・はんだ</td><td>—</td><td>—</td><td>DRV8835 のピンヘッダー</td></tr>
+<tr><td>テスター (導通ブザー付き)</td><td>—</td><td>—</td><td>ジャンパー線と電池の確認</td></tr>
+<tr><td>カーボン抵抗 1kΩ 100本</td><td class="mono">125102</td><td>¥100</td><td>LED の電流制限。今の手持ちは 10kΩ だけで、LED がかなり暗くなる</td></tr>
+<tr><td>単3電池 4本・micro-USB のデータ用ケーブル・モバイルバッテリー</td><td>—</td><td>—</td><td>車を走らせるとき</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">3</span>手元の部品</h2>
+<h3>共通</h3>
+<div class="tbl"><table>
+<thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
+<tbody>
+<tr><td>ESP32-DevKitC-32E (ESP32-WROOM-32E, 4MB)</td><td class="mono">115673</td><td>1</td><td>ピンヘッダー付き。USB は micro-B</td></tr>
+<tr><td>ブレッドボード EIC-801</td><td class="mono">100315</td><td>1</td><td>30行 × a〜j、電源ライン上下 2 本ずつ</td></tr>
+<tr><td>ジャンパーワイヤセット (オス-オス) 60本以上 無選別</td><td class="mono">130088</td><td>1</td><td>使う前に導通を確認</td></tr>
+<tr><td>カーボン抵抗 1/4W 10kΩ</td><td class="mono">125103</td><td>100本</td><td>茶黒橙金</td></tr>
+</tbody></table></div>
+
+<h3>首振りガジェット</h3>
+<div class="tbl"><table>
+<thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
+<tbody>
+<tr><td>マイクロサーボ 9g SG90</td><td class="mono">108761</td><td>1</td><td>線は 茶 = GND、赤 = +、橙 = 信号</td></tr>
+<tr><td>CdS セル 5mm</td><td class="mono">100110</td><td>1</td><td>明るいと 10〜20kΩ、暗いと約 1MΩ</td></tr>
+</tbody></table></div>
+
+<h3>障害物回避カー</h3>
+<div class="tbl"><table>
+<thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
+<tbody>
+<tr><td>2WD Mini Smart Robot Mobile Platform Kit (FT-DC-002)</td><td class="mono">113651</td><td>1</td><td>車体・ギヤボックス付きモーター 2 個・車輪・補助輪。制御部品は入っていない</td></tr>
+<tr><td>超音波距離センサー HC-SR04</td><td class="mono">111009</td><td>1</td><td>電源 3〜5.5V の版。3.3V で動かすと Echo も 3.3V</td></tr>
+<tr><td>DRV8835 モータードライバーモジュール (AE-DRV8835-S)</td><td class="mono">109848</td><td>1</td><td>要はんだ付け。モーター電源 2〜11V、ロジック 2〜7V</td></tr>
+<tr><td>電池ボックス 単3×4本 リード線・フタ・スイッチ付</td><td class="mono">100311</td><td>1</td><td>モーター用 (約 6V)</td></tr>
+</tbody></table></div>
+
+<h3>次に使う部品</h3>
+<div class="tbl"><table>
+<thead><tr><th>部品</th><th>番号</th><th>数</th></tr></thead>
+<tbody>
+<tr><td>Grove ジョイスティックモジュール</td><td class="mono">109279</td><td>1</td></tr>
+<tr><td>ユニポーラー ステッピングモーター 28BYJ-48 5V</td><td class="mono">113256</td><td>1</td></tr>
+<tr><td>トランジスターアレイ ULN2003AN (ステッピングモーター用)</td><td class="mono">115064</td><td>1</td></tr>
+<tr><td>DHT11 温湿度センサーモジュール</td><td class="mono">115491</td><td>1</td></tr>
+<tr><td>サーミスター 10kΩ</td><td class="mono">117250</td><td>10本</td></tr>
+<tr><td>8ビットシフトレジスター 74HC595</td><td class="mono">114053</td><td>1</td></tr>
+<tr><td>赤外線リモコン (NEC フォーマット)</td><td class="mono">107245</td><td>1</td></tr>
+<tr><td>赤外線リモコン受信モジュール OSRB38C9AA</td><td class="mono">104659</td><td>2</td></tr>
+<tr><td>4 桁 7 セグメント LED (赤, カソードコモン)</td><td class="mono">109971</td><td>1</td></tr>
+<tr><td>傾斜スイッチ RBS32 0100</td><td class="mono">102742</td><td>1</td></tr>
+<tr><td>半固定ボリューム 10kΩ (つまみ付)</td><td class="mono">108012</td><td>1</td></tr>
+<tr><td>5mm LED 赤 / 黄</td><td class="mono">112605 / 111657</td><td>各 1</td></tr>
+<tr><td>5mm LED 緑 / 青</td><td class="mono">106405 / 106403</td><td>各 10</td></tr>
+<tr><td>5mm フルカラー LED (カソードコモン)</td><td class="mono">111852</td><td>1</td></tr>
+<tr><td>電子ブザー 12mm UDB-05LFPN</td><td class="mono">109704</td><td>1</td></tr>
+<tr><td>圧電スピーカー PT08</td><td class="mono">101251</td><td>2</td></tr>
+<tr><td>ドライバー内蔵リレーモジュールキット</td><td class="mono">113573</td><td>1</td></tr>
+<tr><td>タクトスイッチ (黒)</td><td class="mono">103647</td><td>1</td></tr>
+</tbody></table></div>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('parts')</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電子工作ノート</title>
+<meta name="description" content="ESP32 と秋月電子の部品で動くものを作る。ブレッドボードの配線図と Arduino スケッチをまとめた記録。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top"><a href="../">← トップ</a></p>
+<p class="eyebrow">Electronics</p>
+<h1>電子工作ノート</h1>
+<p class="lede">ESP32 と秋月電子で買える部品で「動くもの」を作る記録です。どのページも、<b>回路図 → ブレッドボードの配線図 → 配線表 → スケッチ (Arduino)</b> の順に並べ、スケッチは段階に分けて「ここまで動いたら次へ」と進められるようにしています。</p>
+
+<div class="roadmap" id="list"></div>
+
+<h2>このノートの決まりごと</h2>
+<div class="grid2">
+  <div><b>マイコン</b>ESP32-DevKitC-32E。Arduino IDE と ESP32 ボードパッケージ 3.x (3.3.12 でコンパイル確認) で書く。</div>
+  <div><b>ブレッドボード</b>EIC-801 (30行 × a〜j 列、上下に電源ライン 2 本ずつ)。「a12」は a 列の 12 行目の穴。</div>
+  <div><b>ESP32 の挿し方</b>USB を左、3V3/5V の並ぶ列 (J1) を上にして 1〜19 行に。使えるのは上の a 列に空く 1 穴だけ。<a href="setup.html#breadboard">理由</a></div>
+  <div><b>線の色</b>赤 = 5V、橙 = 3.3V、黒 = GND、紫 = 電池。信号線はピンごとに色を変え、配線表と同じ色で描く。</div>
+</div>
+
+<div class="kp danger"><b class="h">いちばん大事な 3 つ</b>
+<ul>
+  <li>ESP32 のピンは <b>3.3V</b> まで。5V や電池の電圧を GPIO に入れると壊れる。</li>
+  <li>別の電源 (電池など) を使うときも、<b>GND は全部 1 本につなぐ</b>。つないでいないと信号が伝わらない。</li>
+  <li>配線を変えるときは <b>USB を抜き、電池のスイッチも切る</b>。</li>
+</ul>
+</div>
+
+<h2>この先に作れそうなもの</h2>
+<p class="lede">手元の部品で次に作れるもの。まだページはありません。</p>
+<ul>
+  <li><b>ジョイスティックで動かす</b>: ジョイスティックのアナログ値でサーボやステッピングモーター (28BYJ-48 + ULN2003) を回す。</li>
+  <li><b>赤外線リモコンで操縦</b>: 付属リモコンの NEC 信号を受信モジュールで読み、障害物回避カーを手動でも走らせる。</li>
+  <li><b>温湿度を 7 セグで表示</b>: DHT11 の値を 4 桁 7 セグメント LED に出す。74HC595 でピン数を節約する練習にもなる。</li>
+  <li><b>光で文字を送る</b>: LED の点滅と CdS / フォトトランジスタで、<a href="../visible-light/">可視光通信のページ</a>の内容を実物でやる。</li>
+</ul>
+
+<p class="lede">配線図は <a href="https://github.com/ishichan0819/ishichan0819.github.io/tree/main/electronics/tools">tools/gen_diagrams.py</a> で穴の座標から生成しています。スケッチは <a href="https://github.com/ishichan0819/ishichan0819.github.io/tree/main/electronics/sketches">sketches/</a> にまとめてあります。</p>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>
+(function(){
+  var host=document.getElementById('list');
+  host.innerHTML=ELEC_PAGES.map(function(p,i){
+    return '<a class="tcard" href="'+p.id+'.html"><span class="no">'+(i+1)+'</span><span><span class="t">'+p.t+'</span><span class="d">'+p.d+'</span></span></a>';
+  }).join('');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開発環境と最初の一歩 — 電子工作ノート</title>
+<meta name="description" content="Arduino IDE に ESP32 ボードパッケージを入れて、配線なしで ESP32-DevKitC を動かす。ブレッドボードへの挿し方と、使えるピン。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>開発環境と最初の一歩</h1>
+<p class="lede">まだ何も配線せずに、PC と ESP32 を USB でつないで「書き込める・シリアルで話せる・ボタンが読める」ところまで確かめます。ここが通れば、あとの失敗は配線かスケッチのどちらかに絞れます。</p>
+
+<h2><span class="no">1</span>Arduino IDE と ESP32 ボードパッケージ</h2>
+<ol class="steps">
+  <li><a href="https://www.arduino.cc/en/software">Arduino IDE 2</a> を入れる。</li>
+  <li>「ファイル → 基本設定」の「追加のボードマネージャの URL」に次を入れる。<br><code>https://espressif.github.io/arduino-esp32/package_esp32_index.json</code></li>
+  <li>「ツール → ボード → ボードマネージャ」で <b>esp32</b> を検索し、<b>esp32 by Espressif Systems</b> の <b>3.x</b> をインストールする。</li>
+  <li>ESP32 を USB でつなぎ、「ツール → ボード」で <b>ESP32 Dev Module</b>、「ツール → ポート」で出てきたポートを選ぶ。</li>
+</ol>
+<div class="kp warn"><b class="h">ポートが出てこないとき</b>
+<ul>
+  <li>USB ケーブルが<b>充電専用</b>だと、電源は入ってもポートは出ません。データ通信できるケーブルに替える。</li>
+  <li>このボードの USB は micro-B で、USB シリアル変換に Silicon Labs の CP210x 系のチップを使っています。自動で認識されないときは Silicon Labs の CP210x ドライバを入れる。</li>
+</ul>
+</div>
+<div class="kp"><b class="h">ボードパッケージは 3.x を使う</b>
+<p>このノートのスケッチは PWM に <code>ledcAttach(ピン, 周波数, 分解能)</code> を使っています。これは 3.x で入った書き方で、2.x には無いのでコンパイルが通りません。</p>
+</div>
+
+<h2><span class="no">2</span>最初のスケッチ: hello_esp32</h2>
+<p>配線は要りません。チップの情報を表示し、基板の <b>BOOT</b> ボタン (GPIO0) を押すたびに回数を出します。</p>
+<div class="sketch" data-src="sketches/hello_esp32/hello_esp32.ino" data-open></div>
+<ol class="steps">
+  <li>書き込み (→ ボタン) を押す。</li>
+  <li>「ツール → シリアルモニタ」を開き、右下の速度を <b>115200 baud</b> にする。</li>
+  <li>基板の <b>EN</b> ボタンを押すとリセットされ、最初から表示される。</li>
+</ol>
+<h3>確認すること</h3>
+<ul class="check">
+  <li><code>chip : ESP32-D0WD-V3 rev …</code> のようにチップ名が出る (rev の数字はロットで違う)</li>
+  <li><code>flash : 4096 KB</code> と出る</li>
+  <li>BOOT を押すたびに <code>BOOT pressed: 1 回目</code> と数が増える</li>
+</ul>
+<div class="kp warn"><b class="h">書き込みで止まるとき</b>
+<ul>
+  <li><code>Connecting....___</code> のまま失敗する → <b>BOOT を押したまま</b>もう一度書き込み、<code>Writing</code> が出たら離す。</li>
+  <li>シリアルモニタが文字化けする → 速度が 115200 になっているか見る。</li>
+</ul>
+</div>
+
+<h2 id="breadboard"><span class="no">3</span>ブレッドボードへの挿し方</h2>
+<p>ESP32-DevKitC は幅が広く、EIC-801 のような 1 列 5 穴のブレッドボードに挿すと<b>片側の列にだけ 1 穴ずつ空きが残り、反対側は空きが残りません</b>。そこで、3V3・5V・GND と使いやすい GPIO が並ぶ <b>J1 列</b>を空きの残る側 (上) にして、USB を左に向けて 1〜19 行に挿します。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/esp32-pinmap.svg" alt="ESP32-DevKitC-32E を USB を左にして上から見た図。上の J1 列に、1 行目から 5V, CMD, SD3, SD2, 13, GND, 12, 14, 27, 26, 25, 33, 32, 35, 34, VN, VP, EN, 3V3 が並ぶ。" loading="lazy"></div>
+  <figcaption>J1 列のピンと、ブレッドボードの行番号の対応。<a href="img/esp32-pinmap.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>種類</th><th>ピン</th><th>気をつけること</th></tr></thead>
+<tbody>
+<tr><td><span class="w" style="background:#16A34A"></span>自由に使える</td><td class="mono">13, 14, 25, 26, 27, 32, 33</td><td>入力にも出力 (PWM) にも使える。このノートの配線はここから選んでいる。</td></tr>
+<tr><td><span class="w" style="background:#0F766E"></span>入力専用</td><td class="mono">34, 35, 36 (VP), 39 (VN)</td><td>出力はできない。アナログ入力 (ADC1) なので、明るさや Echo の受け口にちょうどいい。</td></tr>
+<tr><td><span class="w" style="background:#B45309"></span>起動に影響</td><td class="mono">12</td><td>起動の瞬間に H だとフラッシュの電圧設定が変わって起動しないことがある。使わない。</td></tr>
+<tr><td><span class="w" style="background:#9CA3AF"></span>触らない</td><td class="mono">CMD, SD2, SD3</td><td>内部のフラッシュメモリにつながっている。</td></tr>
+<tr><td><span class="w" style="background:#E11D48"></span>電源</td><td class="mono">5V, 3V3, GND</td><td>5V は USB からの電源がそのまま出る。3V3 は基板のレギュレータの出力。</td></tr>
+</tbody></table></div>
+<div class="kp"><b class="h">ADC2 と Wi-Fi</b>
+<p>アナログ入力には ADC1 と ADC2 があり、ADC2 側 (GPIO 25〜27 など) は Wi-Fi を使っている間は読めません。アナログ値を読むピンは ADC1 (32〜39) から選ぶと、あとで Wi-Fi を足しても困りません。</p>
+</div>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('setup')</script>
+</body>
+</html>

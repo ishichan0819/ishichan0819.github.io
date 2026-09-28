@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>首振りガジェット — 電子工作ノート</title>
+<meta name="description" content="ESP32 と CdS セルとサーボ SG90 で、首を振っていちばん明るい方向を探して向くガジェットを作る。回路図・ブレッドボード配線図・スケッチ。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>首振りガジェット</h1>
+<p class="lede">明るさセンサー (CdS) とサーボモーターで、<b>首を左右に振って部屋の中でいちばん明るい方向を探し、そっちを向く</b>ガジェットを作ります。サーボを動かす (出力)、明るさを読む (入力)、2 つをつなぐ (処理) の 3 つを 1 段ずつ確かめながら進めます。</p>
+
+<div class="grid2">
+  <div><b>使う部品</b>ESP32-DevKitC、ブレッドボード、SG90 サーボ、CdS セル、10kΩ 抵抗 1 本、ジャンパー線 (オス-オス 7 本)。最後の段だけオス-メス 2 本。</div>
+  <div><b>電源</b>PC の USB だけ。サーボの 5V も ESP32 の 5V ピン (USB からの 5V) から取る。</div>
+  <div><b>はんだ付け</b>不要。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>サーボは「パルスの幅」で角度が決まる</h3>
+<p>SG90 には 20ms ごとにパルスを送り続けます。パルスの幅が 0.5ms なら 0°、2.4ms なら 180° で、その間は幅に比例した角度で止まります。ESP32 では PWM (LEDC) を 50Hz・16bit にして、デューティで幅を作ります。</p>
+<p class="mono" style="font-size:.9rem">デューティ = パルス幅 ÷ 20ms × 65535 (例: 90° = 1.45ms → 4751)</p>
+<h3>CdS は「明るいと抵抗が下がる」抵抗</h3>
+<p>CdS と 10kΩ を直列にして 3.3V と GND の間に入れると、真ん中の電圧は <b>3.3V × 10k ÷ (CdS + 10k)</b> になります。明るいほど CdS の抵抗が小さくなり、電圧が上がります。この電圧を IO34 のアナログ入力で読みます。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/light-seeker-schematic.svg" alt="回路図。ESP32 の 5V・GND・IO25 をサーボの赤・茶・橙に。3V3 から CdS、CdS と 10kΩ の間を IO34 へ、10kΩ の下は GND。" loading="lazy"></div>
+  <figcaption>回路図。<a href="img/light-seeker-schematic.svg">図だけを開く</a></figcaption>
+</figure>
+
+<h2><span class="no">2</span>配線</h2>
+<p>ESP32 は <a href="setup.html#breadboard">いつもの向き</a> (USB を左、J1 列を上) で 1〜19 行に挿します。使うのは上の a 列に空いた穴と、上の電源ライン 2 本です。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/light-seeker-breadboard.svg" alt="ブレッドボード配線図。a1 から上の + ライン (5V)、a6 から上の − ライン (GND)、a19 から a24 (3V3)。CdS を c24 と c25、10kΩ を b25 と上の − ラインの間。a15 (IO34) から a25。a11 (IO25) からサーボの橙、+ ラインから赤、− ラインから茶。" loading="lazy"></div>
+  <figcaption>ブレッドボード配線図 (横にスクロールできます)。<a href="img/light-seeker-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><span class="w" style="background:#E11D48"></span><b>a1</b> (5V)</td><td>上の <b>+</b> ライン (赤線)</td><td>5V を配る</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#1F2937"></span><b>a6</b> (GND)</td><td>上の <b>−</b> ライン (青線)</td><td>GND を配る</td></tr>
+<tr><td class="n">3</td><td><span class="w" style="background:#EA8A00"></span><b>a19</b> (3V3)</td><td><b>a24</b></td><td>CdS の上側に 3.3V</td></tr>
+<tr><td class="n">4</td><td>CdS セル</td><td><b>c24</b> と <b>c25</b></td><td>向きはない</td></tr>
+<tr><td class="n">5</td><td>10kΩ</td><td><b>b25</b> と 上の <b>−</b> ライン</td><td>分圧の下側</td></tr>
+<tr><td class="n">6</td><td><span class="w" style="background:#0F766E"></span><b>a15</b> (IO34)</td><td><b>a25</b></td><td>CdS と 10kΩ の間の電圧を読む</td></tr>
+<tr><td class="n">7</td><td><span class="w" style="background:#16A34A"></span><b>a11</b> (IO25)</td><td>サーボの <b>橙</b></td><td>パルス (信号)</td></tr>
+<tr><td class="n">8</td><td>上の <b>+</b> ライン</td><td>サーボの <b>赤</b></td><td>5V</td></tr>
+<tr><td class="n">9</td><td>上の <b>−</b> ライン</td><td>サーボの <b>茶</b></td><td>GND</td></tr>
+</tbody></table></div>
+<p style="font-size:.9rem;color:var(--muted)">サーボのコネクタはメスなので、オス-オスのジャンパー線をそのまま挿せます。</p>
+
+<h2><span class="no">3</span>段階 1: サーボだけ動かす</h2>
+<p>配線 7〜9 だけで動きます。20° と 160° の間をゆっくり往復します。</p>
+<div class="sketch" data-src="sketches/servo_test/servo_test.ino"></div>
+<ul class="check">
+  <li>サーボの腕がなめらかに往復する</li>
+  <li>シリアルモニタに <code>angle  20°  pulse  711 us</code> のように 20° ごとに出る</li>
+</ul>
+<div class="kp warn"><b class="h">サーボが動くたびに ESP32 が再起動する</b>
+<p>サーボが動き出す瞬間に電流が多く流れ、USB の 5V が下がって ESP32 がリセットされています。PC の別の USB ポートか、AC アダプタ付きの USB ハブにつなぎ替えてみてください。</p>
+</div>
+
+<h2><span class="no">4</span>段階 2: 明るさで角度を変える</h2>
+<p>配線 1〜9 を全部つなぎます。明るいほど 160° 側、暗いほど 20° 側を向きます。</p>
+<div class="sketch" data-src="sketches/cds_servo/cds_servo.ino"></div>
+<ol class="steps">
+  <li>書き込んだら「ツール → シリアルプロッタ」を開く (115200 baud)。<code>mV</code> と <code>angle</code> の 2 本の線が出る。</li>
+  <li>CdS を手で覆ったときの mV を <code>DARK_MV</code> に、スマホのライトを当てたときの mV を <code>BRIGHT_MV</code> に書いて、もう一度書き込む。</li>
+  <li>手をかざしたり離したりして、サーボが追いかけてくれば OK。</li>
+</ol>
+<ul class="check">
+  <li>覆うと mV が下がり、ライトを当てると上がる (逆なら CdS と 10kΩ の位置を見直す)</li>
+  <li>mV がずっと 0 付近 → a19 → a24 の 3V3 が来ていない。ずっと 3000 付近 → 10kΩ が GND に届いていない</li>
+</ul>
+
+<h2><span class="no">5</span>段階 3: いちばん明るい方向を探す</h2>
+<p>CdS を c24–c25 から抜き、オス-メスのジャンパー線 2 本で延長して、サーボの腕の先にテープで貼ります (もう片方は c24 と c25 へ)。首を振りながら 5° ごとに明るさを測り、いちばん明るかった角度を向いて 3 秒止まる、をくり返します。</p>
+<div class="sketch" data-src="sketches/light_seeker/light_seeker.ino"></div>
+<ul class="check">
+  <li>シリアルモニタに角度ごとの棒グラフが出て、いちばん長い行に <code>&lt;- ここ</code> と付く</li>
+  <li>窓やスタンドライトのある方向を向く。ライトを動かして次のスキャンを待つと、向きが変わる</li>
+</ul>
+<div class="kp"><b class="h">スキャン中に止まる時間 (SETTLE_MS) の理由</b>
+<p>CdS は光が変わってから抵抗が落ち着くまで 20〜30ms かかります (データシートの応答時間)。サーボが止まるのと合わせて 60ms 待ってから測っています。短くすると、1 つ前の角度の明るさを引きずってピークがずれます。</p>
+</div>
+
+<h2><span class="no">6</span>改造のアイデア</h2>
+<ul>
+  <li>CdS をもう 1 個買い足して左右に付け、2 つの差で首を回す「追いかけ型」にする。スキャンなしで光に追従できる。</li>
+  <li>腕に小さい旗やキャラクターを付けて、明るい方を指さす置物にする。</li>
+  <li>障害物回避カーの HC-SR04 をサーボに載せて、左右の距離を測ってから曲がる向きを決める。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('light-seeker')</script>
+</body>
+</html>

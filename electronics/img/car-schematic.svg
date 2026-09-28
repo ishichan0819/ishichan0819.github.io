@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540" role="img" aria-labelledby="t d" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP','Noto Sans CJK JP',Meiryo,sans-serif">
+<title id="t">障害物回避カーの回路図</title>
+<desc id="d">ESP32 から DRV8835 に左右2組の向き(PHASE)と速さ(ENABLE)を送る。モーターは単3×4本から。HC-SR04 は 3.3V で動かし、Trig と Echo を直接つなぐ。</desc>
+<rect width="900" height="540" rx="14" fill="#FBFAF7"/>
+<rect x="30" y="40" width="150" height="400" rx="8" fill="#23262E"/>
+<text x="105.0" y="62.0" font-size="14" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">ESP32</text>
+<text x="105.0" y="80.0" font-size="10" fill="#C9CDD6" text-anchor="middle" dominant-baseline="central" font-weight="400">DevKitC-32E</text>
+<circle cx="180" cy="90" r="4.5" fill="#EA8A00"/>
+<text x="168.0" y="90.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<circle cx="180" cy="150" r="4.5" fill="#9333EA"/>
+<text x="168.0" y="150.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO33</text>
+<circle cx="180" cy="185" r="4.5" fill="#16A34A"/>
+<text x="168.0" y="185.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO25</text>
+<circle cx="180" cy="220" r="4.5" fill="#0284C7"/>
+<text x="168.0" y="220.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO26</text>
+<circle cx="180" cy="255" r="4.5" fill="#4F46E5"/>
+<text x="168.0" y="255.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO27</text>
+<circle cx="180" cy="290" r="4.5" fill="#1F2937"/>
+<text x="168.0" y="290.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<circle cx="180" cy="370" r="4.5" fill="#B45309"/>
+<text x="168.0" y="370.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO32</text>
+<circle cx="180" cy="400" r="4.5" fill="#0F766E"/>
+<text x="168.0" y="400.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO35</text>
+<text x="105.0" y="458.0" font-size="10" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">USB ← モバイルバッテリー</text>
+<rect x="340" y="60" width="160" height="250" rx="8" fill="#1C8A4A"/>
+<text x="420.0" y="80.0" font-size="13" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">DRV8835</text>
+<text x="420.0" y="96.0" font-size="9" fill="#D7F5E2" text-anchor="middle" dominant-baseline="central" font-weight="400">PHASE/ENABLE モード</text>
+<circle cx="340" cy="90" r="4.5" fill="#fff"/>
+<text x="350.0" y="90.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VCC</text>
+<circle cx="340" cy="118" r="4.5" fill="#fff"/>
+<text x="350.0" y="118.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">MODE</text>
+<circle cx="340" cy="150" r="4.5" fill="#fff"/>
+<text x="350.0" y="150.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">AIN1</text>
+<circle cx="340" cy="185" r="4.5" fill="#fff"/>
+<text x="350.0" y="185.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">AIN2</text>
+<circle cx="340" cy="220" r="4.5" fill="#fff"/>
+<text x="350.0" y="220.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BIN1</text>
+<circle cx="340" cy="255" r="4.5" fill="#fff"/>
+<text x="350.0" y="255.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BIN2</text>
+<circle cx="340" cy="290" r="4.5" fill="#fff"/>
+<text x="350.0" y="290.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<circle cx="500" cy="90" r="4.5" fill="#fff"/>
+<text x="490.0" y="90.0" font-size="10" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VM</text>
+<circle cx="500" cy="140" r="4.5" fill="#fff"/>
+<text x="490.0" y="140.0" font-size="10" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">AOUT1</text>
+<circle cx="500" cy="175" r="4.5" fill="#fff"/>
+<text x="490.0" y="175.0" font-size="10" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">AOUT2</text>
+<circle cx="500" cy="220" r="4.5" fill="#fff"/>
+<text x="490.0" y="220.0" font-size="10" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BOUT1</text>
+<circle cx="500" cy="255" r="4.5" fill="#fff"/>
+<text x="490.0" y="255.0" font-size="10" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BOUT2</text>
+<path d="M180 90 L340 90" fill="none" stroke="#EA8A00" stroke-width="3" stroke-linejoin="round"/>
+<path d="M300 90 L300 118 L340 118" fill="none" stroke="#EA8A00" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="300" cy="90" r="4.5" fill="#EA8A00"/>
+<text x="262.0" y="118.0" font-size="9" fill="#EA8A00" text-anchor="middle" dominant-baseline="central" font-weight="700">MODE=H</text>
+<path d="M180 150 L340 150" fill="none" stroke="#9333EA" stroke-width="3" stroke-linejoin="round"/>
+<text x="262.0" y="141.0" font-size="8.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">APHASE 左の向き</text>
+<path d="M180 185 L340 185" fill="none" stroke="#16A34A" stroke-width="3" stroke-linejoin="round"/>
+<text x="262.0" y="176.0" font-size="8.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">AENBL 左の速さ</text>
+<path d="M180 220 L340 220" fill="none" stroke="#0284C7" stroke-width="3" stroke-linejoin="round"/>
+<text x="262.0" y="211.0" font-size="8.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">BPHASE 右の向き</text>
+<path d="M180 255 L340 255" fill="none" stroke="#4F46E5" stroke-width="3" stroke-linejoin="round"/>
+<text x="262.0" y="246.0" font-size="8.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">BENBL 右の速さ</text>
+<path d="M180 290 L340 290" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<path d="M500 140 L600 140 L600 141" fill="none" stroke="#475569" stroke-width="3" stroke-linejoin="round"/>
+<path d="M500 175 L600 175 L600 173" fill="none" stroke="#475569" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="600" cy="157" r="16" fill="#F4C430" stroke="#B8901A" stroke-width="2"/>
+<text x="600.0" y="157.0" font-size="13" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">M</text>
+<text x="626.0" y="157.0" font-size="11" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">左モーター</text>
+<path d="M500 220 L600 220 L600 221" fill="none" stroke="#475569" stroke-width="3" stroke-linejoin="round"/>
+<path d="M500 255 L600 255 L600 253" fill="none" stroke="#475569" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="600" cy="237" r="16" fill="#F4C430" stroke="#B8901A" stroke-width="2"/>
+<text x="600.0" y="237.0" font-size="13" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">M</text>
+<text x="626.0" y="237.0" font-size="11" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">右モーター</text>
+<path d="M500 90 L720 90 L720 100" fill="none" stroke="#C026D3" stroke-width="3" stroke-linejoin="round"/>
+<path d="M702 100 h36 M710 108 h20 M702 116 h36 M710 124 h20" stroke="#1F2430" stroke-width="2.2"/>
+<text x="692.0" y="100.0" font-size="13" fill="#C026D3" text-anchor="middle" dominant-baseline="central" font-weight="700">+</text>
+<text x="692.0" y="124.0" font-size="13" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">−</text>
+<text x="746.0" y="106.0" font-size="11" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">単3×4本</text>
+<text x="746.0" y="121.0" font-size="9" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">約 6V (モーター用)</text>
+<path d="M720 124 L720 330 L318 330 L318 290" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="318" cy="290" r="4.5" fill="#1F2937"/>
+<text x="730.0" y="316.0" font-size="10" fill="#1F2937" text-anchor="start" dominant-baseline="central" font-weight="700">GND はすべて 1 本にまとめる</text>
+<rect x="620" y="380" width="170" height="140" rx="8" fill="#1E5FB4"/>
+<text x="705.0" y="400.0" font-size="13" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">HC-SR04</text>
+<text x="705.0" y="418.0" font-size="8.5" fill="#DCE7FB" text-anchor="middle" dominant-baseline="central" font-weight="400">3〜5.5V 対応品 / GPIO モード</text>
+<circle cx="620" cy="410" r="4.5" fill="#fff"/>
+<text x="632.0" y="410.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VCC</text>
+<circle cx="620" cy="440" r="4.5" fill="#fff"/>
+<text x="632.0" y="440.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">Trig</text>
+<circle cx="620" cy="470" r="4.5" fill="#fff"/>
+<text x="632.0" y="470.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">Echo</text>
+<circle cx="620" cy="500" r="4.5" fill="#fff"/>
+<text x="632.0" y="500.0" font-size="10" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<path d="M606 410 L620 410" fill="none" stroke="#EA8A00" stroke-width="3" stroke-linejoin="round"/>
+<rect x="576.5" y="402.0" width="31" height="16" rx="8" fill="#EA8A00"/>
+<text x="592.0" y="410.0" font-size="9" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<path d="M180 370 L560 370 L560 440 L620 440" fill="none" stroke="#B45309" stroke-width="3" stroke-linejoin="round"/>
+<path d="M180 400 L530 400 L530 470 L620 470" fill="none" stroke="#0F766E" stroke-width="3" stroke-linejoin="round"/>
+<path d="M594 500 L620 500" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<path d="M582 504 h24 M586 509 h16 M590 514 h8" stroke="#1F2430" stroke-width="1.8"/>
+<text x="40.0" y="490.0" font-size="10" fill="#0F766E" text-anchor="start" dominant-baseline="central" font-weight="700">HC-SR04 を 3.3V で動かすので、Echo も 3.3V で返ってくる → IO35 に直接つないでよい</text>
+<text x="40.0" y="508.0" font-size="9.5" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">(5V で動かすと Echo も 5V になり、ESP32 の入力には入れられない)</text>
+</svg>

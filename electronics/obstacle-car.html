@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>障害物回避カー — 電子工作ノート</title>
+<meta name="description" content="ESP32・DRV8835・HC-SR04 と 2WD ロボットキットで、ぶつかる前によけて走り回る車を作る。回路図・ブレッドボード配線図・スケッチ。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>障害物回避カー</h1>
+<p class="lede">超音波センサーで前を見ながら走り、壁や箱に近づいたら少し下がって向きを変える車を作ります。モーターを回す (出力)、距離を測る (入力) をそれぞれ確かめてから、最後に「状態」を切り替えるスケッチでつなぎます。</p>
+
+<div class="grid2">
+  <div><b>使う部品</b>ESP32-DevKitC、ブレッドボード、2WD ロボットキット (FT-DC-002)、DRV8835 モジュール、HC-SR04、電池ボックス (単3×4本)、ジャンパー線 (オス-オス 9 本、オス-メス 4 本)。</div>
+  <div><b>電源は 2 系統</b>ESP32 は USB (走るときはモバイルバッテリー)。モーターは単3×4本 (約 6V)。GND だけは全部つなぐ。</div>
+  <div><b>はんだ付け</b>DRV8835 のピンヘッダー 12 か所。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>モータードライバー DRV8835</h3>
+<p>ESP32 のピンはモーターを回せるほどの電流を出せないので、間に DRV8835 を入れます。<b>MODE を H</b> にすると「PHASE/ENABLE モード」になり、1 つのモーターを 2 本の線で操れます。PHASE で向き、ENABLE に PWM を入れて速さを決めます。</p>
+<div class="tbl"><table>
+<thead><tr><th>MODE</th><th>ENABLE</th><th>PHASE</th><th>OUT1</th><th>OUT2</th><th>動き</th></tr></thead>
+<tbody>
+<tr><td class="mono">1</td><td class="mono">0</td><td class="mono">×</td><td class="mono">L</td><td class="mono">L</td><td>ブレーキ</td></tr>
+<tr><td class="mono">1</td><td class="mono">1</td><td class="mono">0</td><td class="mono">H</td><td class="mono">L</td><td>正転</td></tr>
+<tr><td class="mono">1</td><td class="mono">1</td><td class="mono">1</td><td class="mono">L</td><td class="mono">H</td><td>逆転</td></tr>
+</tbody></table></div>
+<p style="font-size:.9rem;color:var(--muted)">秋月の AE-DRV8835-S のマニュアルより。ENABLE を 20kHz の PWM で細かく ON/OFF すると、平均の電圧が下がって遅く回ります。スケッチでは 6V の電池に対してデューティを 200/255 までに抑えています。</p>
+<h3>超音波センサー HC-SR04</h3>
+<p>Trig に 10µs 以上のパルスを入れると超音波を出し、反射が返ってくるまでの間 Echo が H になります。音速は約 343 m/s なので、<b>H の時間 (µs) ÷ 58.3 = 距離 (cm)</b> です。秋月の HC-SR04 は 3〜5.5V で動く版なので、<b>3.3V で動かして Echo も 3.3V</b> にし、ESP32 に直接入れます。データシートにある通り、測定の間は 200ms 以上あけます。</p>
+<div class="kp danger"><b class="h">HC-SR04 を 5V で動かさない</b>
+<p>5V で動かすと Echo も 5V で出てきて、3.3V までの ESP32 の入力を壊します。VCC は必ず 3V3 から取ります。</p>
+</div>
+<h3>走り方: 4 つの状態を切り替える</h3>
+<div class="grid2">
+  <div><b>STOPPED</b>止まっている。BOOT ボタンで FORWARD へ。</div>
+  <div><b>FORWARD</b>前進。50cm より近いと減速、25cm より近いと BACKING へ。</div>
+  <div><b>BACKING</b>0.4 秒下がる。終わったら前回と逆向きに TURNING へ。</div>
+  <div><b>TURNING</b>その場で 0.4 秒回るたびに距離を見て、40cm より遠ければ FORWARD へ。3 秒回っても空かなければ逆回りにする。</div>
+</div>
+<figure class="fig">
+  <div class="scroll"><img src="img/car-schematic.svg" alt="回路図。ESP32 の IO33・IO25・IO26・IO27 を DRV8835 の AIN1・AIN2・BIN1・BIN2 に。3V3 を VCC と MODE に。VM に単3×4本、AOUT に左モーター、BOUT に右モーター。HC-SR04 は VCC を 3V3、Trig を IO32、Echo を IO35 に。GND はすべて共通。" loading="lazy"></div>
+  <figcaption>回路図。<a href="img/car-schematic.svg">図だけを開く</a></figcaption>
+</figure>
+
+<h2><span class="no">2</span>組み立て</h2>
+<ol class="steps">
+  <li><b>DRV8835 にピンヘッダーをはんだ付けする。</b>ヘッダーを先にブレッドボードに挿し、その上に基板を載せてはんだ付けすると、ピンがまっすぐに付く。</li>
+  <li><b>車体を組む。</b>キットの説明書どおり。モーターは線が内側に来る向きで付ける (秋月の補足説明書より)。</li>
+  <li><b>載せる。</b>上の板にブレッドボード (裏が両面テープ)、下の板に電池ボックス、前に HC-SR04、空いたところにモバイルバッテリー。</li>
+  <li><b>配線する。</b>下の図と表のとおり。USB と電池のスイッチは切ったまま。</li>
+</ol>
+
+<h2><span class="no">3</span>配線</h2>
+<p>ESP32 は <a href="setup.html#breadboard">いつもの向き</a> (USB を左、J1 列を上) で 1〜19 行に。DRV8835 は <b>23〜28 行</b>に、e 列と f 列にまたがるように挿し、<b>e 列側に VCC・MODE・AIN1・AIN2・BIN1・BIN2</b> (23 → 28 行) が来る向きにします。f 列側は VM・AOUT1・AOUT2・BOUT1・BOUT2・GND です。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/car-breadboard.svg" alt="ブレッドボード配線図。ESP32 を 1〜19 行、DRV8835 を 23〜28 行。a6 から上の − ライン。a19 から a23、b23 から b24。a12 から a25、a11 から a26、a10 から a27、a9 から a28。j28 から下の − ライン。上下の − ラインを 29〜30 行の間でつなぐ。電池の + を j23、− を下の − ライン。モーターを h24–h25 と h26–h27。HC-SR04 は c23 から VCC、a13 から Trig、a14 から Echo、上の − ラインから GND。" loading="lazy"></div>
+  <figcaption>ブレッドボード配線図 (横にスクロールできます)。<a href="img/car-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><span class="w" style="background:#1F2937"></span><b>a6</b> (GND)</td><td>上の <b>−</b> ライン</td><td>ESP32 の GND</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#EA8A00"></span><b>a19</b> (3V3)</td><td><b>a23</b></td><td>DRV8835 の VCC (ロジック電源)</td></tr>
+<tr><td class="n">3</td><td><span class="w" style="background:#EA8A00"></span><b>b23</b></td><td><b>b24</b></td><td>MODE を H に (PHASE/ENABLE モード)</td></tr>
+<tr><td class="n">4</td><td><span class="w" style="background:#9333EA"></span><b>a12</b> (IO33)</td><td><b>a25</b></td><td>AIN1 = APHASE (左の向き)</td></tr>
+<tr><td class="n">5</td><td><span class="w" style="background:#16A34A"></span><b>a11</b> (IO25)</td><td><b>a26</b></td><td>AIN2 = AENBL (左の速さ)</td></tr>
+<tr><td class="n">6</td><td><span class="w" style="background:#0284C7"></span><b>a10</b> (IO26)</td><td><b>a27</b></td><td>BIN1 = BPHASE (右の向き)</td></tr>
+<tr><td class="n">7</td><td><span class="w" style="background:#4F46E5"></span><b>a9</b> (IO27)</td><td><b>a28</b></td><td>BIN2 = BENBL (右の速さ)</td></tr>
+<tr><td class="n">8</td><td><span class="w" style="background:#1F2937"></span><b>j28</b></td><td>下の <b>−</b> ライン</td><td>DRV8835 の GND</td></tr>
+<tr><td class="n">9</td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td>下の <b>−</b> ライン</td><td>GND どうしをつなぐ (29〜30 行のすき間を通す)</td></tr>
+<tr><td class="n">10</td><td><span class="w" style="background:#C026D3"></span>電池ボックスの <b>赤</b></td><td><b>j23</b></td><td>VM (モーター電源 約 6V)</td></tr>
+<tr><td class="n">11</td><td>電池ボックスの <b>黒</b></td><td>下の <b>−</b> ライン</td><td>電池の −</td></tr>
+<tr><td class="n">12</td><td>左モーターの 2 本</td><td><b>h24</b> と <b>h25</b></td><td>AOUT1 / AOUT2</td></tr>
+<tr><td class="n">13</td><td>右モーターの 2 本</td><td><b>h26</b> と <b>h27</b></td><td>BOUT1 / BOUT2</td></tr>
+<tr><td class="n">14</td><td><span class="w" style="background:#EA8A00"></span><b>c23</b> (3V3)</td><td>HC-SR04 <b>VCC</b></td><td>オス-メス線。3.3V で動かす</td></tr>
+<tr><td class="n">15</td><td><span class="w" style="background:#B45309"></span><b>a13</b> (IO32)</td><td>HC-SR04 <b>Trig</b></td><td>オス-メス線</td></tr>
+<tr><td class="n">16</td><td><span class="w" style="background:#0F766E"></span><b>a14</b> (IO35)</td><td>HC-SR04 <b>Echo</b></td><td>オス-メス線</td></tr>
+<tr><td class="n">17</td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td>HC-SR04 <b>GND</b></td><td>オス-メス線</td></tr>
+</tbody></table></div>
+<div class="kp warn"><b class="h">配線するときの順番</b>
+<ul>
+  <li>USB と電池のスイッチは切ったまま配線を全部終えてから、電源を入れる (HC-SR04 のデータシートにも「GND が最初につながるように」とある)。</li>
+  <li>電池の + (約 6V) は j23 以外に挿さない。3V3 の列や上の電源ラインに触れると ESP32 が壊れる。</li>
+  <li>電池ボックスのリード線はより線なので、先をよくねじってから挿す。</li>
+</ul>
+</div>
+
+<h2><span class="no">4</span>段階 1: モーターの向きを合わせる</h2>
+<p>車体を箱の上などに置いて<b>タイヤを浮かせ</b>、PC とは USB でつないだまま、電池のスイッチを入れて BOOT を押します。</p>
+<div class="sketch" data-src="sketches/motor_test/motor_test.ino"></div>
+<ul class="check">
+  <li>「左だけ前進」で左のタイヤが前に回る (逆なら <code>LEFT_REVERSED</code> を反転)</li>
+  <li>「右だけ前進」で右のタイヤが前に回る (逆なら <code>RIGHT_REVERSED</code> を反転)</li>
+  <li>「左だけ」で右が回った → 左右のモーターの線を入れ替える (h24–h25 と h26–h27)</li>
+</ul>
+<p>決まった <code>LEFT_REVERSED</code> / <code>RIGHT_REVERSED</code> は、段階 3 のスケッチにも同じ値を書きます。</p>
+
+<h2><span class="no">5</span>段階 2: 距離を測る</h2>
+<div class="sketch" data-src="sketches/distance_test/distance_test.ino"></div>
+<ul class="check">
+  <li>手を 10cm、30cm、1m と離すと、<code>cm:</code> の値がだいたい合う</li>
+  <li>何もない方向に向けると <code>cm:-1</code> (反射が返ってこない)</li>
+  <li>ずっと <code>-1</code> → Trig と Echo が逆、または VCC / GND が来ていない</li>
+</ul>
+
+<h2><span class="no">6</span>段階 3: 走らせる</h2>
+<div class="sketch" data-src="sketches/obstacle_car/obstacle_car.ino"></div>
+<ol class="steps">
+  <li>段階 1 で決めた <code>LEFT_REVERSED</code> / <code>RIGHT_REVERSED</code> を書いて、PC から書き込む。</li>
+  <li>USB を PC から抜いて、モバイルバッテリーにつなぎ替える。電池のスイッチを入れる。</li>
+  <li>床に置いて BOOT を押すと走り出す。止めるときはもう一度 BOOT。</li>
+</ol>
+<div class="kp"><b class="h">走り方を変えるときは定数だけ</b>
+<p>速すぎて止まりきれないなら <code>SPEED_FORWARD</code> を下げるか <code>STOP_CM</code> を大きく。距離は 200ms ごとにしか測れないので、速さ × 0.2 秒ぶんは「見ていない間に進む」と考えて決めます。</p>
+</div>
+
+<h2><span class="no">7</span>うまくいかないとき</h2>
+<div class="tbl"><table>
+<thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>どちらのモーターも回らない</td><td>電池のスイッチ、j23 の電池の +、DRV8835 のはんだ付け、上下の GND をつなぐ線 (#9)</td></tr>
+<tr><td>向きは変わるのに速さが変わらない / 変な動き</td><td>MODE が H になっているか (#3)。MODE が浮いていると別のモード (IN/IN) で動く</td></tr>
+<tr><td>モーターが動き出すと ESP32 が再起動する</td><td>電池が減っていないか。GND の共通 (#1, #8, #9) が抜けていないか</td></tr>
+<tr><td>走っているうちに ESP32 だけ止まる</td><td>モバイルバッテリーによっては、流れる電流が少ないと自動で切れる。別のバッテリーで試す</td></tr>
+<tr><td>まっすぐ走らない</td><td>モーターの個体差。遅い側だけ速さを足す定数を作ると直せる</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">8</span>改造のアイデア</h2>
+<ul>
+  <li>HC-SR04 を<a href="light-seeker.html">首振りガジェット</a>のサーボに載せ、止まったときに左右の距離を測って、空いている方へ曲がる。</li>
+  <li>赤外線リモコンで「自動 / 手動」を切り替えて、手動のときは十字キーで操縦する。</li>
+  <li>ESP32 の Wi-Fi でスマホのブラウザからスタート / ストップする。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('obstacle-car')</script>
+</body>
+</html>

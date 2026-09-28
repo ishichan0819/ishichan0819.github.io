@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" width="760" height="380" role="img" aria-labelledby="t d" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP','Noto Sans CJK JP',Meiryo,sans-serif">
+<title id="t">首振りガジェットの回路図</title>
+<desc id="d">ESP32 の 5V と GND をサーボに、IO25 をサーボの信号に。3V3 から CdS と 10kΩ で分圧し、その中点を IO34 に入れる。</desc>
+<rect width="760" height="380" rx="14" fill="#FBFAF7"/>
+<rect x="40" y="40" width="150" height="300" rx="8" fill="#23262E"/>
+<text x="115.0" y="62.0" font-size="14" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">ESP32</text>
+<text x="115.0" y="80.0" font-size="10" fill="#C9CDD6" text-anchor="middle" dominant-baseline="central" font-weight="400">DevKitC-32E</text>
+<circle cx="190" cy="90" r="5" fill="#E11D48"/>
+<text x="178.0" y="90.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">5V</text>
+<circle cx="190" cy="140" r="5" fill="#1F2937"/>
+<text x="178.0" y="140.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<circle cx="190" cy="190" r="5" fill="#16A34A"/>
+<text x="178.0" y="190.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO25</text>
+<circle cx="190" cy="250" r="5" fill="#EA8A00"/>
+<text x="178.0" y="250.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<circle cx="190" cy="300" r="5" fill="#0F766E"/>
+<text x="178.0" y="300.0" font-size="11" fill="#fff" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">IO34</text>
+<rect x="500" y="40" width="200" height="175" rx="10" fill="#2F6FDB"/>
+<text x="600.0" y="60.0" font-size="13" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">SG90 サーボ</text>
+<circle cx="500" cy="90" r="6" fill="#DC2626" stroke="#fff" stroke-width="1.5"/>
+<text x="514.0" y="90.0" font-size="11" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700">赤  +5V</text>
+<path d="M190 90 L494 90" fill="none" stroke="#E11D48" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="500" cy="140" r="6" fill="#6B3E26" stroke="#fff" stroke-width="1.5"/>
+<text x="514.0" y="140.0" font-size="11" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700">茶  GND</text>
+<path d="M190 140 L494 140" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="500" cy="190" r="6" fill="#F08A24" stroke="#fff" stroke-width="1.5"/>
+<text x="514.0" y="190.0" font-size="11" fill="#fff" text-anchor="start" dominant-baseline="central" font-weight="700">橙  信号</text>
+<path d="M190 190 L494 190" fill="none" stroke="#16A34A" stroke-width="3" stroke-linejoin="round"/>
+<text x="345.0" y="178.0" font-size="10" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">20ms ごとに 0.5〜2.4ms のパルス</text>
+<text x="345.0" y="206.0" font-size="10" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">→ パルス幅で 0〜180° が決まる</text>
+<path d="M190 250 L310 250 L310 262" fill="none" stroke="#EA8A00" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="310" cy="280" r="18" fill="#FFF7DF" stroke="#B89B4E"/>
+<path d="M310 262 l0 4 l-6 3 l12 5 l-12 5 l12 5 l-6 3 l0 5" fill="none" stroke="#1F2430" stroke-width="1.6"/>
+<path d="M272 257 l14 10 M282 268 l-5 -1 l2 -4 M270 270 l14 10 M280 281 l-5 -1 l2 -4" fill="none" stroke="#E0A100" stroke-width="1.6"/>
+<text x="336.0" y="274.0" font-size="11" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">CdS</text>
+<text x="336.0" y="289.0" font-size="9" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">明るい 10〜20kΩ / 暗い 約1MΩ</text>
+<path d="M310 297 L310 300 L190 300" fill="none" stroke="#0F766E" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="310" cy="300" r="4.5" fill="#0F766E"/>
+<path d="M310 300 L310 310" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<path d="M310 310 l-6 3 l12 5 l-12 5 l12 5 l-6 3 l0 4" fill="none" stroke="#1F2430" stroke-width="1.6"/>
+<text x="324.0" y="322.0" font-size="11" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">10kΩ</text>
+<path d="M310 335 L310 344" fill="none" stroke="#1F2937" stroke-width="3" stroke-linejoin="round"/>
+<path d="M298 344 h24 M302 349 h16 M306 354 h8" stroke="#1F2430" stroke-width="1.8"/>
+<text x="328.0" y="350.0" font-size="10" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">GND</text>
+<text x="480.0" y="290.0" font-size="10.5" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">IO34 の電圧 = 3.3V × 10k ÷ (CdS + 10k)</text>
+<text x="480.0" y="310.0" font-size="10" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">明るい → CdS が小さい → 電圧が上がる</text>
+<text x="480.0" y="328.0" font-size="9.5" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">(実際の値は部屋で変わるので、シリアルモニタで確かめる)</text>
+</svg>
