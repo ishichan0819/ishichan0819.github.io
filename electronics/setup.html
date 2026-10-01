@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>開発環境と最初の一歩 — 電子工作ノート</title>
-<meta name="description" content="Arduino IDE に ESP32 ボードパッケージを入れて、配線なしで ESP32-DevKitC を動かす。ブレッドボードへの挿し方と、使えるピン。">
+<meta name="description" content="Arduino IDE に ESP32 ボードパッケージを入れて、配線なしで ESP32-DevKitC と Freenove の ESP32 を動かす。ブレッドボードへの挿し方、使えるピン、テスターの使いどころ。">
 <meta name="theme-color" content="#0F3B26">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -26,7 +26,8 @@
 <div class="kp warn"><b class="h">ポートが出てこないとき</b>
 <ul>
   <li>USB ケーブルが<b>充電専用</b>だと、電源は入ってもポートは出ません。データ通信できるケーブルに替える。</li>
-  <li>このボードの USB は micro-B で、USB シリアル変換に Silicon Labs の CP210x 系のチップを使っています。自動で認識されないときは Silicon Labs の CP210x ドライバを入れる。</li>
+  <li><b>DevKitC</b> の USB は micro-B で、USB シリアル変換に Silicon Labs の CP210x 系のチップを使っています。自動で認識されないときは Silicon Labs の CP210x ドライバを入れる。</li>
+  <li><b>Freenove の ESP32</b> は USB Type-C で、変換チップは WCH の CH340 です。認識されないときは CH340 のドライバを入れる (Freenove の <a href="https://github.com/Freenove/Freenove_ESP32_WROOM_Board">GitHub</a> の CH340 フォルダにもある)。秋月で買ったケーブルは micro-B なので、Type-C のデータ用ケーブルが別に要る。</li>
 </ul>
 </div>
 <div class="kp"><b class="h">ボードパッケージは 3.x を使う</b>
@@ -72,6 +73,38 @@
 <div class="kp"><b class="h">ADC2 と Wi-Fi</b>
 <p>アナログ入力には ADC1 と ADC2 があり、ADC2 側 (GPIO 25〜27 など) は Wi-Fi を使っている間は読めません。アナログ値を読むピンは ADC1 (32〜39) から選ぶと、あとで Wi-Fi を足しても困りません。</p>
 </div>
+
+<h2 id="freenove"><span class="no">4</span>Freenove の ESP32 ボード</h2>
+<p>Amazon で買った Freenove ESP32 WROOM ボード (2 枚入り) も、中身は同じ ESP32-WROOM-32E です。Arduino IDE の設定も DevKitC と同じ <b>ESP32 Dev Module</b> で書き込めます。違うのは USB が Type-C なことと、基板に<b>青い LED (IO2)</b> と<b>フルカラー LED (IO16, WS2812)</b> が載っていること、ピンが 20 本ずつあることです。</p>
+<div class="sketch" data-src="sketches/hello_freenove/hello_freenove.ino" data-open></div>
+<ul class="check">
+  <li>フルカラー LED が 1 秒ごとに 赤 → 緑 → 青 → 白 と変わり、青い LED が 1 秒おきに点く</li>
+  <li>BOOT を押すと色送りが止まり、もう一度押すと動く</li>
+  <li>シリアルモニタに MAC アドレスが出る。2 枚とも試して、マスキングテープに末尾 2 桁を書いて貼っておくと見分けやすい</li>
+</ul>
+<p style="font-size:.9rem;color:var(--muted)"><code>rgbLedWrite</code> はボードパッケージ 3.1 以降に入っている関数です。コンパイルで「not declared」と出たら、ボードマネージャで esp32 を最新に更新してください。Freenove の説明書にある WS2812 用ライブラリは使いません。</p>
+<h3>ブレッドボードへの挿し方</h3>
+<p>ピン列の間隔は DevKitC と同じなので、挿し方も同じです (Freenove のピン配置図から測った値)。USB を左、3V3/5V の並ぶ列を上にして 1〜20 行に挿すと、上の a 列に 1 穴ずつ空きます。上の列の並びは、IO13 から 3V3 までが DevKitC と同じで、<b>1 行右にずれます</b>。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/freenove-pinmap.svg" alt="Freenove と DevKitC の上の列のピンを、ブレッドボードの行番号で比べた図。Freenove は 1 行目から 5V, 5V, 3V3, 3V3, 3V3, 13, GND, 12, 14, 27, 26, 25, 33, 32, 35, 34, VN, VP, EN, 3V3。DevKitC は 5V, CMD, SD3, SD2, 13, GND, 12, 14, 27, 26, 25, 33, 32, 35, 34, VN, VP, EN, 3V3。" loading="lazy"></div>
+  <figcaption>同じ行番号で比べた上の列。<a href="img/freenove-pinmap.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="kp warn"><b class="h">DevKitC の配線表を Freenove で使うとき</b>
+<p>このノートの首振りガジェットと障害物回避カーの配線表は、DevKitC の行番号で書いています。Freenove で組むときは <b>ESP32 側の穴だけ 1 行右</b>にずらします (例: a6 → a7、a15 → a16、a19 → a20)。5V は Freenove でも 1 行目のままです。部品側 (21 行目より右) の穴は変わりません。ワイヤレス操縦のコントローラーは、はじめから Freenove の行番号で書いています。</p>
+</div>
+
+<h2 id="tester"><span class="no">5</span>テスターで確かめる</h2>
+<p>テスター (DE-200A) は、動かないときに「どこまで電気が来ているか」を確かめる道具です。このノートでよく使うのは次の 3 つです。測り方の切り替えはテスターの説明書を見てください。</p>
+<div class="kp danger"><b class="h">赤いリード線は V・Ω の端子に</b>
+<p>電流を測る端子 (A や mA と書いてある方) に挿したまま電圧を測ると、中のヒューズが切れます。このノートで電流は測らないので、赤は V・Ω の端子、黒は COM に挿したままにしておきます。</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>確かめること</th><th>レンジ</th><th>測り方</th><th>正しければ</th></tr></thead>
+<tbody>
+<tr><td>ジャンパー線が切れていないか</td><td>導通ブザー</td><td>電源を切った状態で、線の両端にリード棒を当てる</td><td>ピーッと鳴る。鳴らない線は捨てる (無選別のセットは特に)</td></tr>
+<tr><td>電池が減っていないか</td><td>直流電圧 (V⎓)</td><td>電池ボックスのスイッチを入れ、赤を赤い線、黒を黒い線に</td><td>単3×4本で 6V 前後。車の走りが弱くなったら測って比べる</td></tr>
+<tr><td>ESP32 の 3.3V が出ているか</td><td>直流電圧 (V⎓)</td><td>USB をつないだまま、黒を GND の列、赤を 3V3 の列に</td><td>3.3V 前後</td></tr>
+</tbody></table></div>
 
 <nav id="pn"></nav>
 </main>

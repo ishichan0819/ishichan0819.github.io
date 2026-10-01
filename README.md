@@ -9,7 +9,7 @@ https://ishichan0819.github.io/
 - [Computer 基礎: コンピュータの底](https://ishichan0819.github.io/computer-basics/) — 「キーを押すとどうやって電荷が動くのか」を体験する2つのページ
   - [指先から電荷まで](https://ishichan0819.github.io/computer-basics/yubisaki-kara-denka.html) — 5つの実験
   - [内部をのぞく](https://ishichan0819.github.io/computer-basics/naibu-wo-nozoku.html) — キーボードを打つと内部の回路を電気が走り、モニターに文字が出るアクティビティ
-- [電子工作ノート](https://ishichan0819.github.io/electronics/) — ESP32-DevKitC と秋月電子の部品で動くものを作る記録。開発環境、部品、首振りガジェット (CdS + サーボ)、障害物回避カー (HC-SR04 + DRV8835) の回路図・ブレッドボード配線図・Arduino スケッチ
+- [電子工作ノート](https://ishichan0819.github.io/electronics/) — ESP32 (DevKitC / Freenove) と秋月電子の部品で動くものを作る記録。開発環境、部品、首振りガジェット (CdS + サーボ)、障害物回避カー (HC-SR04 + DRV8835)、ワイヤレス操縦 (ESP-NOW + ジョイスティック) の回路図・ブレッドボード配線図・Arduino スケッチ
 - [Visible Light: 光で文字を送る](https://ishichan0819.github.io/visible-light/) — LEDの点滅で文字を送って復号する、可視光通信(Li-Fi)のアクティビティ
 - [CSK / DCSK: 色で文字を送る](https://ishichan0819.github.io/csk/) — RGB-LEDの色でビットを送るCSKと、LEDのON/OFF個数で色を作るDCSKを比べるアクティビティ
 - [スマホ同士で光通信](https://ishichan0819.github.io/screen-camera/) — 1台の画面の色を切り替えて文字を送り、もう1台のカメラで読み取る画面→カメラ通信。色を必ず変える差動符号、パケットごとの色の見本による色較正、CRC つき。カメラの映像は端末の中だけで処理し、カメラなしで試すモードもある

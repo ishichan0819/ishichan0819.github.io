@@ -38,6 +38,14 @@ J1 = ['5V', 'CMD', 'SD3', 'SD2', 'IO13', 'GND', 'IO12', 'IO14', 'IO27', 'IO26',
 J3 = ['CLK', 'SD0', 'SD1', 'IO15', 'IO2', 'IO0', 'IO4', 'IO16', 'IO17', 'IO5',
       'IO18', 'IO19', 'GND', 'IO21', 'RX', 'TX', 'IO22', 'IO23', 'GND']
 
+# Freenove ESP32 WROOM ボード (20 ピン × 2 列、USB Type-C) を同じ向き (USB を左) にしたとき。
+# Freenove のピン配置図から。ピン列の間隔は DevKitC と同じ 10 穴ぶんなので、上の a 列だけ空く。
+# IO13 から 3V3 までの並びは DevKitC の J1 と同じで、1 行ずつ右にずれる。
+FN_TOP = ['5V', '5V', '3V3', '3V3', '3V3', 'IO13', 'GND', 'IO12', 'IO14', 'IO27',
+          'IO26', 'IO25', 'IO33', 'IO32', 'IO35', 'IO34', 'VN', 'VP', 'EN', '3V3']
+FN_BOT = ['GND', 'GND', 'GND', 'GND', 'IO15', 'IO2', 'IO0', 'IO4', 'IO16', 'IO17',
+          'IO5', 'IO18', 'IO19', 'GND', 'IO21', 'RX', 'TX', 'IO22', 'IO23', 'GND']
+
 
 def esc(s):
     return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -160,7 +168,70 @@ class Board:
             s.text(x, y - 13, name.replace('IO', ''), size=7.5, fill='#8A909C', family=MONO)
         s.text(self.hole('b6')[0], self.oy + 8.3 * P, '下の列 (J3) は空き穴がないので使わない', size=8.5, fill='#9AA0AC')
 
+    def freenove(self, used):
+        """Freenove ESP32 WROOM を 1〜20 行に、上のピン列を b 列・下を j 列にして描く。used: {ピン名: 色}"""
+        s = self.s
+        bx0 = self.hole('b1')[0] - 1.0 * P
+        bx1 = self.hole('b20')[0] + 0.9 * P
+        by0 = self.oy + 0.5 * P
+        by1 = self.oy + 11.5 * P
+        # USB Type-C (細長い角丸)
+        s.add(f'<rect x="{bx0 - 0.55 * P}" y="{self.oy + 5.15 * P}" width="{1.0 * P}" height="{1.7 * P}" rx="6" fill="#B8BDC7" stroke="#8B919C"/>')
+        s.add(f'<rect x="{bx0}" y="{by0}" width="{bx1 - bx0}" height="{by1 - by0}" rx="4" fill="#15171C" opacity=".95"/>')
+        mx0, mx1 = self.hole('b13')[0], bx1 + 0.6 * P
+        my0, my1 = self.oy + 2.1 * P, self.oy + 9.9 * P   # ピン名の文字にかからない高さ
+        s.add(f'<rect x="{mx0}" y="{my0}" width="{mx1 - mx0}" height="{my1 - my0}" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>')
+        ax = bx1 - 1.2 * P
+        s.add(f'<rect x="{mx0 + 0.5 * P}" y="{my0 + 0.6 * P}" width="{ax - mx0 - 0.9 * P}" height="{my1 - my0 - 1.2 * P}" rx="2" fill="#C7CBD4"/>')
+        s.add(f'<rect x="{ax}" y="{my0}" width="{mx1 - ax}" height="{my1 - my0}" fill="#E9EBF0" stroke="#9BA1AD"/>')
+        s.text((mx0 + ax) / 2, self.oy + 5.2 * P, 'ESP32-WROOM-32E', size=10, fill='#3A3F4B', weight=700)
+        s.text((ax + mx1) / 2, self.oy + 6.0 * P, 'アンテナ', size=8, fill=MUTED, rotate=-90)
+        s.text(self.hole('b7')[0], self.oy + 4.3 * P, 'Freenove ESP32 WROOM', size=11, fill='#F3F4F6', weight=700)
+        s.text(self.hole('b7')[0], self.oy + 5.9 * P, 'USB-C を左・3V3/5V の列を上に挿す', size=9, fill='#C9CDD6')
+        # ボタン (USB の上下)
+        for label, cy in (('EN', 3.2), ('BOOT', 8.8)):
+            x = bx0 + 0.7 * P
+            s.add(f'<rect x="{x - 7}" y="{self.oy + cy * P - 7}" width="14" height="14" rx="2" fill="#E5E7EB"/>')
+            s.text(x + 17, self.oy + cy * P, label, size=8, fill='#C9CDD6', anchor='start')
+        # 基板の LED: 青 (IO2) とフルカラー (IO16)
+        lx, ly = self.hole('b9')[0], self.oy + 7.4 * P
+        s.add(f'<rect x="{lx - 7}" y="{ly - 7}" width="14" height="14" rx="2" fill="#F8FAFC" stroke="#9CA3AF"/>')
+        s.add(f'<circle cx="{lx}" cy="{ly}" r="3.5" fill="url(#rgb)"/>')
+        s.add('<defs><linearGradient id="rgb"><stop offset="0" stop-color="#EF4444"/><stop offset=".5" stop-color="#22C55E"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs>')
+        s.text(lx + 12, ly, 'RGB (16)', size=8, fill='#C9CDD6', anchor='start')
+        s.add(f'<rect x="{lx - 4}" y="{ly + 14}" width="8" height="5" rx="1" fill="#3B82F6"/>')
+        s.text(lx + 12, ly + 17, 'LED (2)', size=8, fill='#C9CDD6', anchor='start')
+        for i, name in enumerate(FN_TOP):
+            x, y = self.hole(f'b{i + 1}')
+            color = used.get(name)
+            s.add(f'<rect x="{x - 4.5}" y="{y - 4.5}" width="9" height="9" rx="1.5" fill="{color or "#C9A227"}" stroke="#111" stroke-width=".6"/>')
+            label = name.replace('IO', '')
+            if color:
+                s.add(f'<rect x="{x - 12}" y="{y + 7}" width="24" height="13" rx="3" fill="{color}"/>')
+                s.text(x, y + 13.5, label, size=8.5, fill='#fff', weight=700, family=MONO)
+            else:
+                s.text(x, y + 13.5, label, size=8, fill='#9AA0AC', family=MONO)
+        for i, name in enumerate(FN_BOT):
+            x, y = self.hole(f'j{i + 1}')
+            s.add(f'<rect x="{x - 4.5}" y="{y - 4.5}" width="9" height="9" rx="1.5" fill="#8C7A3A" stroke="#111" stroke-width=".6"/>')
+            s.text(x, y - 13, name.replace('IO', ''), size=7.5, fill='#8A909C', family=MONO)
+
     # ---- 部品 ----
+    def cap_e(self, plus, minus, label='470µF'):
+        """電解コンデンサーを上から見た絵。+ の足を plus、− の足を minus の穴に"""
+        (x1, y1), (x2, y2) = self.hole(plus), self.hole(minus)
+        cx, cy = (x1 + x2) / 2 + 22, (y1 + y2) / 2
+        s = self.s
+        for x, y in ((x1, y1), (x2, y2)):
+            s.add(f'<line x1="{x}" y1="{y}" x2="{cx - 8}" y2="{cy + (y - cy) * .4}" stroke="#8A8F99" stroke-width="1.6"/>')
+            s.add(f'<circle cx="{x}" cy="{y}" r="2.6" fill="#8A8F99"/>')
+        s.add(f'<circle cx="{cx}" cy="{cy}" r="13" fill="#1F3F8A" stroke="#14295C"/>')
+        # − 側の帯 (白い弧)
+        side = 1 if y2 > y1 else -1
+        s.add(f'<path d="M{cx - 11} {cy + side * 6} A13 13 0 0 {0 if side > 0 else 1} {cx + 11} {cy + side * 6}" fill="none" stroke="#E5E7EB" stroke-width="4"/>')
+        s.text(cx, cy - side * 4, '+', size=10, fill='#fff', weight=700)
+        s.text(cx + 18, cy, label, size=9, weight=700, anchor='start')
+
     def resistor(self, a, b, bands=('#6B3E26', '#111', '#E07A1F'), label='10kΩ', label_dx=0, label_dy=-14):
         (x1, y1), (x2, y2) = self.hole(a), self.hole(b)
         ang = math.degrees(math.atan2(y2 - y1, x2 - x1))
@@ -181,7 +252,7 @@ class Board:
         if label:
             s.text(cx + label_dx, cy + label_dy, label, size=9, fill=INK, weight=700)
 
-    def cds(self, a, b, label='CdS'):
+    def cds(self, a, b, label='CdS', below=False):
         (x1, y1), (x2, y2) = self.hole(a), self.hole(b)
         cx, cy = (x1 + x2) / 2, (y1 + y2) / 2 - 12
         s = self.s
@@ -190,7 +261,7 @@ class Board:
             s.add(f'<circle cx="{x}" cy="{y}" r="2.6" fill="#8A8F99"/>')
         s.add(f'<circle cx="{cx}" cy="{cy}" r="9" fill="#F4E9C8" stroke="#B89B4E"/>')
         s.add(f'<path d="M{cx - 5} {cy - 3} q2.5 -4 5 0 t5 0 M{cx - 5} {cy + 3} q2.5 -4 5 0 t5 0" fill="none" stroke="#B5462C" stroke-width="1.3"/>')
-        s.text(cx, cy - 16, label, size=9, weight=700)
+        s.text(cx, cy + 22 if below else cy - 16, label, size=9, weight=700)
 
     def module(self, rows, top_labels, bottom_labels, name):
         """DIP モジュールを e 列・f 列にまたがって置く (DRV8835 など)"""
@@ -612,10 +683,318 @@ def esp32_pinmap():
     s.save('esp32-pinmap.svg')
 
 
+# ------------------------------------------------------------------ 追いかけ型 (CdS 2 個)
+IO35_B = '#7C3AED'   # この図だけ、IO34 (CdS A) と見分けるために IO35 を紫にする
+
+
+def light_follower_breadboard():
+    s = SVG(1060, 720, '追いかけ型の首振りガジェットのブレッドボード配線',
+            '首振りガジェットに CdS をもう 1 組足す。e24 から e27 へ 3V3、CdS B を c27–c28、10kΩ を b28 と上の − ラインの間、'
+            'a14 (IO35) から a28。上の + と − のラインにまたがって 470µF を挿す。')
+    b = Board(s, 190, 210)
+    b.draw()
+    b.esp32({'5V': C['5V'], 'GND': C['GND'], '3V3': C['3V3'], 'IO25': C['IO25'], 'IO34': C['IO34'], 'IO35': IO35_B})
+
+    b.wire('a1', 'top+:1', C['5V'], straight=True)
+    b.wire('a6', 'top-:6', C['GND'], straight=True)
+    # CdS A (いままでと同じ)
+    b.wire('a19', 'a24', C['3V3'], lift=0.6)
+    b.cds('c24', 'c25', label='CdS A', below=True)
+    b.resistor('b25', 'top-:25.6', label='', label_dx=26, label_dy=2)
+    b.wire('a15', 'a25', C['IO34'], lift=1.15)
+    # CdS B (足す)
+    b.wire('e24', 'e27', C['3V3'], lift=0.5, width=3)
+    b.cds('c27', 'c28', label='CdS B', below=True)
+    b.resistor('b28', 'top-:28.6', label='', label_dx=26, label_dy=2)
+    b.wire('a14', 'a28', IO35_B, lift=1.45)
+    s.text(b.hole('a30')[0] + 30, b.hole('top-:29.5')[1] + 26, '10kΩ × 2', size=9, weight=700, anchor='start')
+    # 470µF: 上の + と − にまたがって (足の長い方 = + を + ラインへ)
+    b.cap_e('top+:19', 'top-:19')
+
+    servo_icon(s, 880, 40)
+    kx, ky = 800, 58
+    s.add(f'<rect x="{kx}" y="{ky}" width="22" height="46" rx="2" fill="#1F2937"/>')
+    s.text(kx + 11, ky - 10, 'メス', size=8, fill=MUTED)
+    for i, (col, lab) in enumerate((('#F08A24', '橙 信号'), ('#DC2626', '赤 5V'), ('#6B3E26', '茶 GND'))):
+        y = ky + 9 + i * 14
+        s.add(f'<path d="M{kx + 22} {y} C{kx + 50} {y} {850} {60 + i * 8} {880} {60 + i * 8}" fill="none" stroke="{col}" stroke-width="3"/>')
+        s.text(1012, 52 + i * 14, lab, size=9, fill=col, anchor='start', weight=700)
+    pin = lambda i: (kx, ky + 9 + i * 14)
+    route(b, ['a11', (b.hole('a11')[0], pin(0)[1]), pin(0)], C['IO25'])
+    route(b, ['top+:27.5', (b.hole('top+:27.5')[0], pin(1)[1]), pin(1)], C['5V'])
+    route(b, ['top-:29.5', (b.hole('top-:29.5')[0], pin(2)[1]), pin(2)], C['GND'])
+    tag(s, b.hole('a11')[0] + 70, pin(0)[1], 'IO25 → 橙 (信号)', C['IO25'])
+
+    tag(s, b.hole('a1')[0] + 36, b.hole('top+:1')[1] - 14, '5V', C['5V'])
+    tag(s, b.hole('a6')[0] + 40, b.hole('top-:6')[1] - 14, 'GND', C['GND'])
+    s.text(b.hole('e27')[0] + 12, b.hole('e27')[1] + 14, '3V3 を 27 行へ', size=8.5, anchor='start', fill=C['3V3'], weight=700)
+
+    usb_cable(s, b, ('USB → PC', '書き込み・電源・シリアル'))
+
+    # CdS を腕に付けるようす
+    ix, iy = 520, 540
+    s.add(f'<rect x="{ix}" y="{iy}" width="520" height="164" rx="10" fill="#FFFFFF" stroke="#D6D0C2"/>')
+    s.text(ix + 14, iy + 18, 'CdS A・B を抜いて、オス-メス線 4 本で延長し、サーボの腕に付ける', size=10, anchor='start', weight=700)
+    hx, hy = ix + 120, iy + 124                      # 腕の付け根
+    s.add(f'<rect x="{hx - 70}" y="{hy - 6}" width="140" height="34" rx="6" fill="#2F6FDB"/>')
+    s.add(f'<circle cx="{hx}" cy="{hy}" r="9" fill="#F3F4F6" stroke="#9CA3AF"/>')
+    s.add(f'<rect x="{hx - 52}" y="{hy - 50}" width="104" height="10" rx="5" fill="#F9FAFB" stroke="#9CA3AF"/>')
+    s.add(f'<line x1="{hx}" y1="{hy}" x2="{hx}" y2="{hy - 45}" stroke="#9CA3AF" stroke-width="6"/>')
+    s.add(f'<rect x="{hx - 2}" y="{hy - 78}" width="4" height="30" fill="#8B5E3C"/>')   # 仕切り
+    for dx, rot, lab in ((-26, -25, 'A'), (26, 25, 'B')):
+        cx, cy = hx + dx, hy - 60
+        s.add(f'<g transform="rotate({rot} {cx} {cy})"><circle cx="{cx}" cy="{cy}" r="8" fill="#F4E9C8" stroke="#B89B4E"/>'
+              f'<path d="M{cx - 4} {cy - 2} q2 -3 4 0 t4 0 M{cx - 4} {cy + 2} q2 -3 4 0 t4 0" fill="none" stroke="#B5462C" stroke-width="1.1"/></g>')
+        s.text(cx + dx * 0.9, cy - 6, lab, size=10, weight=700)
+    s.text(hx + 2, hy - 86, '厚紙の仕切り', size=8.5, fill='#8B5E3C', anchor='start')
+    s.text(ix + 250, iy + 54, 'A と B を少し外向き (左右に 20〜30°) に開いて貼り、', size=9.5, anchor='start')
+    s.text(ix + 250, iy + 70, '間に厚紙を立てる。光が片側から来ると片方だけ影になる', size=9.5, anchor='start')
+    s.text(ix + 250, iy + 96, 'A の 2 本 → c24 と c25', size=9.5, anchor='start', fill=C['IO34'], weight=700)
+    s.text(ix + 250, iy + 112, 'B の 2 本 → c27 と c28', size=9.5, anchor='start', fill=IO35_B, weight=700)
+    s.text(ix + 250, iy + 136, '首振りでケーブルが引っかからない長さに', size=8.5, anchor='start', fill=MUTED)
+
+    legend(s, 190, 572, [('5V', C['5V']), ('3V3', C['3V3']), ('GND', C['GND'])])
+    legend(s, 190, 594, [('IO25 サーボ', C['IO25']), ('IO34 CdS A', C['IO34'])])
+    legend(s, 190, 616, [('IO35 CdS B', IO35_B)])
+    s.save('light-follower-breadboard.svg')
+
+
+# ------------------------------------------------------------------ ワイヤレス操縦
+GROVE = {'X': ('#EAB308', '黄'), 'Y': ('#F3F4F6', '白'), 'VCC': ('#DC2626', '赤'), 'GND': ('#111827', '黒')}
+JOY_ROWS = {'X': 24, 'Y': 25, 'VCC': 26, 'GND': 27}   # 変換ケーブルのピンヘッダーを c24〜c27 に
+
+
+def grove_wire(s, pts, key, width=3.4):
+    """Grove ケーブルの 1 本。白い線も見えるよう、細い灰色のふちを付ける"""
+    col = GROVE[key][0]
+    d = 'M' + ' L'.join(f'{x:.1f} {y:.1f}' for x, y in pts)
+    s.add(f'<path d="{d}" fill="none" stroke="#6B7280" stroke-width="{width + 1.6}" stroke-linecap="round" stroke-linejoin="round"/>')
+    s.add(f'<path d="{d}" fill="none" stroke="{col}" stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round"/>')
+
+
+def joystick_icon(s, x, y):
+    """Grove ジョイスティックを上から見た絵。左の辺に Grove のソケット。ソケットの 4 本の y を返す"""
+    s.add(f'<rect x="{x}" y="{y}" width="150" height="150" rx="8" fill="#2B6CB0" stroke="#1E4E80"/>')
+    s.add(f'<circle cx="{x + 82}" cy="{y + 75}" r="46" fill="#1F2937"/>')
+    s.add(f'<circle cx="{x + 82}" cy="{y + 75}" r="30" fill="#4B5563" stroke="#111827" stroke-width="2"/>')
+    s.add(f'<circle cx="{x + 82}" cy="{y + 75}" r="17" fill="#6B7280"/>')
+    for ang, lab in ((0, 'X+'), (90, 'Y+')):
+        ex = x + 82 + 62 * math.cos(math.radians(-ang))
+        ey = y + 75 + 62 * math.sin(math.radians(-ang))
+        s.text(ex, ey, lab, size=8.5, fill='#DCE7FB', weight=700, family=MONO)
+    s.text(x + 82, y + 165, 'Grove ジョイスティック', size=10, weight=700)
+    s.text(x + 82, y + 180, '向きは joystick_test で確かめる', size=8.5, fill=MUTED)
+    sx, sy = x - 14, y + 44
+    s.add(f'<rect x="{sx}" y="{sy}" width="20" height="62" rx="3" fill="#F3F4F6" stroke="#9CA3AF"/>')
+    return {k: sy + 10 + i * 14 for i, k in enumerate(('X', 'Y', 'VCC', 'GND'))}, sx
+
+
+def rc_controller_breadboard():
+    s = SVG(1100, 580, 'ワイヤレス操縦のコントローラーの配線',
+            'Freenove ESP32 を 1〜20 行に挿す。a5 (3V3) から上の + ライン、a7 (GND) から上の − ライン。'
+            'ジョイスティックの変換ケーブルを c24〜c27 (黄 X・白 Y・赤 VCC・黒 GND) に挿し、a16 (IO34) → a24、a15 (IO35) → a25、'
+            '+ ライン → a26、− ライン → a27。')
+    b = Board(s, 190, 150)
+    b.draw()
+    b.freenove({'3V3': C['3V3'], 'GND': C['GND'], 'IO34': C['IO34'], 'IO35': IO35_B})
+
+    # 3V3 と GND を上の電源ラインに (このコントローラーでは + ラインが 3.3V)
+    b.wire('a5', 'top+:5', C['3V3'], straight=True)
+    b.wire('a7', 'top-:7', C['GND'], straight=True)
+    b.wire('a16', 'a24', C['IO34'], lift=0.95)
+    b.wire('a15', 'a25', IO35_B, lift=1.3)
+    b.wire('top+:26.5', 'a26', C['3V3'], straight=True)
+    b.wire('top-:27.5', 'a27', C['GND'], straight=True)
+
+    # 変換ケーブルのピンヘッダー (c24〜c27) とジョイスティック
+    x24, yc = b.hole('c24')
+    x27, _ = b.hole('c27')
+    s.add(f'<rect x="{x24 - 8}" y="{yc - 7}" width="{x27 - x24 + 16}" height="14" rx="2" fill="#20232A"/>')
+    pins, sx = joystick_icon(s, 900, 190)
+    for i, key in enumerate(('GND', 'VCC', 'Y', 'X')):          # 右の穴ほど浅く曲げると交差しない
+        px, py = b.hole(f'c{JOY_ROWS[key]}')
+        turn_y = py + (0.55 + i * 0.38) * P
+        grove_wire(s, [(px, py), (px, turn_y), (sx - 40 - i * 8, turn_y), (sx - 40 - i * 8, pins[key]), (sx, pins[key])], key)
+        s.add(f'<circle cx="{px}" cy="{py}" r="3.2" fill="{GROVE[key][0]}" stroke="#374151" stroke-width="1"/>')
+    s.text(x27 + 14, yc, 'ヘッダー', size=8.5, weight=700, anchor='start')
+    s.text(840, b.oy + 9.6 * P, '変換ケーブル', size=9.5, weight=700)
+    s.text(840, b.oy + 10.4 * P, '(Grove を切って', size=8.5, fill=MUTED)
+    s.text(840, b.oy + 11.1 * P, 'ピンヘッダーに)', size=8.5, fill=MUTED)
+    gx = 900 + 160
+    for i, key in enumerate(('X', 'Y', 'VCC', 'GND')):
+        col, name = GROVE[key]
+        y = 410 + i * 16
+        s.add(f'<rect x="{gx - 150}" y="{y - 3}" width="18" height="6" rx="3" fill="{col}" stroke="#6B7280" stroke-width=".8"/>')
+        s.text(gx - 126, y, f'{name}  {key}', size=9.5, anchor='start', weight=700)
+
+    tag(s, b.hole('a5')[0] + 36, b.hole('top+:5')[1] - 14, '3V3', C['3V3'])
+    tag(s, b.hole('a7')[0] + 44, b.hole('top-:7')[1] + 12, 'GND', C['GND'])
+    s.text(b.hole('a26')[0] - 4, b.hole('top+:26.5')[1] - 16, '+ ラインは 3.3V', size=9, fill=C['3V3'], weight=700, anchor='end')
+
+    usb_cable(s, b, ('USB', 'PC かモバイルバッテリー'))
+    legend(s, 190, 500, [('3V3', C['3V3']), ('GND', C['GND']), ('IO34 ← X (黄)', C['IO34']), ('IO35 ← Y (白)', IO35_B)])
+    s.text(190, 528, 'このコントローラーでは上の + ラインに 3.3V を流す。5V はどこにもつながない', size=10, anchor='start', fill='#B91C1C', weight=700)
+    s.save('rc-controller-breadboard.svg')
+
+
+def rc_system():
+    s = SVG(900, 360, 'ワイヤレス操縦のしくみ',
+            'コントローラー (Freenove ESP32 + ジョイスティック) が 1 秒に 20 回、X・Y・押した回数を ESP-NOW で送る。'
+            '車 (障害物回避カーの配線のまま) は 1 秒に 10 回、距離とモードを送り返す。0.3 秒届かなければ車は止まる。')
+    # コントローラー
+    cx, cy, cw, ch = 30, 50, 250, 230
+    s.add(f'<rect x="{cx}" y="{cy}" width="{cw}" height="{ch}" rx="12" fill="#FFFFFF" stroke="#D6D0C2"/>')
+    s.text(cx + cw / 2, cy + 22, 'コントローラー', size=14, weight=700)
+    s.text(cx + cw / 2, cy + 41, 'Freenove ESP32 + ジョイスティック', size=9.5, fill=MUTED)
+    s.add(f'<rect x="{cx + 20}" y="{cy + 60}" width="96" height="96" rx="8" fill="#2B6CB0"/>')
+    s.add(f'<circle cx="{cx + 68}" cy="{cy + 108}" r="30" fill="#1F2937"/><circle cx="{cx + 68}" cy="{cy + 108}" r="18" fill="#6B7280"/>')
+    s.text(cx + 130, cy + 76, 'X → IO34', size=10, anchor='start', fill=C['IO34'], weight=700, family=MONO)
+    s.text(cx + 130, cy + 94, 'Y → IO35', size=10, anchor='start', fill=IO35_B, weight=700, family=MONO)
+    s.text(cx + 130, cy + 112, '押し込み = X が', size=9, anchor='start', fill=MUTED)
+    s.text(cx + 130, cy + 126, '3.3V いっぱい', size=9, anchor='start', fill=MUTED)
+    for i, (col, lab) in enumerate((('#22C55E', '緑: つながっている'), ('#EAB308', '黄: 前進ストップ中'), ('#EF4444', '赤の点滅: 返事がない'))):
+        y = cy + 176 + i * 17
+        s.add(f'<circle cx="{cx + 28}" cy="{y}" r="6" fill="{col}"/>')
+        s.text(cx + 42, y, lab, size=9.5, anchor='start')
+    # 車
+    vx, vy, vw, vh = 620, 50, 250, 230
+    s.add(f'<rect x="{vx}" y="{vy}" width="{vw}" height="{vh}" rx="12" fill="#FFFFFF" stroke="#D6D0C2"/>')
+    s.text(vx + vw / 2, vy + 22, '車', size=14, weight=700)
+    s.text(vx + vw / 2, vy + 41, 'ESP32-DevKitC + DRV8835 + HC-SR04', size=9.5, fill=MUTED)
+    s.add(f'<rect x="{vx + 30}" y="{vy + 70}" width="140" height="64" rx="10" fill="#F4C430" stroke="#B8901A"/>')
+    for wx in (vx + 22, vx + 170):
+        s.add(f'<rect x="{wx}" y="{vy + 78}" width="16" height="48" rx="4" fill="#1F2937"/>')
+    s.add(f'<rect x="{vx + 182}" y="{vy + 84}" width="46" height="36" rx="4" fill="#1E5FB4"/>')
+    s.add(f'<circle cx="{vx + 194}" cy="{vy + 102}" r="8" fill="#D1D5DB"/><circle cx="{vx + 216}" cy="{vy + 102}" r="8" fill="#D1D5DB"/>')
+    s.text(vx + 100, vy + 102, '配線はそのまま', size=10, weight=700)
+    s.text(vx + 20, vy + 160, '前後 = Y、曲がる = X', size=10, anchor='start')
+    s.text(vx + 20, vy + 178, '左 = 前後 + 曲がる、右 = 前後 − 曲がる', size=9.5, anchor='start', fill=MUTED)
+    s.text(vx + 20, vy + 200, 'ぶつからないモード:', size=10, anchor='start', weight=700)
+    s.text(vx + 20, vy + 217, '20cm より近いと前進だけ止める', size=9.5, anchor='start', fill=MUTED)
+
+    # 電波
+    def arrow(y, x1, x2, col):
+        d = 1 if x2 > x1 else -1
+        s.add(f'<line x1="{x1}" y1="{y}" x2="{x2 - d * 10}" y2="{y}" stroke="{col}" stroke-width="3" stroke-dasharray="7 5"/>')
+        s.add(f'<path d="M{x2} {y} l{-d * 14} -8 l0 16 z" fill="{col}"/>')
+    arrow(110, cx + cw + 12, vx - 12, '#0F766E')
+    s.text(450, 88, 'ESP-NOW  20 回/秒', size=11, weight=700, fill='#0F766E')
+    s.text(450, 130, 'x (-100〜100), y (-100〜100), 押した回数', size=9.5, fill=MUTED, family=MONO)
+    arrow(210, vx - 12, cx + cw + 12, '#B45309')
+    s.text(450, 188, '10 回/秒', size=11, weight=700, fill='#B45309')
+    s.text(450, 230, '距離 (cm), モード, 前進ストップ中か', size=9.5, fill=MUTED, family=MONO)
+    s.text(450, 302, 'ルーターは要らない。宛先を決めずに全員へ送り (ブロードキャスト)、GROUP_ID が同じものだけ受け取る', size=10, weight=700)
+    s.text(450, 324, '車は 0.3 秒コントローラーの電波が届かなければ止まる (フェイルセーフ)', size=10, fill='#B91C1C', weight=700)
+    s.save('rc-system.svg')
+
+
+def grove_adapter():
+    s = SVG(900, 300, 'Grove ケーブルからジョイスティック用の変換ケーブルを作る',
+            'Grove ケーブル (両端コネクタ) を真ん中で切ると 2 本できる。切った側の 4 本の皮をむいて予備はんだし、'
+            '1×40 のピンヘッダーから切り出した 4 ピンにはんだ付けする。並びは 黄・白・赤・黒。')
+    order = ('X', 'Y', 'VCC', 'GND')
+
+    def plug(x, y):
+        s.add(f'<rect x="{x}" y="{y - 22}" width="30" height="44" rx="4" fill="#F3F4F6" stroke="#9CA3AF"/>')
+        s.add(f'<rect x="{x + 6}" y="{y - 16}" width="18" height="32" rx="2" fill="#E5E7EB" stroke="#9CA3AF"/>')
+
+    def bundle(x1, x2, y):
+        for i, k in enumerate(order):
+            grove_wire(s, [(x1, y - 9 + i * 6), (x2, y - 9 + i * 6)], k, width=3.4)
+
+    # 1. 切る
+    s.text(30, 30, '1. 真ん中で切る (1 本から 2 本できる)', size=12, weight=700, anchor='start')
+    y = 90
+    plug(40, y)
+    bundle(70, 380, y)
+    plug(380, y)
+    s.add(f'<line x1="225" y1="{y - 30}" x2="225" y2="{y + 30}" stroke="#B91C1C" stroke-width="2" stroke-dasharray="5 4"/>')
+    s.text(225, y + 44, 'ここで切る', size=10, fill='#B91C1C', weight=700)
+    # 2. むいて予備はんだ
+    s.text(470, 30, '2. 先を 5mm むいて、ねじって、はんだを薄くのせる', size=12, weight=700, anchor='start')
+    plug(480, y)
+    bundle(510, 700, y)
+    for i, k in enumerate(order):
+        yy = y - 9 + i * 6
+        s.add(f'<line x1="700" y1="{yy}" x2="{722 + i * 4}" y2="{yy + (i - 1.5) * 6}" stroke="#A3A3A3" stroke-width="2.6" stroke-linecap="round"/>')
+    s.text(790, y - 6, '芯線に', size=9.5, anchor='start', fill=MUTED)
+    s.text(790, y + 9, '予備はんだ', size=9.5, anchor='start', fill=MUTED)
+    # 3. ピンヘッダーに付ける
+    s.text(30, 160, '3. ピンヘッダーを 4 ピン分に折って、1 本ずつはんだ付け。むき出しの所をテープで巻く', size=12, weight=700, anchor='start')
+    y2 = 225
+    plug(40, y2)
+    bundle(70, 300, y2)
+    hx = 330
+    s.add(f'<rect x="{hx - 6}" y="{y2 - 30}" width="20" height="60" rx="2" fill="#20232A"/>')
+    for i, k in enumerate(order):
+        py = y2 - 22 + i * 14.5
+        grove_wire(s, [(300, y2 - 9 + i * 6), (316, py), (hx - 6, py)], k, width=3)
+        s.add(f'<rect x="{hx + 14}" y="{py - 1.6}" width="34" height="3.2" fill="#C9A227"/>')
+        col, name = GROVE[k]
+        s.text(hx + 58, py, f'{name} → {k}', size=10, anchor='start', weight=700, family=MONO)
+    s.text(hx + 150, y2 - 18, '並びは コネクタと同じ 黄・白・赤・黒 (ジョイスティックでは X・Y・VCC・GND)', size=10, anchor='start')
+    s.text(hx + 150, y2 + 2, 'できたら テスターの導通ブザーで 4 本とも鳴るか、', size=10, anchor='start')
+    s.text(hx + 150, y2 + 18, '隣どうしで鳴らない (ショートしていない) かを確かめる', size=10, anchor='start')
+    s.text(hx + 150, y2 + 42, 'ブレッドボードに挿したヘッダーの上ではんだ付けすると、ピンが熱で動かない', size=9.5, anchor='start', fill=MUTED)
+    s.save('grove-adapter.svg')
+
+
+def freenove_pinmap():
+    s = SVG(900, 330, 'Freenove ESP32 WROOM と DevKitC の上の列のピンの比べ',
+            'どちらも USB を左にして 1 行目から挿したとき、上の列 (a 列の隣) に並ぶピン。'
+            'Freenove は 20 ピンで、IO13 から 3V3 までが DevKitC より 1 行右にずれる。')
+    ox, step = 150, 36
+    kinds = {
+        '5V': '#E11D48', '3V3': '#EA8A00', 'GND': '#374151',
+        'IO13': '#16A34A', 'IO14': '#16A34A', 'IO27': '#16A34A', 'IO26': '#16A34A',
+        'IO25': '#16A34A', 'IO33': '#16A34A', 'IO32': '#16A34A',
+        'IO35': '#0F766E', 'IO34': '#0F766E', 'VN': '#0F766E', 'VP': '#0F766E',
+        'IO12': '#B45309', 'EN': '#6B7280', 'CMD': '#9CA3AF', 'SD3': '#9CA3AF', 'SD2': '#9CA3AF',
+    }
+    for i in range(20):
+        s.text(ox + i * step, 40, i + 1, size=9, fill=MUTED, family=MONO)
+    s.text(ox - 50, 40, '行', size=9, fill=MUTED)
+
+    def row(y, pins, title, sub):
+        s.add(f'<rect x="{ox - 26}" y="{y - 26}" width="{20 * step + 14}" height="52" rx="8" fill="#23262E"/>')
+        s.text(ox - 34, y - 7, title, size=11, weight=700, anchor='end')
+        s.text(ox - 34, y + 10, sub, size=9, fill=MUTED, anchor='end')
+        for i, name in enumerate(pins):
+            x = ox + i * step
+            col = kinds[name]
+            s.add(f'<rect x="{x - 15}" y="{y - 11}" width="30" height="22" rx="4" fill="{col}"/>')
+            s.text(x, y, name.replace('IO', ''), size=10, fill='#fff', weight=700, family=MONO)
+
+    row(90, FN_TOP, 'Freenove', '20 ピン・USB-C')
+    row(190, J1, 'DevKitC', '19 ピン・micro-B')
+    # 同じピンを線で結ぶ (13〜3V3 は 1 行ずれる)
+    for i, name in enumerate(J1):
+        if name in ('5V', 'CMD', 'SD3', 'SD2'):
+            continue
+        j = i + 1
+        s.add(f'<line x1="{ox + i * step}" y1="{178}" x2="{ox + j * step}" y2="{102}" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>')
+    s.add(f'<rect x="{ox + 12 * step - 190}" y="129" width="380" height="22" rx="11" fill="#FBFAF7"/>')
+    s.text(ox + 12 * step, 140, 'IO13 から 3V3 までは同じ並びで、Freenove が 1 行右', size=10.5, weight=700, fill=INK)
+    x = 30
+    for label, col in (('電源', '#E11D48'), ('GND', '#374151'), ('自由に使える', '#16A34A'), ('入力専用 (ADC1)', '#0F766E'),
+                       ('起動時に影響 (避ける)', '#B45309'), ('内部フラッシュ用 (触らない)', '#9CA3AF')):
+        s.add(f'<rect x="{x}" y="{246}" width="14" height="14" rx="3" fill="{col}"/>')
+        s.text(x + 20, 253, label, size=10, anchor='start')
+        x += 38 + 11 * len(label)
+    s.text(30, 290, 'このノートの配線表は DevKitC の行番号。Freenove で組むときは、ESP32 側の穴だけ 1 行右にずらす (例: a6 → a7、a19 → a20)。', size=10, anchor='start', weight=700)
+    s.text(30, 310, '部品側 (21 行目より右) の穴はそのまま。5V は Freenove でも 1 行目 (2 行目も 5V)。', size=10, anchor='start', fill=MUTED)
+    s.save('freenove-pinmap.svg')
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
     esp32_pinmap()
+    freenove_pinmap()
     light_seeker_breadboard()
     light_seeker_schematic()
+    light_follower_breadboard()
     car_breadboard()
     car_schematic()
+    rc_system()
+    rc_controller_breadboard()
+    grove_adapter()

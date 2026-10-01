@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 330" width="900" height="330" role="img" aria-labelledby="t d" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP','Noto Sans CJK JP',Meiryo,sans-serif">
+<title id="t">Freenove ESP32 WROOM と DevKitC の上の列のピンの比べ</title>
+<desc id="d">どちらも USB を左にして 1 行目から挿したとき、上の列 (a 列の隣) に並ぶピン。Freenove は 20 ピンで、IO13 から 3V3 までが DevKitC より 1 行右にずれる。</desc>
+<rect width="900" height="330" rx="14" fill="#FBFAF7"/>
+<text x="150.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">1</text>
+<text x="186.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">2</text>
+<text x="222.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3</text>
+<text x="258.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">4</text>
+<text x="294.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">5</text>
+<text x="330.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">6</text>
+<text x="366.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">7</text>
+<text x="402.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">8</text>
+<text x="438.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">9</text>
+<text x="474.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">10</text>
+<text x="510.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">11</text>
+<text x="546.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">12</text>
+<text x="582.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">13</text>
+<text x="618.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">14</text>
+<text x="654.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">15</text>
+<text x="690.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">16</text>
+<text x="726.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">17</text>
+<text x="762.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">18</text>
+<text x="798.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">19</text>
+<text x="834.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">20</text>
+<text x="100.0" y="40.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">行</text>
+<rect x="124" y="64" width="734" height="52" rx="8" fill="#23262E"/>
+<text x="116.0" y="83.0" font-size="11" fill="#1F2430" text-anchor="end" dominant-baseline="central" font-weight="700">Freenove</text>
+<text x="116.0" y="100.0" font-size="9" fill="#6B7280" text-anchor="end" dominant-baseline="central" font-weight="400">20 ピン・USB-C</text>
+<rect x="135" y="79" width="30" height="22" rx="4" fill="#E11D48"/>
+<text x="150.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">5V</text>
+<rect x="171" y="79" width="30" height="22" rx="4" fill="#E11D48"/>
+<text x="186.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">5V</text>
+<rect x="207" y="79" width="30" height="22" rx="4" fill="#EA8A00"/>
+<text x="222.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<rect x="243" y="79" width="30" height="22" rx="4" fill="#EA8A00"/>
+<text x="258.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<rect x="279" y="79" width="30" height="22" rx="4" fill="#EA8A00"/>
+<text x="294.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<rect x="315" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="330.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">13</text>
+<rect x="351" y="79" width="30" height="22" rx="4" fill="#374151"/>
+<text x="366.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<rect x="387" y="79" width="30" height="22" rx="4" fill="#B45309"/>
+<text x="402.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">12</text>
+<rect x="423" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="438.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">14</text>
+<rect x="459" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="474.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">27</text>
+<rect x="495" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="510.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">26</text>
+<rect x="531" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="546.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">25</text>
+<rect x="567" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="582.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">33</text>
+<rect x="603" y="79" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="618.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">32</text>
+<rect x="639" y="79" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="654.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">35</text>
+<rect x="675" y="79" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="690.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">34</text>
+<rect x="711" y="79" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="726.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VN</text>
+<rect x="747" y="79" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="762.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VP</text>
+<rect x="783" y="79" width="30" height="22" rx="4" fill="#6B7280"/>
+<text x="798.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">EN</text>
+<rect x="819" y="79" width="30" height="22" rx="4" fill="#EA8A00"/>
+<text x="834.0" y="90.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<rect x="124" y="164" width="734" height="52" rx="8" fill="#23262E"/>
+<text x="116.0" y="183.0" font-size="11" fill="#1F2430" text-anchor="end" dominant-baseline="central" font-weight="700">DevKitC</text>
+<text x="116.0" y="200.0" font-size="9" fill="#6B7280" text-anchor="end" dominant-baseline="central" font-weight="400">19 ピン・micro-B</text>
+<rect x="135" y="179" width="30" height="22" rx="4" fill="#E11D48"/>
+<text x="150.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">5V</text>
+<rect x="171" y="179" width="30" height="22" rx="4" fill="#9CA3AF"/>
+<text x="186.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">CMD</text>
+<rect x="207" y="179" width="30" height="22" rx="4" fill="#9CA3AF"/>
+<text x="222.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">SD3</text>
+<rect x="243" y="179" width="30" height="22" rx="4" fill="#9CA3AF"/>
+<text x="258.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">SD2</text>
+<rect x="279" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="294.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">13</text>
+<rect x="315" y="179" width="30" height="22" rx="4" fill="#374151"/>
+<text x="330.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">GND</text>
+<rect x="351" y="179" width="30" height="22" rx="4" fill="#B45309"/>
+<text x="366.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">12</text>
+<rect x="387" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="402.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">14</text>
+<rect x="423" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="438.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">27</text>
+<rect x="459" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="474.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">26</text>
+<rect x="495" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="510.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">25</text>
+<rect x="531" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="546.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">33</text>
+<rect x="567" y="179" width="30" height="22" rx="4" fill="#16A34A"/>
+<text x="582.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">32</text>
+<rect x="603" y="179" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="618.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">35</text>
+<rect x="639" y="179" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="654.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">34</text>
+<rect x="675" y="179" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="690.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VN</text>
+<rect x="711" y="179" width="30" height="22" rx="4" fill="#0F766E"/>
+<text x="726.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">VP</text>
+<rect x="747" y="179" width="30" height="22" rx="4" fill="#6B7280"/>
+<text x="762.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">EN</text>
+<rect x="783" y="179" width="30" height="22" rx="4" fill="#EA8A00"/>
+<text x="798.0" y="190.0" font-size="10" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">3V3</text>
+<line x1="294" y1="178" x2="330" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="330" y1="178" x2="366" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="366" y1="178" x2="402" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="402" y1="178" x2="438" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="438" y1="178" x2="474" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="474" y1="178" x2="510" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="510" y1="178" x2="546" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="546" y1="178" x2="582" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="582" y1="178" x2="618" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="618" y1="178" x2="654" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="654" y1="178" x2="690" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="690" y1="178" x2="726" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="726" y1="178" x2="762" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="762" y1="178" x2="798" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<line x1="798" y1="178" x2="834" y2="102" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="3 3"/>
+<rect x="392" y="129" width="380" height="22" rx="11" fill="#FBFAF7"/>
+<text x="582.0" y="140.0" font-size="10.5" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">IO13 から 3V3 までは同じ並びで、Freenove が 1 行右</text>
+<rect x="30" y="246" width="14" height="14" rx="3" fill="#E11D48"/>
+<text x="50.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">電源</text>
+<rect x="90" y="246" width="14" height="14" rx="3" fill="#374151"/>
+<text x="110.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">GND</text>
+<rect x="161" y="246" width="14" height="14" rx="3" fill="#16A34A"/>
+<text x="181.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">自由に使える</text>
+<rect x="265" y="246" width="14" height="14" rx="3" fill="#0F766E"/>
+<text x="285.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">入力専用 (ADC1)</text>
+<rect x="424" y="246" width="14" height="14" rx="3" fill="#B45309"/>
+<text x="444.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">起動時に影響 (避ける)</text>
+<rect x="594" y="246" width="14" height="14" rx="3" fill="#9CA3AF"/>
+<text x="614.0" y="253.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">内部フラッシュ用 (触らない)</text>
+<text x="30.0" y="290.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">このノートの配線表は DevKitC の行番号。Freenove で組むときは、ESP32 側の穴だけ 1 行右にずらす (例: a6 → a7、a19 → a20)。</text>
+<text x="30.0" y="310.0" font-size="10" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">部品側 (21 行目より右) の穴はそのまま。5V は Freenove でも 1 行目 (2 行目も 5V)。</text>
+</svg>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ワイヤレス操縦 — 電子工作ノート</title>
+<meta name="description" content="2 台目の ESP32 と Grove ジョイスティックでコントローラーを作り、ESP-NOW で障害物回避カーを無線で操縦する。変換ケーブルの作り方・配線図・スケッチ。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>ワイヤレス操縦</h1>
+<p class="lede">Freenove の ESP32 とジョイスティックで手持ちのコントローラーを作り、<a href="obstacle-car.html">障害物回避カー</a>を無線で操縦します。<b>車の配線はそのままで、スケッチを書き替えるだけ</b>です。車の超音波センサーはそのまま生かして、前に壁があると前進だけ止める「ぶつからないモード」を付けます。</p>
+
+<div class="grid2">
+  <div><b>使う部品 (コントローラー)</b>Freenove ESP32 WROOM 1 台、ブレッドボード、Grove ジョイスティック、Grove ケーブル 1 本とピンヘッダー 4 ピン (変換ケーブルにする)、ジャンパー線 オス-オス 6 本。</div>
+  <div><b>電源</b>コントローラーは USB (PC かモバイルバッテリー)。車は今までどおり、USB のモバイルバッテリーと単3×4本。</div>
+  <div><b>はんだ付け</b>変換ケーブルの 4 か所。</div>
+  <div><b>先に済ませておくこと</b>障害物回避カーの段階 1 (モーターの向き) と段階 2 (距離)。Freenove のボードは<a href="setup.html#freenove">動作確認</a>まで。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>ESP-NOW: ルーターなしで ESP32 どうしが話す</h3>
+<p>ESP-NOW は Espressif が用意している無線の仕組みで、Wi-Fi の電波を使いながら、ルーターにはつながずに ESP32 どうしで短いメッセージを直接やりとりします。このページでは宛先を決めずに<b>近くの全員へ送り (ブロードキャスト)</b>、受け取った側が <code>GROUP_ID</code> の番号を見て自分宛てかを決めます。相手の MAC アドレスを調べて書き込む手間がありません。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/rc-system.svg" alt="しくみの図。コントローラー (Freenove ESP32 とジョイスティック) が 1 秒に 20 回、x・y・押した回数を ESP-NOW で車に送る。車は 1 秒に 10 回、距離・モード・前進ストップ中かを送り返す。車は 0.3 秒電波が届かなければ止まる。" loading="lazy"></div>
+  <figcaption>コントローラーと車のやりとり。<a href="img/rc-system.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="grid2">
+  <div><b>コントローラー → 車</b>1 秒に 20 回、スティックの X と Y (−100〜100) と、スティックを押し込んだ回数を送る。</div>
+  <div><b>車 → コントローラー</b>1 秒に 10 回、前までの距離と「ぶつからないモード」の状態を返す。コントローラーはフルカラー LED の色で知らせる。</div>
+  <div><b>フェイルセーフ</b>車は 0.3 秒コントローラーの電波が届かなければ止まる。電源が切れても、離れすぎても、走り続けない。</div>
+  <div><b>曲がり方</b>左のモーター = 前後 + 曲がる量、右 = 前後 − 曲がる量。前後が 0 で横に倒すと、その場で回る。</div>
+</div>
+<h3>ジョイスティックは可変抵抗 2 個</h3>
+<p>Grove ジョイスティックの中には 10kΩ の可変抵抗が縦と横に 1 個ずつ入っていて、倒した向きに応じて X と Y の電圧が変わります (秋月の商品説明より)。ESP32 はこの電圧をアナログ入力 (ADC1 の IO34・IO35) で読みます。スティックを押し込むと X が電源電圧いっぱいになる作りで、押し込みは「X がいっぱいになったか」で判断します (Seeed のマニュアルより)。</p>
+<div class="kp danger"><b class="h">ジョイスティックの VCC は 3.3V にする</b>
+<p>押し込むと X に VCC がそのまま出てきます。VCC を 5V にすると ESP32 の入力に 5V が入って壊れます。秋月の仕様では 3.3〜5V で動くので、3.3V で使います。</p>
+</div>
+
+<h2><span class="no">2</span>変換ケーブルを作る</h2>
+<p>ジョイスティックの端子は Grove (2mm ピッチの 4 ピン) で、ブレッドボード (2.54mm ピッチ) には挿せません。Grove ケーブルを半分に切り、切った側をピンヘッダーにはんだ付けして変換ケーブルにします。1 本のケーブルから 2 本できます。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/grove-adapter.svg" alt="変換ケーブルの作り方。1. Grove ケーブルを真ん中で切る。2. 先を 5mm むいてねじり、予備はんだ。3. ピンヘッダーを 4 ピン分に折り、黄・白・赤・黒の順にはんだ付けしてテープで巻く。ジョイスティックでは 黄 = X、白 = Y、赤 = VCC、黒 = GND。" loading="lazy"></div>
+  <figcaption>変換ケーブルの作り方。<a href="img/grove-adapter.svg">図だけを開く</a></figcaption>
+</figure>
+<ol class="steps">
+  <li>ピンヘッダー (1×40) を 4 ピンのところで、ペンチで折る。</li>
+  <li>4 ピンのヘッダーを、長い方のピンを下にしてブレッドボードに挿しておく。熱でピンが動かず、はんだ付けしやすい。</li>
+  <li>ケーブルの線を 1 本ずつ、上に出ている短いピンにはんだ付けする。並びはコネクタと同じ <b>黄・白・赤・黒</b>。</li>
+  <li>隣どうしが触れないよう、1 本ずつと全体をビニールテープで巻く。</li>
+  <li><a href="setup.html#tester">テスターの導通ブザー</a>で、コネクタの穴とピンの間が 4 本とも鳴るか、隣どうしのピンで鳴らないかを確かめる。</li>
+</ol>
+
+<h2><span class="no">3</span>コントローラーの配線</h2>
+<p>Freenove のボードを<a href="setup.html#freenove">いつもの向き</a> (USB を左、3V3/5V の並ぶ列を上) で 1〜20 行に挿します。変換ケーブルのピンヘッダーは <b>c24〜c27</b> に、黄 (X) が 24 行、黒 (GND) が 27 行に来る向きで挿します。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/rc-controller-breadboard.svg" alt="コントローラーのブレッドボード配線図。Freenove ESP32 を 1〜20 行。a5 (3V3) から上の + ライン、a7 (GND) から上の − ライン。変換ケーブルのピンヘッダーを c24〜c27 に挿し、a16 (IO34) から a24 (黄 X)、a15 (IO35) から a25 (白 Y)、+ ラインから a26 (赤 VCC)、− ラインから a27 (黒 GND)。" loading="lazy"></div>
+  <figcaption>コントローラーの配線図 (横にスクロールできます)。<a href="img/rc-controller-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><span class="w" style="background:#EA8A00"></span><b>a5</b> (3V3)</td><td>上の <b>+</b> ライン</td><td>このコントローラーでは + ラインが 3.3V</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#1F2937"></span><b>a7</b> (GND)</td><td>上の <b>−</b> ライン</td><td>GND を配る</td></tr>
+<tr><td class="n">3</td><td>変換ケーブルのピンヘッダー</td><td><b>c24〜c27</b></td><td>c24 = 黄 X、c25 = 白 Y、c26 = 赤 VCC、c27 = 黒 GND</td></tr>
+<tr><td class="n">4</td><td><span class="w" style="background:#0F766E"></span><b>a16</b> (IO34)</td><td><b>a24</b></td><td>X を読む</td></tr>
+<tr><td class="n">5</td><td><span class="w" style="background:#7C3AED"></span><b>a15</b> (IO35)</td><td><b>a25</b></td><td>Y を読む</td></tr>
+<tr><td class="n">6</td><td><span class="w" style="background:#EA8A00"></span>上の <b>+</b> ライン</td><td><b>a26</b></td><td>ジョイスティックの VCC (3.3V)</td></tr>
+<tr><td class="n">7</td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td><b>a27</b></td><td>ジョイスティックの GND</td></tr>
+</tbody></table></div>
+<div class="kp warn"><b class="h">首振りガジェットとブレッドボードを共用するとき</b>
+<p>首振りガジェットでは上の + ラインが 5V でした。このコントローラーでは 3.3V です。組み替えるときは、5V の線 (a1 → + ライン) を必ず抜いてから配線します。</p>
+</div>
+
+<h2><span class="no">4</span>段階 1: ジョイスティックの値を見る</h2>
+<p>コントローラーだけで確かめます。書き込んだら「ツール → シリアルプロッタ」(115200 baud) を開きます。<b>起動の瞬間はスティックに触らない</b> (その位置を真ん中として覚える)。起動したら一度、スティックをぐるっと大きく回します (端の位置を覚える)。</p>
+<div class="sketch" data-src="sketches/joystick_test/joystick_test.ino"></div>
+<ul class="check">
+  <li>手を離すと <code>x</code> と <code>y</code> が 0 に戻る</li>
+  <li>右に倒すと <code>x</code> が +100、前 (自分から遠い方) に倒すと <code>y</code> が +100 に近づく。逆なら <code>INVERT_X</code> / <code>INVERT_Y</code> を <code>true</code> にする</li>
+  <li>押し込むと <code>press</code> が 100 になり、<code>rawX</code> が 102 (= 4095 ÷ 40) 付近に張り付く</li>
+  <li>倒しても <code>press</code> が 100 にならない (押していないのに 100 になるなら <code>PRESS_RAW</code> を上げる)</li>
+</ul>
+<div class="kp"><b class="h">値が動かない・変なとき</b>
+<ul>
+  <li>x も y もずっと 0、rawX・rawY が 0 付近 → 赤 (VCC) か + ラインの 3.3V が来ていない。</li>
+  <li>rawX と rawY の役割が逆 → 変換ケーブルの黄と白が入れ替わっている。ヘッダーの向きを見る。</li>
+  <li>手を離しても 0 にならない → <code>DEAD</code> (真ん中の遊び) を 8 から 12 くらいに上げる。</li>
+</ul>
+</div>
+
+<h2><span class="no">5</span>段階 2: 車に rc_car を書き込む</h2>
+<p>車の配線は障害物回避カーのまま。<a href="obstacle-car.html">障害物回避カーの段階 1</a> で決めた <code>LEFT_REVERSED</code> / <code>RIGHT_REVERSED</code> を書いてから、PC から車の ESP32 (DevKitC) に書き込みます。</p>
+<div class="sketch" data-src="sketches/rc_car/rc_car.ino"></div>
+<ul class="check">
+  <li>シリアルモニタに「コントローラーを待っています」と出て、タイヤは回らない</li>
+</ul>
+
+<h2><span class="no">6</span>段階 3: コントローラーに rc_controller を書き込む</h2>
+<p>段階 1 で決めた <code>INVERT_X</code> / <code>INVERT_Y</code> を書いてから、コントローラー (Freenove) に書き込みます。<code>GROUP_ID</code> と <code>CHANNEL</code> は車と同じ値のままにします。車は<b>箱の上に載せてタイヤを浮かせ</b>、電池のスイッチを入れておきます。</p>
+<div class="sketch" data-src="sketches/rc_controller/rc_controller.ino"></div>
+<ul class="check">
+  <li>コントローラーの LED が緑になり、車のシリアルモニタに「コントローラーとつながりました」と出る</li>
+  <li>前に倒すと両方のタイヤが前に回り、右に倒すと左のタイヤが前・右のタイヤが後ろに回る</li>
+  <li>スティックを離すとタイヤが止まる</li>
+  <li><b>コントローラーの USB を抜くと、0.3 秒ほどで車のタイヤが止まる</b> (フェイルセーフ)。ここは走らせる前に必ず確かめる</li>
+</ul>
+<p>コントローラーのシリアルモニタには、送っている x・y と、車から返ってきた距離が 0.3 秒ごとに出ます。HC-SR04 の前に手をかざすと距離が変わります。</p>
+
+<h2><span class="no">7</span>走らせる</h2>
+<ol class="steps">
+  <li>車の USB を PC から抜いて、モバイルバッテリーにつなぎ替える。電池のスイッチを入れて床に置く。</li>
+  <li>コントローラーを PC かモバイルバッテリーにつなぐ。LED が緑になったら操縦できる。</li>
+  <li>壁に向かって前に倒し続けると、20cm 手前で止まり、LED が黄になる。横に倒すか後ろに倒せば動ける。</li>
+  <li>スティックを押し込むと「ぶつからないモード」が OFF になり、壁の手前でも止まらなくなる。もう一度押すと ON。</li>
+</ol>
+<div class="kp"><b class="h">走り方を変えるときは rc_car の定数だけ</b>
+<ul>
+  <li>少し倒しただけでは動かない → <code>MIN_DUTY</code> を上げる。いきなり速く動く → 下げる。</li>
+  <li>曲がりすぎる → <code>TURN_RATE</code> を下げる (0.5 くらい)。</li>
+  <li>止まるのが壁に近すぎる → <code>STOP_CM</code> を大きくする。距離は 0.2 秒ごとにしか測れないので、速いほど余裕が要る。</li>
+</ul>
+</div>
+
+<h2><span class="no">8</span>うまくいかないとき</h2>
+<div class="tbl"><table>
+<thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>LED が赤の点滅のまま (車から返事がない)</td><td>車の ESP32 に rc_car が入っているか、電源が入っているか。両方の <code>GROUP_ID</code> と <code>CHANNEL</code> が同じか</td></tr>
+<tr><td>つながったり切れたりする</td><td>近づけて試す。ESP32 の金属のカバーの先 (アンテナ) を手や電池で覆わない</td></tr>
+<tr><td>前に倒すと後ろに進む / 左右が逆</td><td>前後が逆 → コントローラーの <code>INVERT_Y</code>。左右が逆 → <code>INVERT_X</code>。片方のタイヤだけ逆 → 車の <code>LEFT_REVERSED</code> / <code>RIGHT_REVERSED</code></td></tr>
+<tr><td>スティックを離しても少し動く</td><td>コントローラーの <code>DEAD</code> を上げる</td></tr>
+<tr><td>モーターが動き出すと車の ESP32 が再起動する</td><td>障害物回避カーと同じ。電池の残り、GND の共通 (#1, #8, #9)</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">9</span>改造のアイデア</h2>
+<ul>
+  <li><b>バックセンサー</b>: 車から返ってくる距離に合わせて、コントローラーにつないだ圧電スピーカーを「近いほど速く」鳴らす。</li>
+  <li><b>ターボボタン</b>: スティックの押し込みを「押している間だけ速く」に変える。<code>presses</code> の代わりに押している状態を送る。</li>
+  <li><b>首振りレーダー</b>: 3 台目の ESP32 にサーボと HC-SR04 を載せて首を振り、角度と距離をコントローラーに送って、シリアルプロッタに扇形の地図を描く。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('wireless-rc')</script>
+</body>
+</html>

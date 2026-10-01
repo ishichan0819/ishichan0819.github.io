@@ -4,16 +4,16 @@
   --page:#F4F5F1;--ink:#16201A;--muted:#5A6660;--rule:#D8DDD6;--card:#FFFFFF;
   --pcb:#0F3B26;--pcb-deep:#0A2A1B;--silk:#E9F5EE;--silk-dim:#9FBFAE;
   --acc:#1E8A4F;--copper:#B8743A;--gold:#D9A93C;--warn:#C2410C;--bad:#B91C1C;
-  --v5:#E11D48;--v33:#EA8A00;--gnd:#1F2937;
+  --v5:#E11D48;--v33:#EA8A00;--gnd:#1F2937;--swb:rgba(0,0,0,.15);
   --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --page:#0C110E;--ink:#E4ECE7;--muted:#98A89F;--rule:#243029;--card:#131A16;
-  --pcb:#0F2A1D;--pcb-deep:#0A1D14;--acc:#4ADE80;--copper:#E0A26A;--warn:#FB923C;--bad:#F87171;--gnd:#9CA3AF}}
+  --pcb:#0F2A1D;--pcb-deep:#0A1D14;--acc:#4ADE80;--copper:#E0A26A;--warn:#FB923C;--bad:#F87171;--gnd:#9CA3AF;--swb:rgba(255,255,255,.45)}}
 :root[data-theme="dark"]{
   --page:#0C110E;--ink:#E4ECE7;--muted:#98A89F;--rule:#243029;--card:#131A16;
-  --pcb:#0F2A1D;--pcb-deep:#0A1D14;--acc:#4ADE80;--copper:#E0A26A;--warn:#FB923C;--bad:#F87171;--gnd:#9CA3AF}
+  --pcb:#0F2A1D;--pcb-deep:#0A1D14;--acc:#4ADE80;--copper:#E0A26A;--warn:#FB923C;--bad:#F87171;--gnd:#9CA3AF;--swb:rgba(255,255,255,.45)}
 *,*::before,*::after{box-sizing:inherit}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--page);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.85}
@@ -50,7 +50,7 @@ th,td{border-bottom:1px solid var(--rule);padding:7px 10px;text-align:left;verti
 th{background:color-mix(in srgb,var(--rule) 60%,transparent);font-weight:700;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 td.n{font-family:var(--mono);color:var(--muted);width:2.5em}
-.w{display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;margin-right:.35em;border:1px solid rgba(0,0,0,.15)}
+.w{display:inline-block;width:.9em;height:.9em;border-radius:3px;vertical-align:-.1em;margin-right:.35em;border:1px solid var(--swb)}
 
 /* 図 */
 .fig{margin:10px 0 22px}

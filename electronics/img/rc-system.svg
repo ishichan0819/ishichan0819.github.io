@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360" role="img" aria-labelledby="t d" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP','Noto Sans CJK JP',Meiryo,sans-serif">
+<title id="t">ワイヤレス操縦のしくみ</title>
+<desc id="d">コントローラー (Freenove ESP32 + ジョイスティック) が 1 秒に 20 回、X・Y・押した回数を ESP-NOW で送る。車 (障害物回避カーの配線のまま) は 1 秒に 10 回、距離とモードを送り返す。0.3 秒届かなければ車は止まる。</desc>
+<rect width="900" height="360" rx="14" fill="#FBFAF7"/>
+<rect x="30" y="50" width="250" height="230" rx="12" fill="#FFFFFF" stroke="#D6D0C2"/>
+<text x="155.0" y="72.0" font-size="14" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">コントローラー</text>
+<text x="155.0" y="91.0" font-size="9.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">Freenove ESP32 + ジョイスティック</text>
+<rect x="50" y="110" width="96" height="96" rx="8" fill="#2B6CB0"/>
+<circle cx="98" cy="158" r="30" fill="#1F2937"/><circle cx="98" cy="158" r="18" fill="#6B7280"/>
+<text x="160.0" y="126.0" font-size="10" fill="#0F766E" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">X → IO34</text>
+<text x="160.0" y="144.0" font-size="10" fill="#7C3AED" text-anchor="start" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">Y → IO35</text>
+<text x="160.0" y="162.0" font-size="9" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">押し込み = X が</text>
+<text x="160.0" y="176.0" font-size="9" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">3.3V いっぱい</text>
+<circle cx="58" cy="226" r="6" fill="#22C55E"/>
+<text x="72.0" y="226.0" font-size="9.5" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">緑: つながっている</text>
+<circle cx="58" cy="243" r="6" fill="#EAB308"/>
+<text x="72.0" y="243.0" font-size="9.5" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">黄: 前進ストップ中</text>
+<circle cx="58" cy="260" r="6" fill="#EF4444"/>
+<text x="72.0" y="260.0" font-size="9.5" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">赤の点滅: 返事がない</text>
+<rect x="620" y="50" width="250" height="230" rx="12" fill="#FFFFFF" stroke="#D6D0C2"/>
+<text x="745.0" y="72.0" font-size="14" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">車</text>
+<text x="745.0" y="91.0" font-size="9.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400">ESP32-DevKitC + DRV8835 + HC-SR04</text>
+<rect x="650" y="120" width="140" height="64" rx="10" fill="#F4C430" stroke="#B8901A"/>
+<rect x="642" y="128" width="16" height="48" rx="4" fill="#1F2937"/>
+<rect x="790" y="128" width="16" height="48" rx="4" fill="#1F2937"/>
+<rect x="802" y="134" width="46" height="36" rx="4" fill="#1E5FB4"/>
+<circle cx="814" cy="152" r="8" fill="#D1D5DB"/><circle cx="836" cy="152" r="8" fill="#D1D5DB"/>
+<text x="720.0" y="152.0" font-size="10" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">配線はそのまま</text>
+<text x="640.0" y="210.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">前後 = Y、曲がる = X</text>
+<text x="640.0" y="228.0" font-size="9.5" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">左 = 前後 + 曲がる、右 = 前後 − 曲がる</text>
+<text x="640.0" y="250.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">ぶつからないモード:</text>
+<text x="640.0" y="267.0" font-size="9.5" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">20cm より近いと前進だけ止める</text>
+<line x1="292" y1="110" x2="598" y2="110" stroke="#0F766E" stroke-width="3" stroke-dasharray="7 5"/>
+<path d="M608 110 l-14 -8 l0 16 z" fill="#0F766E"/>
+<text x="450.0" y="88.0" font-size="11" fill="#0F766E" text-anchor="middle" dominant-baseline="central" font-weight="700">ESP-NOW  20 回/秒</text>
+<text x="450.0" y="130.0" font-size="9.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">x (-100〜100), y (-100〜100), 押した回数</text>
+<line x1="608" y1="210" x2="302" y2="210" stroke="#B45309" stroke-width="3" stroke-dasharray="7 5"/>
+<path d="M292 210 l14 -8 l0 16 z" fill="#B45309"/>
+<text x="450.0" y="188.0" font-size="11" fill="#B45309" text-anchor="middle" dominant-baseline="central" font-weight="700">10 回/秒</text>
+<text x="450.0" y="230.0" font-size="9.5" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">距離 (cm), モード, 前進ストップ中か</text>
+<text x="450.0" y="302.0" font-size="10" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">ルーターは要らない。宛先を決めずに全員へ送り (ブロードキャスト)、GROUP_ID が同じものだけ受け取る</text>
+<text x="450.0" y="324.0" font-size="10" fill="#B91C1C" text-anchor="middle" dominant-baseline="central" font-weight="700">車は 0.3 秒コントローラーの電波が届かなければ止まる (フェイルセーフ)</text>
+</svg>

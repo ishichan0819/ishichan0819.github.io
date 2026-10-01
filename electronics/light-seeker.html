@@ -17,7 +17,7 @@
 <p class="lede">明るさセンサー (CdS) とサーボモーターで、<b>首を左右に振って部屋の中でいちばん明るい方向を探し、そっちを向く</b>ガジェットを作ります。サーボを動かす (出力)、明るさを読む (入力)、2 つをつなぐ (処理) の 3 つを 1 段ずつ確かめながら進めます。</p>
 
 <div class="grid2">
-  <div><b>使う部品</b>ESP32-DevKitC、ブレッドボード、SG90 サーボ、CdS セル、10kΩ 抵抗 1 本、ジャンパー線 (オス-オス 7 本)。最後の段だけオス-メス 2 本。</div>
+  <div><b>使う部品</b>ESP32-DevKitC、ブレッドボード、SG90 サーボ、CdS セル、10kΩ 抵抗 1 本、ジャンパー線 (オス-オス 7 本)。段階 3 でオス-メス 2 本。段階 4 では CdS と 10kΩ をもう 1 組、オス-オス 2 本・オス-メス 2 本、470µF のコンデンサー。</div>
   <div><b>電源</b>PC の USB だけ。サーボの 5V も ESP32 の 5V ピン (USB からの 5V) から取る。</div>
   <div><b>はんだ付け</b>不要。</div>
 </div>
@@ -62,7 +62,7 @@
   <li>シリアルモニタに <code>angle  20°  pulse  711 us</code> のように 20° ごとに出る</li>
 </ul>
 <div class="kp warn"><b class="h">サーボが動くたびに ESP32 が再起動する</b>
-<p>サーボが動き出す瞬間に電流が多く流れ、USB の 5V が下がって ESP32 がリセットされています。PC の別の USB ポートか、AC アダプタ付きの USB ハブにつなぎ替えてみてください。</p>
+<p>サーボが動き出す瞬間に電流が多く流れ、USB の 5V が下がって ESP32 がリセットされています。上の + ラインと − ラインにまたがって <b>470µF の電解コンデンサー</b>を挿すと、瞬間的な電流をコンデンサーが肩代わりしてくれます (挿し方は<a href="#follower">段階 4 の図</a>。足の長い方を + ラインへ)。それでも直らなければ、PC の別の USB ポートか、AC アダプタ付きの USB ハブにつなぎ替えてみてください。</p>
 </div>
 
 <h2><span class="no">4</span>段階 2: 明るさで角度を変える</h2>
@@ -89,10 +89,43 @@
 <p>CdS は光が変わってから抵抗が落ち着くまで 20〜30ms かかります (データシートの応答時間)。サーボが止まるのと合わせて 60ms 待ってから測っています。短くすると、1 つ前の角度の明るさを引きずってピークがずれます。</p>
 </div>
 
-<h2><span class="no">6</span>改造のアイデア</h2>
+<h2 id="follower"><span class="no">6</span>段階 4: 2 つの CdS で光を追いかける</h2>
+<p>段階 3 は首を振りきってから向きを決めるので、光を動かしても次のスキャンまで追いかけません。CdS を 2 個にして腕の左右に付け、<b>明るい側へ少しずつ回り、2 個が同じ明るさになったら止まる</b>ようにすると、スマホのライトを動かしたときに首がついてきます。</p>
+<h3>追加する配線</h3>
+<p>段階 2 の配線 (1〜9) はそのまま。CdS をもう 1 組と、サーボの電源を安定させるコンデンサーを足します。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/light-follower-breadboard.svg" alt="追いかけ型のブレッドボード配線図。段階 2 の配線に加えて、e24 から e27 に 3V3、CdS B を c27 と c28、10kΩ を b28 と上の − ラインの間、a14 (IO35) から a28。上の + ラインと − ラインにまたがって 470µF。CdS A と B はオス-メス線でサーボの腕に付け、間に厚紙の仕切りを立てる。" loading="lazy"></div>
+  <figcaption>追いかけ型のブレッドボード配線図 (横にスクロールできます)。<a href="img/light-follower-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">10</td><td><span class="w" style="background:#EA8A00"></span><b>e24</b></td><td><b>e27</b></td><td>24 行の 3.3V を 27 行にも</td></tr>
+<tr><td class="n">11</td><td>CdS B</td><td><b>c27</b> と <b>c28</b></td><td>向きはない</td></tr>
+<tr><td class="n">12</td><td>10kΩ</td><td><b>b28</b> と 上の <b>−</b> ライン</td><td>CdS B の分圧の下側</td></tr>
+<tr><td class="n">13</td><td><span class="w" style="background:#7C3AED"></span><b>a14</b> (IO35)</td><td><b>a28</b></td><td>CdS B の明るさを読む</td></tr>
+<tr><td class="n">14</td><td>電解コンデンサー 470µF</td><td>上の <b>+</b> ラインと <b>−</b> ライン</td><td>足の長い方 (+) を + ラインへ。帯のある側が −</td></tr>
+</tbody></table></div>
+<p>段階 2 の CdS (c24–c25) が CdS A、足した方が CdS B です。どちらもオス-メス線で延長してサーボの腕に貼り、<b>少し外向きに開いて、間に厚紙の仕切り</b>を立てます。光が片側から来ると、仕切りの影でもう片方が暗くなります。</p>
+<div class="kp danger"><b class="h">電解コンデンサーには向きがある</b>
+<p>+ と − を逆に挿すと、膨らんだり破裂したりします。足の長い方が +、本体の帯 (− の印) がある側が − です。挿す前にもう一度見てください。</p>
+</div>
+<h3>スケッチ</h3>
+<div class="sketch" data-src="sketches/light_follower/light_follower.ino"></div>
+<ol class="steps">
+  <li>書き込んで、シリアルプロッタ (115200 baud) を開く。<code>A</code>・<code>B</code> (mV)、<code>diff</code> (差)、<code>angle</code> が出る。</li>
+  <li>部屋の明かりだけの状態で <code>diff</code> が 0 付近か見る。いつもどちらかに偏るなら、CdS の個体差。<code>B_SCALE</code> を 1.1 や 0.9 にして 0 に寄せる。</li>
+  <li>スマホのライトを片側から当てる。光の方へ回れば OK。<b>逃げるように回ったら</b> <code>DIRECTION</code> を <code>-1</code> にする。</li>
+</ol>
+<ul class="check">
+  <li>ライトをゆっくり左右に動かすと、首がついてくる</li>
+  <li>ライトを正面に置くと、少し揺れてから止まる (止まらずにブルブルするなら <code>DEADBAND</code> を上げるか <code>GAIN</code> を下げる)</li>
+</ul>
+
+<h2><span class="no">7</span>改造のアイデア</h2>
 <ul>
-  <li>CdS をもう 1 個買い足して左右に付け、2 つの差で首を回す「追いかけ型」にする。スキャンなしで光に追従できる。</li>
   <li>腕に小さい旗やキャラクターを付けて、明るい方を指さす置物にする。</li>
+  <li>Freenove の ESP32 で組み、基板のフルカラー LED を左右の明るさの差で色が変わるように光らせる (赤 = 左が明るい、青 = 右が明るい)。</li>
   <li>障害物回避カーの HC-SR04 をサーボに載せて、左右の距離を測ってから曲がる向きを決める。</li>
 </ul>
 

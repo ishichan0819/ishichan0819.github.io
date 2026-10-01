@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>部品と道具 — 電子工作ノート</title>
-<meta name="description" content="秋月電子で揃えた部品の一覧と、どのプロジェクトで使うか。はんだ付けが必要な部品と、買い足すと楽になるもの。">
+<meta name="description" content="秋月電子で揃えた部品と Freenove の ESP32 ボードの一覧、どのプロジェクトで使うか。はんだ付けが必要な部品と、買い足すと楽になるもの。">
 <meta name="theme-color" content="#0F3B26">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -14,45 +14,55 @@
 <main>
 <p class="top" id="nav"></p>
 <h1>部品と道具</h1>
-<p class="lede">秋月電子通商で揃えた部品です。番号は秋月の販売コードで、<code>akizukidenshi.com/catalog/g/g<i>番号</i>/</code> で商品ページが開きます。価格は 2026 年 9 月時点の税込です。</p>
+<p class="lede">秋月電子通商で揃えた部品と、Amazon で買った Freenove の ESP32 ボードです。番号は秋月の販売コードで、<code>akizukidenshi.com/catalog/g/g<i>番号</i>/</code> で商品ページが開きます。</p>
 
 <h2><span class="no">1</span>先に知っておくこと</h2>
 <div class="kp warn"><b class="h">はんだ付けが要るもの</b>
 <ul>
   <li><b>DRV8835 モータードライバー (109848)</b>: 基板とピンヘッダーが別になっているので、12 か所はんだ付けしてからブレッドボードに挿す。障害物回避カーで必要。</li>
+  <li><b>ジョイスティックの変換ケーブル</b>: Grove ケーブル (116938) を切ってピンヘッダーに 4 か所。<a href="wireless-rc.html">ワイヤレス操縦</a>で作り方を説明している。</li>
   <li><b>ドライバー内蔵リレーモジュールキット (113573)</b>: 組み立てキット。</li>
 </ul>
 </div>
-<div class="kp warn"><b class="h">そのままではブレッドボードにつながらないもの</b>
-<ul>
-  <li><b>Grove ジョイスティック (109279)</b>: Grove 端子 (4 ピンのコネクタ) なので、Grove → ジャンパー線の変換ケーブルが要る。</li>
-  <li><b>HC-SR04 を車の前に付けるとき</b>と、<b>CdS をサーボの腕に付けるとき</b>: 部品の足やピンに挿すため、<b>オス-メス</b>のジャンパー線が要る (手元のジャンパー線はオス-オス)。</li>
-</ul>
-</div>
 <div class="kp"><b class="h">ジャンパー線は使う前に導通を見る</b>
-<p>オス-オスのジャンパー線セット (130088) は無選別品で、購入時の注意書きに「使用前にテスターの導通ブザーで 1 本ずつ確認」とあります。配線が正しいのに動かないときは、まず線を疑う。</p>
+<p>オス-オスのジャンパー線セット (130088) は無選別品で、購入時の注意書きに「使用前にテスターの導通ブザーで 1 本ずつ確認」とあります。テスター (DE-200A) が届いたので、<a href="setup.html#tester">導通ブザー</a>で一度全部見ておくと、あとで「配線は正しいのに動かない」に悩まされません。</p>
+</div>
+<div class="kp"><b class="h">ESP32 が 3 台になった</b>
+<p>DevKitC 1 台と Freenove 2 台。どれも同じ ESP32-WROOM-32E で、同じスケッチが動きます。たとえば DevKitC は車に載せたまま、Freenove の 1 台をコントローラー、もう 1 台を首振りガジェット用にすると、組み替えずに遊べます。Freenove で配線表を使うときは<a href="setup.html#freenove">行番号を 1 つずらす</a>点に注意。</p>
 </div>
 
 <h2><span class="no">2</span>買い足すと楽になるもの</h2>
 <div class="tbl"><table>
-<thead><tr><th>もの</th><th>秋月の番号</th><th>目安</th><th>何のため</th></tr></thead>
+<thead><tr><th>もの</th><th>何のため</th></tr></thead>
 <tbody>
-<tr><td>ジャンパーワイヤ (オス-メス) 15cm 10本</td><td class="mono">108932</td><td>¥280</td><td>HC-SR04 と CdS の延長。どちらのプロジェクトでも使う</td></tr>
-<tr><td>はんだごて・はんだ</td><td>—</td><td>—</td><td>DRV8835 のピンヘッダー</td></tr>
-<tr><td>テスター (導通ブザー付き)</td><td>—</td><td>—</td><td>ジャンパー線と電池の確認</td></tr>
-<tr><td>カーボン抵抗 1kΩ 100本</td><td class="mono">125102</td><td>¥100</td><td>LED の電流制限。今の手持ちは 10kΩ だけで、LED がかなり暗くなる</td></tr>
-<tr><td>単3電池 4本・micro-USB のデータ用ケーブル・モバイルバッテリー</td><td>—</td><td>—</td><td>車を走らせるとき</td></tr>
+<tr><td>USB Type-C のデータ用ケーブル</td><td>Freenove のボード用。箱に入っていなければ。充電専用のケーブルではポートが出ない</td></tr>
+<tr><td>単3電池 4本</td><td>車のモーター用</td></tr>
+<tr><td>モバイルバッテリー</td><td>車の ESP32 用。ワイヤレス操縦のコントローラーも外で使うなら、もう 1 つ</td></tr>
+<tr><td>ビニールテープ</td><td>変換ケーブルのはんだ付けした所を巻く。車にブレッドボードや電池を留める</td></tr>
 </tbody></table></div>
 
 <h2><span class="no">3</span>手元の部品</h2>
-<h3>共通</h3>
+<h3>マイコンと配線</h3>
 <div class="tbl"><table>
 <thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
 <tbody>
 <tr><td>ESP32-DevKitC-32E (ESP32-WROOM-32E, 4MB)</td><td class="mono">115673</td><td>1</td><td>ピンヘッダー付き。USB は micro-B</td></tr>
-<tr><td>ブレッドボード EIC-801</td><td class="mono">100315</td><td>1</td><td>30行 × a〜j、電源ライン上下 2 本ずつ</td></tr>
+<tr><td>Freenove ESP32 WROOM ボード</td><td>Amazon</td><td>2</td><td>ESP32-WROOM-32E。USB Type-C (CH340)。青 LED (IO2)・フルカラー LED (IO16) 付き</td></tr>
+<tr><td>ブレッドボード EIC-801</td><td class="mono">100315</td><td>2</td><td>30行 × a〜j、電源ライン上下 2 本ずつ。1 枚は車に貼る</td></tr>
 <tr><td>ジャンパーワイヤセット (オス-オス) 60本以上 無選別</td><td class="mono">130088</td><td>1</td><td>使う前に導通を確認</td></tr>
+<tr><td>ジャンパーワイヤ (オス-メス) 15cm 黒 / 黄</td><td class="mono">108932 / 108936</td><td>各 10本</td><td>HC-SR04 やサーボの腕の CdS につなぐ</td></tr>
 <tr><td>カーボン抵抗 1/4W 10kΩ</td><td class="mono">125103</td><td>100本</td><td>茶黒橙金</td></tr>
+<tr><td>カーボン抵抗 1/4W 1kΩ</td><td class="mono">125102</td><td>100本</td><td>茶黒赤金。LED の電流制限など</td></tr>
+<tr><td>ピンヘッダー 1×40</td><td class="mono">100167</td><td>1</td><td>折って使う。変換ケーブルに 4 ピン</td></tr>
+<tr><td>USB ケーブル A-microB 1.5m</td><td class="mono">107607</td><td>1</td><td>DevKitC 用 (データ通信できる)</td></tr>
+</tbody></table></div>
+
+<h3>道具</h3>
+<div class="tbl"><table>
+<thead><tr><th>道具</th><th>番号</th><th>メモ</th></tr></thead>
+<tbody>
+<tr><td>オートレンジデジタルマルチテスター DE-200A</td><td class="mono">100568</td><td>導通ブザー付き。<a href="setup.html#tester">使いどころ</a></td></tr>
+<tr><td>はんだごて・はんだ</td><td>手持ち</td><td>DRV8835 と変換ケーブル</td></tr>
 </tbody></table></div>
 
 <h3>首振りガジェット</h3>
@@ -60,7 +70,8 @@
 <thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
 <tbody>
 <tr><td>マイクロサーボ 9g SG90</td><td class="mono">108761</td><td>1</td><td>線は 茶 = GND、赤 = +、橙 = 信号</td></tr>
-<tr><td>CdS セル 5mm</td><td class="mono">100110</td><td>1</td><td>明るいと 10〜20kΩ、暗いと約 1MΩ</td></tr>
+<tr><td>CdS セル 5mm</td><td class="mono">100110</td><td>2</td><td>明るいと 10〜20kΩ、暗いと約 1MΩ。2 個で<a href="light-seeker.html#follower">追いかけ型</a>に</td></tr>
+<tr><td>電解コンデンサー 470µF 16V</td><td class="mono">108426</td><td>2</td><td>サーボの電源の安定用。足の長い方が +、帯のある側が −</td></tr>
 </tbody></table></div>
 
 <h3>障害物回避カー</h3>
@@ -73,11 +84,18 @@
 <tr><td>電池ボックス 単3×4本 リード線・フタ・スイッチ付</td><td class="mono">100311</td><td>1</td><td>モーター用 (約 6V)</td></tr>
 </tbody></table></div>
 
+<h3>ワイヤレス操縦</h3>
+<div class="tbl"><table>
+<thead><tr><th>部品</th><th>番号</th><th>数</th><th>メモ</th></tr></thead>
+<tbody>
+<tr><td>Grove ジョイスティックモジュール</td><td class="mono">109279</td><td>1</td><td>10kΩ の可変抵抗 2 個。3.3V で使う</td></tr>
+<tr><td>コネクター付コード 4P Grove 用ケーブル</td><td class="mono">116938</td><td>1</td><td>半分に切って変換ケーブル 2 本に</td></tr>
+</tbody></table></div>
+
 <h3>次に使う部品</h3>
 <div class="tbl"><table>
 <thead><tr><th>部品</th><th>番号</th><th>数</th></tr></thead>
 <tbody>
-<tr><td>Grove ジョイスティックモジュール</td><td class="mono">109279</td><td>1</td></tr>
 <tr><td>ユニポーラー ステッピングモーター 28BYJ-48 5V</td><td class="mono">113256</td><td>1</td></tr>
 <tr><td>トランジスターアレイ ULN2003AN (ステッピングモーター用)</td><td class="mono">115064</td><td>1</td></tr>
 <tr><td>DHT11 温湿度センサーモジュール</td><td class="mono">115491</td><td>1</td></tr>

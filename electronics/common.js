@@ -5,7 +5,8 @@ window.ELEC_PAGES=[
   {id:'setup',        t:'開発環境と最初の一歩', d:'Arduino IDE に ESP32 を入れて、配線なしで動かす。ブレッドボードへの挿し方'},
   {id:'parts',        t:'部品と道具',           d:'買った部品の一覧、はんだ付けが要るもの、買い足すと楽になるもの'},
   {id:'light-seeker', t:'首振りガジェット',     d:'CdS で明るさを測り、サーボで首を振っていちばん明るい方向を向く'},
-  {id:'obstacle-car', t:'障害物回避カー',       d:'超音波で前を見て、DRV8835 で左右のモーターを回し、ぶつかる前によける'}
+  {id:'obstacle-car', t:'障害物回避カー',       d:'超音波で前を見て、DRV8835 で左右のモーターを回し、ぶつかる前によける'},
+  {id:'wireless-rc',  t:'ワイヤレス操縦',       d:'2 台目の ESP32 とジョイスティックでコントローラーを作り、ESP-NOW で車を操縦する'}
 ];
 var $=function(s,r){return (r||document).querySelector(s)};
 
