@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>赤外線リモコン — 電子工作ノート</title>
+<meta name="description" content="秋月の赤外線リモコン (NEC フォーマット) の信号を、ライブラリを使わずに ESP32 で読む。ボタンごとに色と音を出し、最後は障害物回避カーをリモコンで操縦する。配線図・信号の図・スケッチ。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>赤外線リモコン</h1>
+<p class="lede">秋月の赤外線リモコンの信号を、受信モジュールと ESP32 で読みます。ライブラリは使わず、<b>信号が変わった時刻の差を測って 0 と 1 を読み分けます</b>。読めたら、ボタンごとに色と音を出し、最後は障害物回避カーをリモコンで操縦します。</p>
+
+<div class="grid2">
+  <div><b>使う部品</b>Freenove ESP32 1 台、ブレッドボード、赤外線リモコン受信モジュール OSRB38C9AA、赤外線リモコン (NEC フォーマット)、圧電スピーカー PT08、ジャンパー線 オス-オス 5 本。段階 3 は障害物回避カーとオス-メス線 3 本。</div>
+  <div><b>電源</b>USB だけ。リモコンはコイン電池 CR2025。最初に電池ホルダのプラスチックシートを抜く (リモコンの説明書より)。</div>
+  <div><b>はんだ付け</b>不要。</div>
+  <div><b>ボードの行番号</b>Freenove のもの (<a href="setup.html#freenove">挿し方</a>)。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>リモコンは 38kHz で点滅する赤外線</h3>
+<p>リモコンは目に見えない赤外線 (940nm) を、1 秒に 3 万 8 千回の速さで点滅させながら送ります。受信モジュールはその点滅だけを拾い、<b>点滅が来ている間は OUT を LOW、来ていない間は HIGH</b> にします (出力はアクティブロー)。電灯や日光のような点滅しない光は無視されます。</p>
+<h3>NEC フォーマット: LOW と HIGH の長さで 0 と 1</h3>
+<figure class="fig">
+  <div class="scroll"><img src="img/ir-nec.svg" alt="NEC フォーマットの図。9ms の LOW と 4.5ms の HIGH のリーダーのあと、0 は 0.56ms LOW と 0.56ms HIGH、1 は 0.56ms LOW と 1.69ms HIGH。最初の 8 ビットは 0,0,0,0,1,0,0,0 で 0x10。32 ビットはメーカー 16 ビット、キー 8 ビット、キーの反転 8 ビット。押し続けると 108ms ごとにリピート。" loading="lazy"></div>
+  <figcaption>受信モジュールの OUT。<a href="img/ir-nec.svg">図だけを開く</a></figcaption>
+</figure>
+<p>ESP32 には「ピンのレベルが変わるたびに関数を呼ぶ」割り込みがあります。変わるたびに <code>micros()</code> で時刻を見て、前に変わってからの時間を測り、上の図の長さと比べて 0 か 1 かを決めます。32 ビットそろえば 1 回のボタン押しです。キーの 8 ビットと、それを反転した 8 ビットが合わなければ「読み違い」として捨てます。</p>
+
+<h2><span class="no">2</span>配線</h2>
+<p>受信モジュールは <b>レンズ (丸いふくらみ) を手前に向けて、左から OUT・GND・VCC</b> です (データシートより)。c23・c24・c25 に、レンズが j 列の側を向くように挿します。電源は 2.7〜5.5V なので 3.3V で動かし、OUT をそのまま ESP32 に入れます。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/ir-breadboard.svg" alt="ブレッドボード配線図。Freenove を 1〜20 行。a5 (3V3) から上の + ライン、a7 (GND) から上の − ライン。受信モジュールを c23 (OUT)・c24 (GND)・c25 (VCC) に挿し、a16 (IO34) → a23、− ライン → a24、+ ライン → a25。圧電スピーカーの赤を a12 (IO25)、黒を上の − ライン。" loading="lazy"></div>
+  <figcaption>ブレッドボード配線図 (横にスクロールできます)。<a href="img/ir-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><span class="w" style="background:#EA8A00"></span><b>a5</b> (3V3)</td><td>上の <b>+</b> ライン</td><td>このページでは + ラインが 3.3V</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#1F2937"></span><b>a7</b> (GND)</td><td>上の <b>−</b> ライン</td><td>GND を配る</td></tr>
+<tr><td class="n">3</td><td>受信モジュール</td><td><b>c23・c24・c25</b></td><td>OUT・GND・VCC。レンズを j 列の側へ</td></tr>
+<tr><td class="n">4</td><td><span class="w" style="background:#0F766E"></span><b>a16</b> (IO34)</td><td><b>a23</b></td><td>OUT を読む</td></tr>
+<tr><td class="n">5</td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td><b>a24</b></td><td>受信モジュールの GND</td></tr>
+<tr><td class="n">6</td><td><span class="w" style="background:#EA8A00"></span>上の <b>+</b> ライン</td><td><b>a25</b></td><td>受信モジュールの VCC (3.3V)</td></tr>
+<tr><td class="n">7</td><td>圧電スピーカーの <b>赤</b></td><td><b>a12</b> (IO25)</td><td>音を出す。向きはないので黒と逆でもよい</td></tr>
+<tr><td class="n">8</td><td>圧電スピーカーの <b>黒</b></td><td>上の <b>−</b> ライン</td><td>GND</td></tr>
+</tbody></table></div>
+<p style="font-size:.9rem;color:var(--muted)">圧電スピーカーの線は細いより線です。先をよじってそのまま挿せますが、抜けやすければピンヘッダーにはんだ付けしておくと楽です。色は基板のフルカラー LED で出すので、LED の配線はありません。</p>
+
+<h2><span class="no">3</span>段階 1: ボタンのコードを読む</h2>
+<p>配線 1〜6 だけで動きます。リモコンを受信モジュールに向けてボタンを押します。</p>
+<div class="sketch" data-src="sketches/ir_receive/ir_receive.ino"></div>
+<ul class="check">
+  <li><code>メーカー 0x10EF  キー 0x??</code> と出る (メーカーの番号 10EF はリモコンの資料のとおり)</li>
+  <li>ボタンごとにキーの番号が違う。押し続けると <code>(リピート)</code> が続く</li>
+  <li>青い LED (IO2) が、受け取るたびに光る</li>
+</ul>
+<div class="kp"><b class="h">13 個のキーの番号を書き留めておく</b>
+<p>方向キー 8 つと機能キー 5 つの番号を、紙かメモに書いておきます。段階 3 で車の操縦に割り当てます。</p>
+</div>
+
+<h2><span class="no">4</span>段階 2: ボタンごとに色と音</h2>
+<p>配線 7・8 (圧電スピーカー) を足します。キーの番号から色と音の高さを決めるので、表を書かなくても動きます。押し続けると音が伸びます。</p>
+<div class="sketch" data-src="sketches/ir_light_sound/ir_light_sound.ino"></div>
+<ul class="check">
+  <li>ボタンを押すたびに、基板のフルカラー LED がボタンごとの色になり、ドレミのどれかが鳴る</li>
+  <li>押し続けている間は音が続き、離すと止まる</li>
+</ul>
+
+<h2><span class="no">5</span>段階 3: 障害物回避カーをリモコンで操縦する</h2>
+<p>車の配線はそのままで、受信モジュールをオス-メス線 3 本で足します。車の ESP32 (DevKitC) は 3V3 の穴が空いていないので、<b>IO14 を HIGH にして受信モジュールの電源にします</b>。受信モジュールは 1.5mA (最大) しか使わないので、GPIO から取れます。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/ir-car-breadboard.svg" alt="障害物回避カーの配線に受信モジュールを足した図。受信モジュールの OUT を a5 (IO13)、GND を上の − ライン、VCC を a8 (IO14) にオス-メス線でつなぐ。" loading="lazy"></div>
+  <figcaption>車に足す線 (横にスクロールできます)。<a href="img/ir-car-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>受信モジュール</th><th>車のブレッドボード</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><b>OUT</b></td><td><span class="w" style="background:#0891B2"></span><b>a5</b> (IO13)</td><td>信号を読む</td></tr>
+<tr><td class="n">2</td><td><b>GND</b></td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td>GND</td></tr>
+<tr><td class="n">3</td><td><b>VCC</b></td><td><span class="w" style="background:#A16207"></span><b>a8</b> (IO14)</td><td>スケッチで HIGH にして 3.3V を出す</td></tr>
+</tbody></table></div>
+<div class="sketch" data-src="sketches/ir_car/ir_car.ino"></div>
+<ol class="steps">
+  <li>段階 1 で書き留めたキーの番号を、<code>KEYS</code> の <code>-1</code> のところに <code>0x18</code> のように書く。止まるキーと速さ切り替えのキーは <code>KEY_STOP</code>・<code>KEY_SPEED</code> に。</li>
+  <li><code>LEFT_REVERSED</code> / <code>RIGHT_REVERSED</code> を障害物回避カーと同じにして、車の ESP32 に書き込む。</li>
+  <li>タイヤを浮かせて試す。前のキーを押している間だけ両方のタイヤが前に回り、離すと止まれば OK。</li>
+  <li>床に置いて走らせる。前に壁があると、前のキーを押しても進まない (後ろや回転はできる)。</li>
+</ol>
+<ul class="check">
+  <li>表に書いていないキーを押すと、シリアルモニタに <code>表にないキー 0x??</code> と出る</li>
+  <li>キーを離すと 0.25 秒ほどで止まる (押している間は 108ms ごとにリピートが届く)</li>
+</ul>
+
+<h2><span class="no">6</span>うまくいかないとき</h2>
+<div class="tbl"><table>
+<thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>何を押しても何も出ない</td><td>リモコンの電池シートを抜いたか。受信モジュールの向き (OUT・GND・VCC の順)。a23 と IO34 の線</td></tr>
+<tr><td><code>読み違い</code> がよく出る</td><td>リモコンを近づける。直射日光やインバーターの照明の近くを避ける</td></tr>
+<tr><td>リピートは出るのにキーが出ない</td><td>押した最初の信号を取りこぼしている。もう一度押し直す</td></tr>
+<tr><td>車が止まらない / カクカクする</td><td><code>HOLD_MS</code> を調整する。短すぎるとリピートの間で止まり、長すぎると離してからも走る</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">7</span>改造のアイデア</h2>
+<ul>
+  <li><b>家のリモコンも読んでみる</b>: NEC フォーマットのリモコンなら同じスケッチで読める。日本の家電には別の形式 (家製協フォーマットなど) のものも多く、その場合は「何も出ない」になる。リーダーの長さを測って表示するように書き替えると、どの形式か見分ける手がかりになる。</li>
+  <li><b>針の温度計を切り替える</b>: 針で指す温度計にリモコンを足し、ボタンで「部屋の温度 / 目標の温度」を切り替える。</li>
+  <li><b>リモコンで首振り</b>: 首振りガジェットのサーボを左右のキーで回す。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('ir-remote')</script>
+</body>
+</html>

@@ -171,21 +171,24 @@ class Board:
     def freenove(self, used):
         """Freenove ESP32 WROOM を 1〜20 行に、上のピン列を b 列・下を j 列にして描く。used: {ピン名: 色}"""
         s = self.s
-        bx0 = self.hole('b1')[0] - 1.0 * P
-        bx1 = self.hole('b20')[0] + 0.9 * P
+        bx0 = self.hole('b1')[0] - 0.6 * P
+        bx1 = self.hole('b20')[0] + 0.5 * P
         by0 = self.oy + 0.5 * P
         by1 = self.oy + 11.5 * P
         # USB Type-C (細長い角丸)
         s.add(f'<rect x="{bx0 - 0.55 * P}" y="{self.oy + 5.15 * P}" width="{1.0 * P}" height="{1.7 * P}" rx="6" fill="#B8BDC7" stroke="#8B919C"/>')
         s.add(f'<rect x="{bx0}" y="{by0}" width="{bx1 - bx0}" height="{by1 - by0}" rx="4" fill="#15171C" opacity=".95"/>')
-        mx0, mx1 = self.hole('b13')[0], bx1 + 0.6 * P
-        my0, my1 = self.oy + 2.1 * P, self.oy + 9.9 * P   # ピン名の文字にかからない高さ
-        s.add(f'<rect x="{mx0}" y="{my0}" width="{mx1 - mx0}" height="{my1 - my0}" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>')
-        ax = bx1 - 1.2 * P
-        s.add(f'<rect x="{mx0 + 0.5 * P}" y="{my0 + 0.6 * P}" width="{ax - mx0 - 0.9 * P}" height="{my1 - my0 - 1.2 * P}" rx="2" fill="#C7CBD4"/>')
-        s.add(f'<rect x="{ax}" y="{my0}" width="{mx1 - ax}" height="{my1 - my0}" fill="#E9EBF0" stroke="#9BA1AD"/>')
+        # モジュール。アンテナ部分は基板の端から約 2.9 穴ぶん、d〜h 列の上に浮いて張り出す (ピン配置図から測った値)
+        mx0, mx1 = self.hole('b13')[0], self.hole('b20')[0] + 2.9 * P
+        my0, my1 = self.oy + 2.4 * P, self.oy + 9.6 * P
+        ax = bx1 - 0.6 * P
+        s.add(f'<rect x="{mx0}" y="{my0}" width="{ax - mx0}" height="{my1 - my0}" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>')
+        s.add(f'<rect x="{mx0 + 0.5 * P}" y="{my0 + 0.6 * P}" width="{ax - mx0 - 1.0 * P}" height="{my1 - my0 - 1.2 * P}" rx="2" fill="#C7CBD4"/>')
+        s.add(f'<rect x="{ax}" y="{my0}" width="{mx1 - ax}" height="{my1 - my0}" rx="2" fill="#2A2D35" opacity=".82" stroke="#6B7280" stroke-dasharray="3 2"/>')
+        s.add(f'<path d="M{ax + 6} {my0 + 12} h{mx1 - ax - 18} v8 h-{mx1 - ax - 26} v8 h{mx1 - ax - 26} v8" fill="none" stroke="#C9A227" stroke-width="1.5" opacity=".8"/>')
         s.text((mx0 + ax) / 2, self.oy + 5.2 * P, 'ESP32-WROOM-32E', size=10, fill='#3A3F4B', weight=700)
-        s.text((ax + mx1) / 2, self.oy + 6.0 * P, 'アンテナ', size=8, fill=MUTED, rotate=-90)
+        s.text((ax + mx1) / 2, self.oy + 7.4 * P, 'アンテナ', size=8.5, fill='#E5E7EB', weight=700)
+        s.text((ax + mx1) / 2, self.oy + 8.3 * P, '(浮いている)', size=7.5, fill='#C9CDD6')
         s.text(self.hole('b7')[0], self.oy + 4.3 * P, 'Freenove ESP32 WROOM', size=11, fill='#F3F4F6', weight=700)
         s.text(self.hole('b7')[0], self.oy + 5.9 * P, 'USB-C を左・3V3/5V の列を上に挿す', size=9, fill='#C9CDD6')
         # ボタン (USB の上下)
@@ -278,6 +281,46 @@ class Board:
             x, y = self.hole(f'f{r}')
             s.add(f'<circle cx="{x}" cy="{y}" r="4" fill="#D8C27A" stroke="#6B5A1E" stroke-width=".7"/>')
             s.text(x, y - 19, b, size=7, fill='#FFFFFF', rotate=-90, weight=700, family=MONO)
+
+    def dip(self, rows, e_labels, f_labels, name, notch='right'):
+        """DIP の IC を e 列・f 列にまたがって置く。e_labels / f_labels は rows の順のピン名"""
+        s = self.s
+        xa, _ = self.hole(f'e{rows[0]}')
+        xb, _ = self.hole(f'e{rows[-1]}')
+        ya, yb = self.hole('e1')[1], self.hole('f1')[1]
+        x0, x1 = xa - 0.35 * P, xb + 0.35 * P
+        s.add(f'<rect x="{x0}" y="{ya - 0.25 * P}" width="{x1 - x0}" height="{yb - ya + 0.5 * P}" rx="3" fill="#202329" stroke="#0B0C0F"/>')
+        nx = x1 if notch == 'right' else x0
+        s.add(f'<path d="M{nx} {(ya + yb) / 2 - 7} a7 7 0 0 {1 if notch == "right" else 0} 0 14" fill="#4B5060"/>')
+        s.text((x0 + x1) / 2, (ya + yb) / 2, name, size=10, fill='#E5E7EB', weight=700)
+        for r, t, b in zip(rows, e_labels, f_labels):
+            for col, lab, dy in (('e', t, 15), ('f', b, -15)):
+                x, y = self.hole(f'{col}{r}')
+                s.add(f'<rect x="{x - 3.5}" y="{y - 3.5}" width="7" height="7" fill="#C9CDD6" stroke="#6B7280" stroke-width=".6"/>')
+                s.text(x, y + dy, lab, size=7, fill='#E5E7EB', weight=700, family=MONO)
+
+    def thermistor(self, a, b, label='サーミスター'):
+        (x1, y1), (x2, y2) = self.hole(a), self.hole(b)
+        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2 + 13
+        s = self.s
+        for x, y in ((x1, y1), (x2, y2)):
+            s.add(f'<line x1="{x}" y1="{y}" x2="{cx + (x - cx) * .3}" y2="{cy - 3}" stroke="#8A8F99" stroke-width="1.4"/>')
+            s.add(f'<circle cx="{x}" cy="{y}" r="2.6" fill="#8A8F99"/>')
+        s.add(f'<ellipse cx="{cx}" cy="{cy + 2}" rx="5" ry="7" fill="#D7E8EF" stroke="#7FA7B8"/>')
+        s.add(f'<ellipse cx="{cx}" cy="{cy + 2}" rx="2" ry="3" fill="#3B4252"/>')
+        s.text(cx, cy + 20, label, size=9, weight=700)
+
+    def ir_module(self, rows, lens='down'):
+        """赤外線受信モジュールを c 列に 3 本挿したところ (上から見た図)。lens='down' でレンズが j 側"""
+        s = self.s
+        x0, y = self.hole(f'c{rows[0]}')
+        x1, _ = self.hole(f'c{rows[-1]}')
+        s.add(f'<rect x="{x0 - 9}" y="{y - 9}" width="{x1 - x0 + 18}" height="14" rx="2" fill="#1F2937"/>')
+        cx = (x0 + x1) / 2
+        s.add(f'<path d="M{cx - 9} {y + 5} a9 9 0 0 0 18 0 z" fill="#374151" stroke="#111827"/>')
+        for r in rows:
+            x, yy = self.hole(f'c{r}')
+            s.add(f'<circle cx="{x}" cy="{yy}" r="2.6" fill="#C9CDD6"/>')
 
     def connector2(self, a, b):
         (x1, y1), (x2, y2) = self.hole(a), self.hole(b)
@@ -470,14 +513,22 @@ DRV_TOP = ['VCC', 'MODE', 'AIN1', 'AIN2', 'BIN1', 'BIN2']      # e 列 (ESP32 �
 DRV_BOT = ['VM', 'AOUT1', 'AOUT2', 'BOUT1', 'BOUT2', 'GND']    # f 列 (モーター側)
 
 
-def car_breadboard():
-    s = SVG(1100, 760, '障害物回避カーのブレッドボード配線',
-            'ESP32 を 1〜19 行、DRV8835 を 23〜28 行に置く。上の − ラインが GND。電池の + は DRV8835 の VM 行 (j23) に直接、'
-            '− は下の − ラインへ。HC-SR04 は 3.3V で動かし、Trig を IO32、Echo を IO35 に直接つなぐ。')
+def car_breadboard(ir=False):
+    if ir:
+        s = SVG(1100, 760, '障害物回避カーに赤外線受信モジュールを足した配線',
+                '障害物回避カーの配線はそのまま。受信モジュールをオス-メス線 3 本で、OUT を a5 (IO13)、GND を上の − ライン、'
+                'VCC を a8 (IO14) につなぐ。IO14 は HIGH にして受信モジュールの電源にする。')
+    else:
+        s = SVG(1100, 760, '障害物回避カーのブレッドボード配線',
+                'ESP32 を 1〜19 行、DRV8835 を 23〜28 行に置く。上の − ラインが GND。電池の + は DRV8835 の VM 行 (j23) に直接、'
+                '− は下の − ラインへ。HC-SR04 は 3.3V で動かし、Trig を IO32、Echo を IO35 に直接つなぐ。')
     b = Board(s, 190, 250)
     b.draw()
-    b.esp32({'GND': C['GND'], '3V3': C['3V3'], 'IO25': C['IO25'], 'IO26': C['IO26'],
-             'IO27': C['IO27'], 'IO33': C['IO33'], 'IO32': C['IO32'], 'IO35': C['IO35']})
+    used = {'GND': C['GND'], '3V3': C['3V3'], 'IO25': C['IO25'], 'IO26': C['IO26'],
+            'IO27': C['IO27'], 'IO33': C['IO33'], 'IO32': C['IO32'], 'IO35': C['IO35']}
+    if ir:
+        used.update({'IO13': C['IO13'], 'IO14': C['IO14']})
+    b.esp32(used)
     b.module(range(23, 29), DRV_TOP, DRV_BOT, 'DRV8835')
 
     # 上の − ライン = GND
@@ -548,16 +599,34 @@ def car_breadboard():
     tag(s, b.hole('a14')[0] + 96, 164, 'IO35 ← Echo', C['IO35'])
     tag(s, b.hole('c23')[0] + 74, 178, '3V3 → VCC', C['3V3'])
 
-    tag(s, b.hole('a6')[0] + 40, b.hole('top-:6')[1] - 14, 'GND', C['GND'])
+    tag(s, b.hole('a6')[0] + (-52 if ir else 40), b.hole('top-:6')[1] - 14, 'GND', C['GND'])
     tag(s, (b.hole('a19')[0] + b.hole('a23')[0]) / 2, b.hole('a19')[1] - 0.55 * P - 11, '3V3', C['3V3'])
     s.text(b.hole('c24')[0] + 4, b.hole('c24')[1] + 1, 'MODE', size=8, anchor='start', fill=C['3V3'], weight=700)
+
+    if ir:
+        # 受信モジュール (前から見た図: 左から OUT・GND・VCC)。オス-メス線 3 本で
+        px = {'OUT': 290, 'GND': 320, 'VCC': 350}
+        py = 104
+        s.add(f'<rect x="{px["OUT"] - 16}" y="{py - 34}" width="{px["VCC"] - px["OUT"] + 32}" height="26" rx="3" fill="#1F2937"/>')
+        s.add(f'<circle cx="{px["GND"]}" cy="{py - 21}" r="9" fill="#374151" stroke="#111827"/>')
+        for name, x in px.items():
+            s.add(f'<line x1="{x}" y1="{py - 8}" x2="{x}" y2="{py}" stroke="#9CA3AF" stroke-width="2"/>')
+            s.text(x, py - 44, name, size=8, weight=700, family=MONO)
+        s.text(px['VCC'] + 24, py - 30, '受信モジュール (前から見た図)', size=9.5, weight=700, anchor='start')
+        s.text(px['VCC'] + 24, py - 15, 'リモコンの光が届く向きに付ける', size=9, fill=MUTED, anchor='start')
+        route(b, ['a5', (b.hole('a5')[0], 146), (px['OUT'], 146), (px['OUT'], py)], C['IO13'])
+        route(b, ['top-:7.5', (px['GND'], py)], C['GND'])
+        route(b, ['a8', (b.hole('a8')[0], 158), (px['VCC'], 158), (px['VCC'], py)], C['IO14'])
+        tag(s, 214, 146, 'IO13 ← OUT', C['IO13'])
+        tag(s, 402, 128, 'IO14 → VCC', C['IO14'])
 
     usb_cable(s, b, ('USB → PC / モバイルバッテリー', '走らせるときはモバイルバッテリー'))
     legend(s, 190, 724, [('3V3', C['3V3']), ('GND', C['GND']), ('電池 6V', C['VBAT']),
                          ('IO33 左向き', C['IO33']), ('IO25 左速さ', C['IO25']), ('IO26 右向き', C['IO26']),
                          ('IO27 右速さ', C['IO27'])])
-    legend(s, 190, 744, [('IO32 Trig', C['IO32']), ('IO35 Echo', C['IO35'])])
-    s.save('car-breadboard.svg')
+    legend(s, 190, 744, [('IO32 Trig', C['IO32']), ('IO35 Echo', C['IO35'])] +
+           ([('IO13 ← 受信', C['IO13']), ('IO14 → 受信の電源', C['IO14'])] if ir else []))
+    s.save('ir-car-breadboard.svg' if ir else 'car-breadboard.svg')
 
 
 def car_schematic():
@@ -986,15 +1055,472 @@ def freenove_pinmap():
     s.save('freenove-pinmap.svg')
 
 
+# ------------------------------------------------------------------ 針で指す温度計
+C['IO14'] = '#A16207'
+C['IO13'] = '#0891B2'
+MOTOR_WIRE = {'赤': '#DC2626', '橙': '#F97316', '黄': '#EAB308', 'ピンク': '#EC4899', '青': '#2563EB'}
+ULN_E = ['E', '7B', '6B', '5B', '4B', '3B', '2B', '1B']          # e 列 (23 → 30 行)。切り欠きは右
+ULN_F = ['COM', '7C', '6C', '5C', '4C', '3C', '2C', '1C']        # f 列
+
+
+def motor_icon(s, cx, cy, needle=True):
+    s.add(f'<rect x="{cx - 52}" y="{cy - 8}" width="104" height="16" rx="8" fill="#C7CBD1" stroke="#8B919C"/>')
+    for dx in (-44, 44):
+        s.add(f'<circle cx="{cx + dx}" cy="{cy}" r="3.5" fill="#FBFAF7"/>')
+    s.add(f'<circle cx="{cx}" cy="{cy}" r="34" fill="#D9DCE1" stroke="#8B919C" stroke-width="1.5"/>')
+    s.add(f'<circle cx="{cx}" cy="{cy - 12}" r="7" fill="#B8913A" stroke="#7A5E1E"/>')
+    if needle:
+        s.add(f'<path d="M{cx} {cy - 12} L{cx + 48} {cy - 46}" stroke="#B91C1C" stroke-width="3.5" stroke-linecap="round"/>')
+        s.text(cx + 58, cy - 54, '紙の針', size=9, fill='#B91C1C', weight=700, anchor='start')
+    s.text(cx, cy + 14, '28BYJ-48', size=10, weight=700)
+    s.add(f'<rect x="{cx - 22}" y="{cy + 26}" width="44" height="12" rx="2" fill="#2563EB" opacity=".85"/>')
+
+
+def needle_breadboard():
+    s = SVG(1100, 700, '針で指す温度計のブレッドボード配線',
+            'Freenove ESP32 を 1〜20 行、ULN2003AN を 23〜30 行に切り欠きを右にして挿す。IO14・IO27・IO26・IO25 を 1B〜4B へ。'
+            '上の − ラインから a23 (E)。上の + ライン (5V) を右端で下の + ラインにつなぎ、j23 (COM) へ。'
+            'モーターの赤を h23、橙・黄・ピンク・青を h27〜h30。サーミスターを c21–c22、10kΩ を b22–d23、IO34 を a22。')
+    b = Board(s, 190, 170)
+    b.draw()
+    b.freenove({'5V': C['5V'], 'GND': C['GND'], '3V3': C['3V3'], 'IO14': C['IO14'], 'IO27': C['IO27'],
+                'IO26': C['IO26'], 'IO25': C['IO25'], 'IO34': C['IO34']})
+    b.dip(range(23, 31), ULN_E, ULN_F, 'ULN2003AN')
+
+    b.wire('a1', 'top+:1', C['5V'], straight=True)
+    b.wire('a7', 'top-:7', C['GND'], straight=True)
+    # IO → 1B〜4B (外側ほど遠く。入れ子にして交差させない)
+    b.wire('a9', 'a30', C['IO14'], lift=1.75)
+    b.wire('a10', 'a29', C['IO27'], lift=1.45)
+    b.wire('a11', 'a28', C['IO26'], lift=1.15)
+    b.wire('a12', 'a27', C['IO25'], lift=0.85)
+    # サーミスター: 3V3 (a20) → a21、c21–c22、10kΩ b22–d23 (23 行は GND)、IO34 → a22
+    b.wire('a16', 'a22', C['IO34'], lift=0.6)
+    b.wire('a20', 'a21', C['3V3'], lift=0.35, width=3)
+    b.thermistor('c21', 'c22', label='')
+    b.resistor('b22', 'd23', label='')
+    for text, (tx, ty), target in (('サーミスター (c21–c22)', (470, 36), b.hole('c21')), ('10kΩ (b22–d23)', (690, 36), b.hole('d23'))):
+        s.add(f'<line x1="{tx}" y1="{ty + 9}" x2="{target[0] + 10}" y2="{target[1] + 8}" stroke="#6B7280" stroke-width="1" stroke-dasharray="3 3"/>')
+        s.add(f'<rect x="{tx - 62}" y="{ty - 10}" width="124" height="20" rx="10" fill="#FFFFFF" stroke="#9CA3AF"/>')
+        s.text(tx, ty, text, size=9.5, weight=700)
+    # E (23 行) に GND
+    b.wire('top-:23.5', 'a23', C['GND'], straight=True)
+    # 上の + (5V) を右端で下の + へ。下の + から j23 (COM)
+    xr = b.ox + 29 * P + 1.7 * P
+    route(b, ['top+:29.5', (xr, b.hole('top+:29.5')[1]), (xr, b.hole('bot+:29.5')[1]), 'bot+:29.5'], C['5V'])
+    b.wire('bot+:23.5', 'j23', C['5V'], straight=True)
+
+    # モーター: コネクタの穴にオス-オス線を挿して h23 (赤) と h27〜h30 へ
+    order = (('赤', 'h23'), ('橙', 'h27'), ('黄', 'h28'), ('ピンク', 'h29'), ('青', 'h30'))
+    kx0, ky = 650, 520
+    s.add(f'<rect x="{kx0 - 12}" y="{ky - 8}" width="{4 * 20 + 24}" height="20" rx="3" fill="#F3F4F6" stroke="#9CA3AF"/>')
+    for i, (name, hole) in enumerate(order):
+        kx = kx0 + i * 20
+        hx, hy = b.hole(hole)
+        col = MOTOR_WIRE[name]
+        s.add(f'<path d="M{kx} {ky} L{hx} {hy}" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity=".85"/>')
+        s.add(f'<path d="M{kx} {ky} L{hx} {hy}" stroke="{col}" stroke-width="3.6" stroke-linecap="round"/>')
+        s.add(f'<circle cx="{hx}" cy="{hy}" r="3.2" fill="{col}" stroke="#fff"/>')
+        s.add(f'<rect x="{kx - 5}" y="{ky - 4}" width="10" height="10" rx="1" fill="#374151"/>')
+        s.text(kx, ky + 20 + (i % 2) * 12, name, size=8.5, fill=col, weight=700)
+    mcx, mcy = 960, ky + 96
+    for i in range(5):
+        s.add(f'<path d="M{kx0 + 92} {ky + 2 + (i - 2) * 3} C{kx0 + 150} {ky + (i - 2) * 3} {mcx - 60} {mcy - 40 + i * 3} {mcx - 34} {mcy - 8 + i * 3}" '
+              f'fill="none" stroke="{MOTOR_WIRE[order[i][0]]}" stroke-width="2"/>')
+    motor_icon(s, mcx, mcy)
+    s.text(kx0 + 40, ky + 58, 'コネクタの穴の並びは、線の色で確かめる', size=9, fill=MUTED)
+
+    tag(s, b.hole('a1')[0] + 36, b.hole('top+:1')[1] - 14, '5V', C['5V'])
+    tag(s, b.hole('a7')[0] + 40, b.hole('top-:7')[1] + 12, 'GND', C['GND'])
+    s.text(xr + 8, (b.hole('top+:29.5')[1] + b.hole('bot+:29.5')[1]) / 2 - 8, '5V を', size=9, fill=C['5V'], weight=700, anchor='start')
+    s.text(xr + 8, (b.hole('top+:29.5')[1] + b.hole('bot+:29.5')[1]) / 2 + 8, '下の + へ', size=9, fill=C['5V'], weight=700, anchor='start')
+    s.text(b.hole('top-:23.5')[0] + 8, b.hole('top-:23.5')[1] + 16, 'E', size=9, fill=C['GND'], weight=700, anchor='start')
+
+    usb_cable(s, b, ('USB', 'PC かモバイルバッテリー'))
+    legend(s, 190, 610, [('5V', C['5V']), ('3V3', C['3V3']), ('GND', C['GND']), ('IO34 温度', C['IO34'])])
+    legend(s, 190, 634, [('IO14 → 1B', C['IO14']), ('IO27 → 2B', C['IO27']), ('IO26 → 3B', C['IO26']), ('IO25 → 4B', C['IO25'])])
+    s.text(190, 664, 'ULN2003AN は切り欠き (半円のくぼみ) を右 (30 行側) に向ける', size=10, anchor='start', weight=700)
+    s.save('needle-breadboard.svg')
+
+
+def needle_schematic():
+    s = SVG(900, 440, '針で指す温度計の回路図',
+            'ESP32 の IO14・IO27・IO26・IO25 を ULN2003AN の 1B〜4B に。1C〜4C をモーターの青・ピンク・黄・橙に。'
+            'モーターの赤と COM は 5V、E は GND。3V3 からサーミスターと 10kΩ で分圧し、中点を IO34 へ。')
+
+    def line(pts, col, w=3):
+        d = 'M' + ' L'.join(f'{x} {y}' for x, y in pts)
+        s.add(f'<path d="{d}" fill="none" stroke="{col}" stroke-width="{w}" stroke-linejoin="round"/>')
+
+    def dot(x, y, col):
+        s.add(f'<circle cx="{x}" cy="{y}" r="4.5" fill="{col}"/>')
+
+    ex, ey, ew, eh = 30, 40, 150, 360
+    s.add(f'<rect x="{ex}" y="{ey}" width="{ew}" height="{eh}" rx="8" fill="#15171C"/>')
+    s.text(ex + ew / 2, ey + 22, 'ESP32', size=14, fill='#fff', weight=700)
+    s.text(ex + ew / 2, ey + 40, 'Freenove WROOM', size=10, fill='#C9CDD6')
+    pins = {'5V': 80, 'IO14': 130, 'IO27': 165, 'IO26': 200, 'IO25': 235, 'GND': 280, '3V3': 320, 'IO34': 365}
+    for name, y in pins.items():
+        dot(ex + ew, y, C.get(name, INK))
+        s.text(ex + ew - 12, y, name, size=11, fill='#fff', anchor='end', weight=700, family=MONO)
+
+    ux, uy, uw, uh = 330, 100, 170, 210
+    s.add(f'<rect x="{ux}" y="{uy}" width="{uw}" height="{uh}" rx="8" fill="#202329"/>')
+    s.text(ux + uw / 2, uy + 20, 'ULN2003AN', size=13, fill='#fff', weight=700)
+    s.text(ux + uw / 2, uy + 36, '電流を流す役 (7 回路)', size=9, fill='#C9CDD6')
+    bins = {'1B': 130, '2B': 165, '3B': 200, '4B': 235, 'E': 280}
+    couts = {'1C': 130, '2C': 165, '3C': 200, '4C': 235, 'COM': 280}
+    for name, y in bins.items():
+        dot(ux, y, '#fff')
+        s.text(ux + 10, y, name, size=10, fill='#fff', anchor='start', weight=700, family=MONO)
+    for name, y in couts.items():
+        dot(ux + uw, y, '#fff')
+        s.text(ux + uw - 10, y, name, size=10, fill='#fff', anchor='end', weight=700, family=MONO)
+    for io, pin in (('IO14', '1B'), ('IO27', '2B'), ('IO26', '3B'), ('IO25', '4B')):
+        line([(ex + ew, pins[io]), (ux, bins[pin])], C[io])
+    line([(ex + ew, 280), (ux, 280)], C['GND'])
+
+    # モーター (コイル 2 つ、まん中の赤が 5V)
+    mx = 690
+    coil_y = {'青': 130, 'ピンク': 165, '黄': 200, '橙': 235}
+    for (cname, out) in (('青', '1C'), ('ピンク', '2C'), ('黄', '3C'), ('橙', '4C')):
+        y = coil_y[cname]
+        line([(ux + uw, couts[out]), (mx - 40, y)], MOTOR_WIRE[cname])
+        s.text(mx - 46, y - 10, cname, size=9, fill=MOTOR_WIRE[cname], weight=700, anchor='end')
+    # コイルは ピンク–橙 と 黄–青 の 2 組 (まん中が赤)。図はつなぎ方だけを示す
+    s.add(f'<rect x="{mx - 40}" y="{110}" width="150" height="145" rx="10" fill="#EEF0F3" stroke="#9CA3AF"/>')
+    s.text(mx + 35, 128, '28BYJ-48', size=12, weight=700)
+    s.text(mx + 35, 146, '青 → ピンク → 黄 → 橙 の順に', size=9, fill=MUTED)
+    s.text(mx + 35, 160, '1 本ずつ電気を流すと回る', size=9, fill=MUTED)
+    for y in (130, 165, 200, 235):
+        dot(mx - 40, y, '#6B7280')
+    s.text(mx + 35, 196, 'コイル 2 つ', size=9.5, weight=700)
+    s.text(mx + 35, 212, '(ピンク–橙、黄–青)', size=9, fill=MUTED)
+    s.text(mx + 35, 236, 'まん中の赤 = 5V', size=9.5, weight=700, fill=MOTOR_WIRE['赤'])
+    # 5V: ESP32 5V → COM、モーターの赤
+    line([(ex + ew, 80), (620, 80), (620, 280), (ux + uw, 280)], C['5V'])
+    line([(620, 80), (mx + 35, 80), (mx + 35, 110)], MOTOR_WIRE['赤'])
+    dot(620, 80, C['5V'])
+    s.text(560, 70, '5V', size=10, fill=C['5V'], weight=700)
+    s.text(600, 328, 'COM にも 5V (中のダイオードがコイルの逆電圧を逃がす)', size=9, fill=MUTED, anchor='middle')
+
+    # サーミスター
+    nx = 300
+    line([(ex + ew, 320), (nx, 320), (nx, 330)], C['3V3'])
+    s.add(f'<rect x="{nx - 7}" y="330" width="14" height="22" rx="3" fill="#D7E8EF" stroke="#7FA7B8"/>')
+    s.add(f'<path d="M{nx - 14} 356 l28 -30" stroke="{INK}" stroke-width="1.4"/>')
+    s.text(nx + 20, 338, 'サーミスター (25℃ で 10kΩ)', size=10, anchor='start', weight=700)
+    line([(nx, 352), (nx, 365), (ex + ew, 365)], C['IO34'])
+    dot(nx, 365, C['IO34'])
+    line([(nx, 365), (nx, 372)], C['GND'])
+    s.add(f'<path d="M{nx} 372 l-6 3 l12 5 l-12 5 l12 5 l-6 3 l0 4" fill="none" stroke="{INK}" stroke-width="1.6"/>')
+    s.text(nx + 14, 384, '10kΩ', size=10, anchor='start', weight=700)
+    s.add(f'<path d="M{nx - 12} 400 h24 M{nx - 8} 405 h16 M{nx - 4} 410 h8" stroke="{INK}" stroke-width="1.8"/>')
+    line([(nx, 397), (nx, 400)], C['GND'])
+    s.text(470, 360, '温かい → サーミスターの抵抗が下がる → IO34 の電圧が上がる', size=10, anchor='start', weight=700)
+    s.text(470, 378, '温度 = 1 ÷ (1/298.15 + ln(R/10k) ÷ 3960) − 273.15  (B 定数の式)', size=9.5, anchor='start', fill=MUTED)
+    s.save('needle-schematic.svg')
+
+
+def needle_dial():
+    """実寸で印刷する目盛り板 (mm 単位)。半円で 10〜40℃"""
+    W, H, cx, cy, R = 130, 92, 65, 68, 52
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}mm" height="{H}mm" '
+             f'font-family="{FONT}" role="img" aria-labelledby="t d">',
+             '<title id="t">温度計の目盛り板 (印刷用)</title>',
+             '<desc id="d">半円の目盛り。左端 10℃、右端 40℃、1℃ ごとに目盛り。中心にモーターの軸を通す。100% の大きさで印刷する。</desc>',
+             f'<rect width="{W}" height="{H}" fill="#fff"/>',
+             f'<rect x="1" y="1" width="{W - 2}" height="{H - 2}" fill="none" stroke="#9CA3AF" stroke-width=".3" stroke-dasharray="2 1.5"/>']
+    # 色の帯 (寒い・ちょうどいい・暑い)
+    def arc(t0, t1, r, col, w):
+        a0 = math.pi * (1 - (t0 - 10) / 30)
+        a1 = math.pi * (1 - (t1 - 10) / 30)
+        x0, y0 = cx + r * math.cos(a0), cy - r * math.sin(a0)
+        x1, y1 = cx + r * math.cos(a1), cy - r * math.sin(a1)
+        parts.append(f'<path d="M{x0:.2f} {y0:.2f} A{r} {r} 0 0 1 {x1:.2f} {y1:.2f}" fill="none" stroke="{col}" stroke-width="{w}"/>')
+    arc(10, 18, R - 3, '#BFDBFE', 4)
+    arc(18, 26, R - 3, '#BBF7D0', 4)
+    arc(26, 40, R - 3, '#FECACA', 4)
+    for t in range(10, 41):
+        a = math.pi * (1 - (t - 10) / 30)
+        major = (t % 5 == 0)
+        r1 = R - (8 if major else 5)
+        x0, y0 = cx + R * math.cos(a), cy - R * math.sin(a)
+        x1, y1 = cx + r1 * math.cos(a), cy - r1 * math.sin(a)
+        parts.append(f'<line x1="{x0:.2f}" y1="{y0:.2f}" x2="{x1:.2f}" y2="{y1:.2f}" stroke="#111" stroke-width="{0.6 if major else 0.3}"/>')
+        if major:
+            lx, ly = cx + (R + 5) * math.cos(a), cy - (R + 5) * math.sin(a)
+            parts.append(f'<text x="{lx:.2f}" y="{ly:.2f}" font-size="4.2" text-anchor="middle" dominant-baseline="central" font-weight="700">{t}</text>')
+    parts.append(f'<text x="{cx}" y="{cy - 22}" font-size="5" text-anchor="middle" font-weight="700">℃</text>')
+    parts.append(f'<text x="{cx}" y="{cy - 14}" font-size="2.8" text-anchor="middle" fill="#6B7280">針で指す温度計</text>')
+    parts.append(f'<circle cx="{cx}" cy="{cy}" r="3" fill="none" stroke="#111" stroke-width=".3"/>')
+    parts.append(f'<path d="M{cx - 5} {cy} h10 M{cx} {cy - 5} v10" stroke="#111" stroke-width=".2"/>')
+    parts.append(f'<text x="{cx}" y="{cy + 7}" font-size="2.6" text-anchor="middle" fill="#6B7280">ここに軸を通す (直径 6mm の穴)</text>')
+    parts.append(f'<text x="4" y="{H - 4}" font-size="2.6" fill="#6B7280">100% (実寸) で印刷。左端 = 10℃ = 0 ステップ、右端 = 40℃ = 1024 ステップ</text>')
+    parts.append('</svg>')
+    with open(os.path.join(OUT, 'needle-dial.svg'), 'w', encoding='utf-8') as f:
+        f.write('\n'.join(parts) + '\n')
+    print('wrote needle-dial.svg')
+
+
+# ------------------------------------------------------------------ 赤外線リモコン
+def piezo_icon(s, cx, cy):
+    s.add(f'<rect x="{cx - 40}" y="{cy - 6}" width="80" height="12" rx="6" fill="#1F2937"/>')
+    s.add(f'<circle cx="{cx}" cy="{cy}" r="26" fill="#262A31" stroke="#111"/>')
+    for r in (20, 15, 10):
+        s.add(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="#3B4150"/>')
+    s.add(f'<circle cx="{cx}" cy="{cy}" r="4" fill="#B8913A"/>')
+    s.text(cx + 34, cy - 18, '圧電スピーカー PT08', size=9.5, weight=700, anchor='start')
+    s.text(cx + 34, cy - 4, '向きはない', size=8.5, fill=MUTED, anchor='start')
+
+
+def ir_breadboard():
+    s = SVG(1100, 600, '赤外線リモコン受信のブレッドボード配線',
+            'Freenove ESP32 を 1〜20 行に挿す。a5 (3V3) から上の + ライン、a7 (GND) から上の − ライン。'
+            '受信モジュールを c23〜c25 にレンズを手前 (j 側) に向けて挿し、a16 (IO34) → a23 (OUT)、− ライン → a24 (GND)、+ ライン → a25 (VCC)。'
+            '圧電スピーカーの赤を a12 (IO25)、黒を上の − ラインへ。')
+    b = Board(s, 190, 170)
+    b.draw()
+    b.freenove({'3V3': C['3V3'], 'GND': C['GND'], 'IO34': C['IO34'], 'IO25': C['IO25']})
+    b.wire('a5', 'top+:5', C['3V3'], straight=True)
+    b.wire('a7', 'top-:7', C['GND'], straight=True)
+    b.ir_module([23, 24, 25])
+    b.wire('a16', 'a23', C['IO34'], lift=0.9)
+    b.wire('top-:23.6', 'a24', C['GND'], straight=True)
+    b.wire('top+:25.4', 'a25', C['3V3'], straight=True)
+    for r, lab in ((23, 'OUT'), (24, 'GND'), (25, 'VCC')):
+        x, y = b.hole(f'c{r}')
+        s.text(x, y + 30, lab, size=8, weight=700, family=MONO, rotate=-90)
+    x23, yc = b.hole('c24')
+    s.add(f'<rect x="{x23 + 44}" y="{yc - 2}" width="196" height="38" rx="6" fill="#FFFFFF" stroke="#9CA3AF"/>')
+    s.text(x23 + 52, yc + 9, '受信モジュール OSRB38C9AA', size=9.5, weight=700, anchor='start')
+    s.text(x23 + 52, yc + 25, 'レンズ (ふくらみ) を手前 = j 側に', size=9, fill=MUTED, anchor='start')
+
+    # 圧電スピーカー: 赤 → a12 (IO25)、黒 → 上の − ライン
+    pcx, pcy = 430, 52
+    piezo_icon(s, pcx, pcy)
+    for col, hole in (('#DC2626', 'a12'), ('#111827', 'top-:13.6')):
+        hx, hy = b.hole(hole)
+        sx = pcx - 8 if hole == 'a12' else pcx + 8
+        s.add(f'<path d="M{sx} {pcy + 24} C{sx} {pcy + 60} {hx} {hy - 50} {hx} {hy}" fill="none" stroke="{col}" stroke-width="2.4"/>')
+        s.add(f'<circle cx="{hx}" cy="{hy}" r="3" fill="{col}" stroke="#fff"/>')
+    s.text(b.hole('a12')[0] - 8, b.hole('top+:12')[1] - 26, '赤 → a12', size=9, weight=700, fill='#DC2626', anchor='end')
+    s.text(b.hole('top-:13.6')[0] + 10, b.hole('top-:13.6')[1] - 30, '黒 → − ライン', size=9, weight=700, anchor='start')
+
+    tag(s, b.hole('a5')[0] + 36, b.hole('top+:5')[1] - 14, '3V3', C['3V3'])
+    tag(s, b.hole('a7')[0] + 44, b.hole('top-:7')[1] + 12, 'GND', C['GND'])
+    s.text(b.hole('a25')[0] + 8, b.hole('top+:25.4')[1] - 16, '+ ラインは 3.3V', size=9, fill=C['3V3'], weight=700, anchor='start')
+
+    usb_cable(s, b, ('USB → PC', '書き込み・電源・シリアル'))
+    legend(s, 190, 520, [('3V3', C['3V3']), ('GND', C['GND']), ('IO34 ← 受信', C['IO34']), ('IO25 → 圧電', C['IO25'])])
+    s.text(190, 550, '色は基板のフルカラー LED (IO16) で出すので、LED の配線は要らない', size=10, anchor='start', fill=MUTED)
+    s.save('ir-breadboard.svg')
+
+
+def ir_nec():
+    s = SVG(900, 340, 'NEC フォーマットのリモコン信号',
+            '受信モジュールの出力は、リモコンが光っている間 LOW になる。9ms の LOW と 4.5ms の HIGH (リーダー) のあと、'
+            '0 は 0.56ms LOW + 0.56ms HIGH、1 は 0.56ms LOW + 1.69ms HIGH で 32 ビット。押し続けると 9ms + 2.25ms のリピートが 108ms ごとに来る。')
+    s.text(30, 32, '受信モジュールの OUT (ESP32 が見る信号)', size=12, weight=700, anchor='start')
+    s.text(30, 52, '光っている間 = LOW。LOW と HIGH の長さで 0 / 1 を見分ける', size=9.5, fill=MUTED, anchor='start')
+    yH, yL = 95, 145
+    kl, kb = 10.0, 44.0           # リーダーは 1ms = 10px に縮め、ビットは 1ms = 44px で描く
+    x = 70
+    pts = [(x - 30, yH), (x, yH)]
+
+    def seg(level, ms, k):
+        nonlocal x
+        y = yL if level == 0 else yH
+        pts.append((x, y))
+        x += ms * k
+        pts.append((x, y))
+
+    x0 = x
+    seg(0, 9.0, kl)
+    xm = x
+    seg(1, 4.5, kl)
+    xl = x
+    first = [0, 0, 0, 0, 1, 0, 0, 0]               # 0x10 を下位ビットから
+    marks = []
+    for bit in first:
+        xs = x
+        seg(0, 0.56, kb)
+        seg(1, 1.69 if bit else 0.56, kb)
+        marks.append((xs, x, bit))
+    xe = x
+    d = 'M' + ' L'.join(f'{px:.1f} {py:.1f}' for px, py in pts)
+    s.add(f'<path d="{d}" fill="none" stroke="{C["IO34"]}" stroke-width="2.4" stroke-linejoin="round"/>')
+    s.add(f'<path d="M{xe} {yH} h34" stroke="{C["IO34"]}" stroke-width="2.4" stroke-dasharray="4 4"/>')
+    s.text(xe + 42, yH, '… 残り 24 ビット', size=10, anchor='start', fill=MUTED)
+    s.text(x0 - 36, yH, 'H', size=9, fill=MUTED, family=MONO)
+    s.text(x0 - 36, yL, 'L', size=9, fill=MUTED, family=MONO)
+    s.text((x0 + xm) / 2, yL + 14, '9ms', size=9, family=MONO, weight=700)
+    s.text((xm + xl) / 2, yH - 12, '4.5ms', size=9, family=MONO, weight=700)
+    for xa in ((x0 + xm) / 2, (xm + xl) / 2):     # 縮めて描いている印
+        yy = yL if xa < xm else yH
+        s.add(f'<path d="M{xa - 6} {yy - 7} l4 14 M{xa + 2} {yy - 7} l4 14" stroke="#FBFAF7" stroke-width="4"/>')
+        s.add(f'<path d="M{xa - 6} {yy - 7} l4 14 M{xa + 2} {yy - 7} l4 14" stroke="{MUTED}" stroke-width="1.2"/>')
+    for xs, xe2, bit in marks:
+        s.text((xs + xe2) / 2, yL + 22, str(bit), size=12, weight=700, family=MONO, fill=C['IO25'])
+
+    def brace(xa, xb, y, text):
+        s.add(f'<path d="M{xa + 2} {y} v6 H{xb - 2} v-6" fill="none" stroke="{MUTED}" stroke-width="1.2"/>')
+        s.text((xa + xb) / 2, y + 18, text, size=10, weight=700)
+    brace(x0, xl, 182, 'リーダー (縮めて描いた)')
+    brace(xl, xe, 182, 'メーカーの最初の 8 ビット = 0x10 (下位のビットから)')
+
+    def bitshape(ox, oy, space, label):
+        kk = 44
+        p = [(ox, oy), (ox, oy + 30), (ox + 0.56 * kk, oy + 30), (ox + 0.56 * kk, oy), (ox + (0.56 + space) * kk, oy), (ox + (0.56 + space) * kk, oy + 30)]
+        s.add('<path d="M' + ' L'.join(f'{a:.1f} {b_:.1f}' for a, b_ in p) + f'" fill="none" stroke="{C["IO34"]}" stroke-width="2.4"/>')
+        s.text(ox + 0.28 * kk, oy + 44, '0.56ms', size=8.5, family=MONO)
+        s.text(ox + (0.56 + space / 2) * kk, oy - 10, f'{space:.2f}ms', size=8.5, family=MONO)
+        s.text(ox - 14, oy + 15, label, size=13, weight=700, anchor='end', family=MONO, fill=C['IO25'])
+    s.text(30, 238, '0 と 1 (同じ縮尺)', size=10, weight=700, anchor='start')
+    bitshape(110, 262, 0.56, '0')
+    bitshape(260, 262, 1.69, '1')
+    s.text(470, 250, '32 ビット = メーカー 16 ビット (このリモコンは 0x10EF)', size=10, anchor='start')
+    s.text(470, 268, '+ キー 8 ビット + キーを反転した 8 ビット', size=10, anchor='start')
+    s.text(470, 292, '押し続けると、108ms ごとに「リピート」(9ms LOW + 2.25ms HIGH) が来る', size=10, anchor='start', fill=MUTED)
+    s.text(470, 312, '時間の長さは秋月のリモコンの資料 (NEC フォーマット) より', size=9, anchor='start', fill=MUTED)
+    s.save('ir-nec.svg')
+
+
+# ------------------------------------------------------------------ 光で文字を送る
+def mini_freenove(s, x, y, w=210, h=96, label='Freenove A (送る側)'):
+    """ブレッドボードに挿さない、基板だけの絵。RGB LED の座標を返す"""
+    s.add(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="5" fill="#15171C"/>')
+    s.add(f'<rect x="{x + w - 70}" y="{y + 16}" width="64" height="{h - 32}" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>')
+    s.add(f'<rect x="{x - 10}" y="{y + h / 2 - 12}" width="16" height="24" rx="5" fill="#B8BDC7" stroke="#8B919C"/>')
+    for i in range(20):
+        px = x + 10 + i * (w - 20) / 19
+        s.add(f'<rect x="{px - 2.5}" y="{y + 4}" width="5" height="5" fill="#C9A227"/>')
+        s.add(f'<rect x="{px - 2.5}" y="{y + h - 9}" width="5" height="5" fill="#C9A227"/>')
+    lx, ly = x + 82, y + h / 2 + 6
+    s.add(f'<rect x="{lx - 8}" y="{ly - 8}" width="16" height="16" rx="2" fill="#F8FAFC" stroke="#9CA3AF"/>')
+    s.add(f'<circle cx="{lx}" cy="{ly}" r="5" fill="#FEF9C3" stroke="#EAB308"/>')
+    s.text(x + 60, y + 30, label, size=9.5, fill='#F3F4F6', weight=700)
+    s.text(lx, ly + 20, 'RGB LED', size=8, fill='#C9CDD6')
+    return lx, ly
+
+
+def light_breadboard():
+    s = SVG(1100, 680, '光で文字を送るときの配線',
+            '受け取る側の Freenove ESP32 を 1〜20 行に挿す。a20 (3V3) → a24、CdS を c24–c25、10kΩ を b25 と上の − ライン、'
+            'a16 (IO34) → a25、a7 (GND) → 上の − ライン。送る側の Freenove は配線なしで、基板のフルカラー LED を CdS に向ける。')
+    b = Board(s, 190, 170)
+    b.draw()
+    b.freenove({'3V3': C['3V3'], 'GND': C['GND'], 'IO34': C['IO34']})
+    b.wire('a7', 'top-:7', C['GND'], straight=True)
+    b.wire('a20', 'a24', C['3V3'], lift=0.6)
+    b.cds('c24', 'c25')
+    b.resistor('b25', 'top-:25.6', label='10kΩ', label_dx=26, label_dy=2)
+    b.wire('a16', 'a25', C['IO34'], lift=1.15)
+    tag(s, b.hole('a7')[0] + 44, b.hole('top-:7')[1] + 12, 'GND', C['GND'])
+    s.text(b.hole('c24')[0] - 40, 40, 'Freenove B (受け取る側)', size=11, weight=700)
+    usb_cable(s, b, ('USB → PC', 'シリアルモニタで文字を見る'))
+
+    # 送る側と、紙の筒
+    ix, iy = 330, 512
+    s.add(f'<rect x="{ix}" y="{iy}" width="740" height="150" rx="10" fill="#FFFFFF" stroke="#D6D0C2"/>')
+    s.text(ix + 14, iy + 18, 'CdS をオス-メス線 2 本で延長し、送る側の LED に向ける (間を紙の筒でつなぐ)', size=10, anchor='start', weight=700)
+    lx, ly = mini_freenove(s, ix + 30, iy + 38)
+    tx0, tx1 = lx + 14, lx + 150
+    s.add(f'<rect x="{tx0}" y="{ly - 18}" width="{tx1 - tx0}" height="36" rx="4" fill="#E5E1D8" stroke="#B9B2A3"/>')
+    s.text((tx0 + tx1) / 2, ly + 30, '紙の筒 (3〜5cm)', size=9, fill=MUTED)
+    for i in range(4):
+        y = ly - 9 + i * 6
+        s.add(f'<line x1="{lx + 8}" y1="{y}" x2="{tx1 - 10}" y2="{y}" stroke="#FACC15" stroke-width="1.6" stroke-dasharray="6 5" opacity=".9"/>')
+    cx, cy = tx1 + 10, ly
+    s.add(f'<circle cx="{cx}" cy="{cy}" r="9" fill="#F4E9C8" stroke="#B89B4E"/>')
+    s.add(f'<path d="M{cx - 5} {cy - 3} q2.5 -4 5 0 t5 0 M{cx - 5} {cy + 3} q2.5 -4 5 0 t5 0" fill="none" stroke="#B5462C" stroke-width="1.3"/>')
+    for i, (col, txt) in enumerate(((C['3V3'], 'c24 へ'), (C['IO34'], 'c25 へ'))):
+        s.add(f'<path d="M{cx + 8} {cy - 4 + i * 8} C{cx + 60} {cy - 4 + i * 8} {cx + 80} {cy - 30 + i * 40} {cx + 130} {cy - 30 + i * 40}" fill="none" stroke="{col}" stroke-width="3"/>')
+        s.text(cx + 138, cy - 30 + i * 40, txt, size=9.5, fill=col, weight=700, anchor='start')
+    s.text(ix + 470, iy + 120, '段階 1 は 1 台で: B 自身の LED に向ける', size=9.5, anchor='start', fill=MUTED)
+    s.text(ix + 470, iy + 136, '送る側は配線なし。USB で電源だけ', size=9.5, anchor='start', fill=MUTED)
+
+    legend(s, 190, 488, [('3V3', C['3V3']), ('GND', C['GND']), ('IO34 明るさ', C['IO34'])])
+    s.save('light-breadboard.svg')
+
+
+def light_frame():
+    s = SVG(900, 360, '光で 1 文字を送るときの形',
+            "'H' (0x48) を送る例。消灯で待ち、点灯 1 ビットがスタート、データ 8 ビットを下位から、消灯 2 ビットがストップ。"
+            'CdS の電圧は遅れてなまるので、スタートで明るくなった時刻から 1.5 ビット後、2.5 ビット後… のまん中で読む。')
+    bits = [0, 0] + [1] + [(0x48 >> i) & 1 for i in range(8)] + [0, 0] + [0]
+    x0, bw = 70, 52
+    yLed1, yLed0 = 70, 100
+    s.text(20, yLed1 + 15, 'LED', size=11, weight=700, anchor='start')
+    pts = []
+    for i, bt in enumerate(bits):
+        y = yLed1 if bt else yLed0
+        pts += [(x0 + i * bw, y), (x0 + (i + 1) * bw, y)]
+    s.add('<path d="M' + ' L'.join(f'{a:.1f} {b_:.1f}' for a, b_ in pts) + '" fill="none" stroke="#EAB308" stroke-width="2.6"/>')
+    # CdS の電圧 (立ち上がりは速く、立ち下がりは遅い)
+    yHi, yLo = 160, 230
+    s.text(20, (yHi + yLo) / 2, 'CdS', size=11, weight=700, anchor='start')
+    v, curve = 0.0, []
+    steps = 40
+    for i, bt in enumerate(bits):
+        for k in range(steps):
+            tau = 0.18 if bt > v else 0.45
+            v += (bt - v) * (1 - math.exp(-(1 / steps) / tau))
+            curve.append((x0 + (i + (k + 1) / steps) * bw, yLo - v * (yLo - yHi)))
+    s.add('<path d="M' + f'{x0} {yLo} L' + ' L'.join(f'{a:.1f} {b_:.1f}' for a, b_ in curve) + f'" fill="none" stroke="{C["IO34"]}" stroke-width="2.6"/>')
+    yth = (yHi + yLo) / 2
+    s.add(f'<line x1="{x0}" y1="{yth}" x2="{x0 + len(bits) * bw}" y2="{yth}" stroke="#9CA3AF" stroke-dasharray="5 4"/>')
+    s.text(x0 + len(bits) * bw + 6, yth, 'しきい値', size=9, anchor='start', fill=MUTED)
+    # スタートを見つけた時刻 (しきい値を超えた所) と、読む位置
+    t_start = next(px for px, py in curve if py < yth)
+    s.add(f'<line x1="{t_start}" y1="{yHi - 14}" x2="{t_start}" y2="{yLo + 6}" stroke="#B91C1C" stroke-width="1.2"/>')
+    s.text(t_start, yHi - 22, 'スタートを見つけた', size=8.5, fill='#B91C1C')
+    for k in range(9):
+        sx = t_start + (1.5 + k) * bw
+        sy = min(curve, key=lambda p: abs(p[0] - sx))[1]
+        is_on = sy < yth
+        s.add(f'<circle cx="{sx:.1f}" cy="{sy:.1f}" r="5" fill="{"#B91C1C" if k < 8 else "#6B7280"}" stroke="#fff" stroke-width="1.2"/>')
+        s.text(sx, yLo + 22, ('1' if is_on else '0') if k < 8 else '0?', size=11, weight=700, family=MONO, fill='#B91C1C' if k < 8 else MUTED)
+
+    def brace(i0, i1, text):
+        xa, xb = x0 + i0 * bw + 3, x0 + i1 * bw - 3
+        s.add(f'<path d="M{xa} 262 v6 H{xb} v-6" fill="none" stroke="{MUTED}" stroke-width="1.2"/>')
+        s.text((xa + xb) / 2, 282, text, size=9.5, weight=700)
+    brace(0, 2, '待ち (消灯)')
+    brace(2, 3, 'スタート')
+    brace(3, 11, 'データ 8 ビット (下位のビットから)')
+    brace(11, 13, 'ストップ ×2')
+    for i in range(8):
+        s.text(x0 + (3 + i + 0.5) * bw, yLed1 - 12, f'b{i}', size=8, fill=MUTED, family=MONO)
+    s.text(450, 318, "読んだビットを下位から並べる: 0,0,0,1,0,0,1,0 → 0b01001000 = 0x48 = 'H'", size=11, weight=700)
+    s.text(450, 340, '赤い丸 = 読む位置。ストップの位置が暗くなければ、区切りがずれたと分かる', size=9.5, fill=MUTED)
+    s.save('light-frame.svg')
+
+
 if __name__ == '__main__':
     os.makedirs(OUT, exist_ok=True)
+    # 開発環境
     esp32_pinmap()
     freenove_pinmap()
+    # 首振りガジェット
     light_seeker_breadboard()
     light_seeker_schematic()
     light_follower_breadboard()
+    # 障害物回避カー
     car_breadboard()
     car_schematic()
+    # ワイヤレス操縦
     rc_system()
     rc_controller_breadboard()
     grove_adapter()
+    # 針で指す温度計
+    needle_breadboard()
+    needle_schematic()
+    needle_dial()
+    # 赤外線リモコン
+    ir_nec()
+    ir_breadboard()
+    car_breadboard(ir=True)
+    # 光で文字を送る
+    light_breadboard()
+    light_frame()

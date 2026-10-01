@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>針で指す温度計 — 電子工作ノート</title>
+<meta name="description" content="サーミスターで温度を測り、ステッピングモーター 28BYJ-48 の針で半円の目盛りを指すアナログ温度計を作る。ULN2003AN の使い方、回路図・ブレッドボード配線図・スケッチ・印刷用の目盛り板。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>針で指す温度計</h1>
+<p class="lede">サーミスターで温度を測り、<b>ステッピングモーターの針で半円の目盛りを指す</b>アナログ式の温度計を作ります。サーミスターを指でつまむと、針がじわっと右へ動きます。モーターを回す、温度を測る、2 つをつなぐ、の 3 段で進めます。</p>
+
+<div class="grid2">
+  <div><b>使う部品</b>Freenove ESP32 1 台、ブレッドボード、ステッピングモーター 28BYJ-48、トランジスターアレイ ULN2003AN、サーミスター 10kΩ、10kΩ 抵抗 1 本、ジャンパー線 オス-オス 16 本 (モーターのコネクタに挿す 5 本を含む)。目盛り板と針にする厚紙・紙。</div>
+  <div><b>電源</b>USB だけ。モーターも USB の 5V で回す。</div>
+  <div><b>はんだ付け</b>不要。</div>
+  <div><b>ボードの行番号</b>Freenove のもの (<a href="setup.html#freenove">挿し方</a>)。DevKitC で組むなら ESP32 側の穴を 1 行左に (5V の a1 だけはそのまま)。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>ステッピングモーターは「順番に電気を流す」と回る</h3>
+<p>28BYJ-48 の中にはコイルが 2 組あり、5 本の線のうち<b>赤がまん中 (共通)</b>、残りの 4 本 (青・ピンク・黄・橙) がコイルの端です。<b>青 → ピンク → 黄 → 橙</b>の順に 1 本ずつ電気を流すと、そのたびに少しずつ回ります。中のギヤで 1/64 に減速しているので、1 回転に 2048 回の切り替えが要り、そのぶん力が強く、狙った角度で正確に止まります (秋月の仕様: 減速比 1:64、ステップ角 0.0879°)。</p>
+<p>このノートでは<b>1 度に 1 つのコイルだけ</b>に電気を流し (1 相励磁)、止まっている間は全部切ります。コイルの抵抗は 22Ω なので、5V で 1 本あたり約 0.23A 流れます。1 本ずつなら USB の電源でまかなえます。</p>
+<h3>ULN2003AN: ESP32 の代わりに電流を流す</h3>
+<p>ESP32 のピンからは 0.23A も流せません。ULN2003AN は「入力が H になると、出力を GND につなぐ」スイッチが 7 つ入った IC で、1 つあたり 0.5A まで流せます。入力は 2.8V 以上で ON になるので (秋月の仕様)、ESP32 の 3.3V で動かせます。<b>COM ピンを 5V につなぐ</b>と、中のダイオードがコイルを切った瞬間に出る逆向きの電圧を逃がしてくれます。</p>
+<h3>サーミスター: 温度で抵抗が変わる</h3>
+<p>使うのは 25℃ で 10kΩ の NTC サーミスター (B 定数 3960) で、温かいほど抵抗が下がります。首振りガジェットの CdS と同じく 10kΩ と分圧して IO34 で電圧を読み、<b>B 定数の式</b>で温度に直します。</p>
+<p class="mono" style="font-size:.88rem">1/T = 1/298.15 + ln(R ÷ 10kΩ) ÷ 3960　(T はケルビン。℃ にするときは 273.15 を引く)</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/needle-schematic.svg" alt="回路図。ESP32 の IO14・IO27・IO26・IO25 を ULN2003AN の 1B〜4B へ。1C〜4C をモーターの青・ピンク・黄・橙へ。モーターの赤と ULN2003AN の COM は 5V、E は GND。3V3 からサーミスター、サーミスターと 10kΩ の間を IO34 へ、10kΩ の下は GND。" loading="lazy"></div>
+  <figcaption>回路図。<a href="img/needle-schematic.svg">図だけを開く</a></figcaption>
+</figure>
+
+<h2><span class="no">2</span>配線</h2>
+<p>Freenove のボードは<a href="setup.html#freenove">いつもの向き</a>で 1〜20 行に。ULN2003AN は <b>23〜30 行</b>に、e 列と f 列にまたがり、<b>切り欠き (半円のくぼみ) を右 (30 行側)</b> に向けて挿します。こうすると上の e 列に入力 (1B〜4B) と E、下の f 列に出力 (1C〜4C) と COM が並びます。</p>
+<div class="kp warn"><b class="h">このページでは上の + ラインが 5V</b>
+<p>ワイヤレス操縦や赤外線リモコンのページでは + ラインが 3.3V でした。このページはモーター用に 5V を流します。サーミスターの 3.3V は + ラインではなく <b>a20 (3V3)</b> から取ります。組み替えるときは、前の作品の線を全部抜いてから始めてください。</p>
+</div>
+<figure class="fig">
+  <div class="scroll"><img src="img/needle-breadboard.svg" alt="ブレッドボード配線図。Freenove を 1〜20 行、ULN2003AN を 23〜30 行に切り欠きを右にして挿す。a1 から上の + ライン (5V)、a7 から上の − ライン。a9 (IO14) → a30、a10 (IO27) → a29、a11 (IO26) → a28、a12 (IO25) → a27。上の − ラインから a23。上の + ラインを右端で下の + ラインへ、下の + ラインから j23。サーミスターを c21–c22、a20 → a21、10kΩ を b22–d23、a16 (IO34) → a22。モーターの赤を h23、橙・黄・ピンク・青を h27・h28・h29・h30。" loading="lazy"></div>
+  <figcaption>ブレッドボード配線図 (横にスクロールできます)。<a href="img/needle-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td>ULN2003AN</td><td><b>e23〜e30 / f23〜f30</b></td><td>切り欠きを右に。e23 = E、e27〜e30 = 4B〜1B、f23 = COM、f27〜f30 = 4C〜1C</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#E11D48"></span><b>a1</b> (5V)</td><td>上の <b>+</b> ライン</td><td>5V を配る</td></tr>
+<tr><td class="n">3</td><td><span class="w" style="background:#1F2937"></span><b>a7</b> (GND)</td><td>上の <b>−</b> ライン</td><td>GND を配る</td></tr>
+<tr><td class="n">4</td><td><span class="w" style="background:#1F2937"></span>上の <b>−</b> ライン</td><td><b>a23</b></td><td>ULN2003AN の E (GND)。23 行の上半分が GND になる</td></tr>
+<tr><td class="n">5</td><td><span class="w" style="background:#A16207"></span><b>a9</b> (IO14)</td><td><b>a30</b></td><td>1B → 青</td></tr>
+<tr><td class="n">6</td><td><span class="w" style="background:#4F46E5"></span><b>a10</b> (IO27)</td><td><b>a29</b></td><td>2B → ピンク</td></tr>
+<tr><td class="n">7</td><td><span class="w" style="background:#0284C7"></span><b>a11</b> (IO26)</td><td><b>a28</b></td><td>3B → 黄</td></tr>
+<tr><td class="n">8</td><td><span class="w" style="background:#16A34A"></span><b>a12</b> (IO25)</td><td><b>a27</b></td><td>4B → 橙</td></tr>
+<tr><td class="n">9</td><td><span class="w" style="background:#E11D48"></span>上の <b>+</b> ライン (右端)</td><td>下の <b>+</b> ライン (右端)</td><td>5V を下側へ。ブレッドボードの右の外側を回す</td></tr>
+<tr><td class="n">10</td><td><span class="w" style="background:#E11D48"></span>下の <b>+</b> ライン</td><td><b>j23</b></td><td>ULN2003AN の COM に 5V</td></tr>
+<tr><td class="n">11</td><td>モーターの <b>赤</b></td><td><b>h23</b></td><td>コイルのまん中に 5V (COM と同じ行)</td></tr>
+<tr><td class="n">12</td><td>モーターの <b>橙・黄・ピンク・青</b></td><td><b>h27・h28・h29・h30</b></td><td>4C〜1C。コネクタの穴にオス-オス線を挿して、色を見ながら</td></tr>
+<tr><td class="n">13</td><td>サーミスター</td><td><b>c21</b> と <b>c22</b></td><td>向きはない</td></tr>
+<tr><td class="n">14</td><td><span class="w" style="background:#EA8A00"></span><b>a20</b> (3V3)</td><td><b>a21</b></td><td>サーミスターの上側に 3.3V</td></tr>
+<tr><td class="n">15</td><td>10kΩ</td><td><b>b22</b> と <b>d23</b></td><td>分圧の下側。23 行は GND (#4)</td></tr>
+<tr><td class="n">16</td><td><span class="w" style="background:#0F766E"></span><b>a16</b> (IO34)</td><td><b>a22</b></td><td>サーミスターと 10kΩ の間の電圧を読む</td></tr>
+</tbody></table></div>
+<div class="kp"><b class="h">Freenove のアンテナの下</b>
+<p>Freenove のボードはアンテナが 21〜22 行の上 (d〜h 列) に張り出しています。サーミスターは張り出しの外の c 列に挿します。ULN2003AN の左端がアンテナのすぐ下に来ますが、高さは足ります。</p>
+</div>
+
+<h2><span class="no">3</span>段階 1: モーターを回す</h2>
+<p>配線 1〜12 だけで動きます。起動すると 1 回転し、1 秒止まってから逆に 1 回転して戻ります。BOOT を押すともう一度。</p>
+<div class="sketch" data-src="sketches/stepper_test/stepper_test.ino"></div>
+<ul class="check">
+  <li>軸が 6 秒ほどで 1 回転し、同じだけ逆に回って戻る (シリアルモニタに <code>+2048 ステップ (360°)</code> と出る)</li>
+  <li>回っている間、モーターからかすかなジーという音がする (止まると消える = コイルを切っている)</li>
+  <li>震えるだけで回らない → 色の順番 (#12) を見直す。合っていれば <code>STEP_MS</code> を 4〜5 に上げる</li>
+</ul>
+
+<h2><span class="no">4</span>段階 2: 温度を測る</h2>
+<p>配線 13〜16 を足します。シリアルプロッタ (115200 baud) に温度が出ます。</p>
+<div class="sketch" data-src="sketches/thermistor_test/thermistor_test.ino"></div>
+<ul class="check">
+  <li>部屋の温度に近い値 (20〜28℃ くらい) が出る</li>
+  <li>サーミスターを指でつまむと、数秒で数℃ 上がり、離すとゆっくり戻る</li>
+  <li>テスターで 3V3 と GND の間を測り、その値 (mV) を <code>VCC_MV</code> に書くと、温度が少し正確になる</li>
+</ul>
+
+<h2><span class="no">5</span>段階 3: 針で温度を指す</h2>
+<h3>目盛り板と針を作る</h3>
+<figure class="fig">
+  <div class="scroll"><img src="img/needle-dial.svg" alt="半円の目盛り板。左端 10℃ から右端 40℃ まで 1℃ ごとの目盛りと、5℃ ごとの数字。18℃ まで青、26℃ まで緑、それより上は赤の帯。中心に軸を通す印。" loading="lazy" style="min-width:0;max-width:520px;margin:0 auto"></div>
+  <figcaption>目盛り板。<a href="img/needle-dial.svg" download>印刷用の SVG</a> (実寸 130 × 92mm。100% の大きさで印刷する)</figcaption>
+</figure>
+<ol class="steps">
+  <li>目盛り板を印刷して厚紙に貼る (手で描いてもよい)。中心の印に、軸が通る直径 6mm くらいの穴をあける。</li>
+  <li>モーターを目盛り板の裏にテープで留め、軸を穴から表に出す。</li>
+  <li>紙を細く切って針にし、根元にキリで小さな穴をあけて軸に押し込む (ゆるければテープで留める)。</li>
+</ol>
+<h3>スケッチ</h3>
+<div class="sketch" data-src="sketches/needle_meter/needle_meter.ino"></div>
+<ol class="steps">
+  <li>書き込むと「針の 0 合わせ」が始まる。<b>3 秒以内に BOOT を押すと、押している間だけ針が左へ回る</b>。左端の 10℃ の目盛りで離す。</li>
+  <li>そのまま 3 秒待つと温度計が始まり、針が今の温度へ動く。</li>
+  <li>片付けるときは <b>BOOT を 2 秒長押し</b>。針が左端に戻って止まるので、次に起動したときは 0 合わせが要らない。</li>
+</ol>
+<ul class="check">
+  <li>針が段階 2 で見た温度の目盛りを指す</li>
+  <li>サーミスターをつまむと針が右へ、離すと左へ戻る</li>
+  <li>温度が上がると針が左へ回る → <code>REVERSE</code> を <code>true</code> にする</li>
+</ul>
+
+<h2><span class="no">6</span>うまくいかないとき</h2>
+<div class="tbl"><table>
+<thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>モーターがまったく動かない・震えもしない</td><td>5V が ULN2003AN の COM とモーターの赤に来ているか (#2, #9, #10, #11)。E の GND (#4)。テスターで h23 と GND の間が 5V か測る</td></tr>
+<tr><td>行ったり来たりして進まない</td><td>コイルの順番。h27〜h30 が 橙・黄・ピンク・青 になっているか</td></tr>
+<tr><td>ULN2003AN が熱い</td><td>すぐ USB を抜いて、5V と GND が逆になっていないか、出力どうしがつながっていないかを見る</td></tr>
+<tr><td>温度が -273 や nan</td><td>サーミスターか 10kΩ が外れている。a20 → a21 の 3.3V、23 行の GND</td></tr>
+<tr><td>針が少しずつずれていく</td><td>重い針でギヤが滑っている。紙の針を軽くする。<code>STEP_MS</code> を上げる</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">7</span>改造のアイデア</h2>
+<ul>
+  <li><b>天気予報の気温を指す</b>: Wi-Fi で天気の API から明日の最高気温を取ってきて、針で指す。部屋の温度と切り替えてもよい。</li>
+  <li><b>針の時計</b>: NTP で時刻を合わせ、24 時間で 1 回転する時計にする。</li>
+  <li><b>2 本目の針で湿度</b>: DHT11 の湿度を、もう 1 台のモーターで指す (ULN2003AN は 7 回路あるので、もう 1 台ぶん足りる)。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('needle-meter')</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" width="900" height="340" role="img" aria-labelledby="t d" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP','Noto Sans CJK JP',Meiryo,sans-serif">
+<title id="t">NEC フォーマットのリモコン信号</title>
+<desc id="d">受信モジュールの出力は、リモコンが光っている間 LOW になる。9ms の LOW と 4.5ms の HIGH (リーダー) のあと、0 は 0.56ms LOW + 0.56ms HIGH、1 は 0.56ms LOW + 1.69ms HIGH で 32 ビット。押し続けると 9ms + 2.25ms のリピートが 108ms ごとに来る。</desc>
+<rect width="900" height="340" rx="14" fill="#FBFAF7"/>
+<text x="30.0" y="32.0" font-size="12" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">受信モジュールの OUT (ESP32 が見る信号)</text>
+<text x="30.0" y="52.0" font-size="9.5" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">光っている間 = LOW。LOW と HIGH の長さで 0 / 1 を見分ける</text>
+<path d="M40.0 95.0 L70.0 95.0 L70.0 145.0 L160.0 145.0 L160.0 95.0 L205.0 95.0 L205.0 145.0 L229.6 145.0 L229.6 95.0 L254.3 95.0 L254.3 145.0 L278.9 145.0 L278.9 95.0 L303.6 95.0 L303.6 145.0 L328.2 145.0 L328.2 95.0 L352.8 95.0 L352.8 145.0 L377.5 145.0 L377.5 95.0 L402.1 95.0 L402.1 145.0 L426.8 145.0 L426.8 95.0 L501.1 95.0 L501.1 145.0 L525.8 145.0 L525.8 95.0 L550.4 95.0 L550.4 145.0 L575.0 145.0 L575.0 95.0 L599.7 95.0 L599.7 145.0 L624.3 145.0 L624.3 95.0 L649.0 95.0" fill="none" stroke="#0F766E" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M648.9599999999998 95 h34" stroke="#0F766E" stroke-width="2.4" stroke-dasharray="4 4"/>
+<text x="691.0" y="95.0" font-size="10" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">… 残り 24 ビット</text>
+<text x="34.0" y="95.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">H</text>
+<text x="34.0" y="145.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">L</text>
+<text x="115.0" y="159.0" font-size="9" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">9ms</text>
+<text x="182.5" y="83.0" font-size="9" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">4.5ms</text>
+<path d="M109.0 138 l4 14 M117.0 138 l4 14" stroke="#FBFAF7" stroke-width="4"/>
+<path d="M109.0 138 l4 14 M117.0 138 l4 14" stroke="#6B7280" stroke-width="1.2"/>
+<path d="M176.5 88 l4 14 M184.5 88 l4 14" stroke="#FBFAF7" stroke-width="4"/>
+<path d="M176.5 88 l4 14 M184.5 88 l4 14" stroke="#6B7280" stroke-width="1.2"/>
+<text x="229.6" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="278.9" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="328.2" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="377.5" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="451.6" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">1</text>
+<text x="525.8" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="575.0" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<text x="624.3" y="167.0" font-size="12" fill="#16A34A" text-anchor="middle" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<path d="M72 182 v6 H203.0 v-6" fill="none" stroke="#6B7280" stroke-width="1.2"/>
+<text x="137.5" y="200.0" font-size="10" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">リーダー (縮めて描いた)</text>
+<path d="M207.0 182 v6 H646.9599999999998 v-6" fill="none" stroke="#6B7280" stroke-width="1.2"/>
+<text x="427.0" y="200.0" font-size="10" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="700">メーカーの最初の 8 ビット = 0x10 (下位のビットから)</text>
+<text x="30.0" y="238.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="700">0 と 1 (同じ縮尺)</text>
+<path d="M110.0 262.0 L110.0 292.0 L134.6 292.0 L134.6 262.0 L159.3 262.0 L159.3 292.0" fill="none" stroke="#0F766E" stroke-width="2.4"/>
+<text x="122.3" y="306.0" font-size="8.5" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0.56ms</text>
+<text x="147.0" y="252.0" font-size="8.5" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0.56ms</text>
+<text x="96.0" y="277.0" font-size="13" fill="#16A34A" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0</text>
+<path d="M260.0 262.0 L260.0 292.0 L284.6 292.0 L284.6 262.0 L359.0 262.0 L359.0 292.0" fill="none" stroke="#0F766E" stroke-width="2.4"/>
+<text x="272.3" y="306.0" font-size="8.5" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">0.56ms</text>
+<text x="321.8" y="252.0" font-size="8.5" fill="#1F2430" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">1.69ms</text>
+<text x="246.0" y="277.0" font-size="13" fill="#16A34A" text-anchor="end" dominant-baseline="central" font-weight="700" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">1</text>
+<text x="470.0" y="250.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">32 ビット = メーカー 16 ビット (このリモコンは 0x10EF)</text>
+<text x="470.0" y="268.0" font-size="10" fill="#1F2430" text-anchor="start" dominant-baseline="central" font-weight="400">+ キー 8 ビット + キーを反転した 8 ビット</text>
+<text x="470.0" y="292.0" font-size="10" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">押し続けると、108ms ごとに「リピート」(9ms LOW + 2.25ms HIGH) が来る</text>
+<text x="470.0" y="312.0" font-size="9" fill="#6B7280" text-anchor="start" dominant-baseline="central" font-weight="400">時間の長さは秋月のリモコンの資料 (NEC フォーマット) より</text>
+</svg>

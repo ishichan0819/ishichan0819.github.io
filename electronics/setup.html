@@ -89,6 +89,9 @@
   <div class="scroll"><img src="img/freenove-pinmap.svg" alt="Freenove と DevKitC の上の列のピンを、ブレッドボードの行番号で比べた図。Freenove は 1 行目から 5V, 5V, 3V3, 3V3, 3V3, 13, GND, 12, 14, 27, 26, 25, 33, 32, 35, 34, VN, VP, EN, 3V3。DevKitC は 5V, CMD, SD3, SD2, 13, GND, 12, 14, 27, 26, 25, 33, 32, 35, 34, VN, VP, EN, 3V3。" loading="lazy"></div>
   <figcaption>同じ行番号で比べた上の列。<a href="img/freenove-pinmap.svg">図だけを開く</a></figcaption>
 </figure>
+<div class="kp"><b class="h">アンテナが 21〜22 行の上に張り出す</b>
+<p>Freenove のボードは、モジュールのアンテナ部分が基板の端から 3 穴ぶんほど、d〜h 列の上に浮いて張り出しています (ピン配置図から測った値)。21〜22 行の d〜h 列には部品を挿さず、a〜c 列や 23 行より右を使います。</p>
+</div>
 <div class="kp warn"><b class="h">DevKitC の配線表を Freenove で使うとき</b>
 <p>このノートの首振りガジェットと障害物回避カーの配線表は、DevKitC の行番号で書いています。Freenove で組むときは <b>ESP32 側の穴だけ 1 行右</b>にずらします (例: a6 → a7、a15 → a16、a19 → a20)。5V は Freenove でも 1 行目のままです。部品側 (21 行目より右) の穴は変わりません。ワイヤレス操縦のコントローラーは、はじめから Freenove の行番号で書いています。</p>
 </div>

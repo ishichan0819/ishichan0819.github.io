@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>光で文字を送る — 電子工作ノート</title>
+<meta name="description" content="2 台の ESP32 で可視光通信。1 台が基板の LED の点滅で文字を送り、もう 1 台が CdS で読む。スタートビット・ストップビット、しきい値の自動調整、速さの限界を試す実験。配線図・スケッチ。">
+<meta name="theme-color" content="#0F3B26">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+<main>
+<p class="top" id="nav"></p>
+<h1>光で文字を送る</h1>
+<p class="lede"><a href="../visible-light/">可視光通信のページ</a>で画面の中でやったことを、実物でやります。Freenove の ESP32 を 2 台使い、<b>1 台が基板のフルカラー LED の点滅で文字を送り、もう 1 台が CdS で光を読んで文字に戻します</b>。CdS は反応が遅いので 1 秒に 1 文字くらいですが、そのぶん点滅が目で追える通信です。</p>
+
+<div class="grid2">
+  <div><b>使う部品</b>Freenove ESP32 2 台、ブレッドボード 1 枚、CdS セル、10kΩ 抵抗 1 本、ジャンパー線 オス-オス 3 本・オス-メス 2 本。光を囲う紙の筒 (トイレットペーパーの芯など)。</div>
+  <div><b>電源</b>どちらも USB。送る側はモバイルバッテリーでもよい (何もしなくても、くり返し文字を送る)。</div>
+  <div><b>はんだ付け</b>不要。送る側は配線もなし。</div>
+  <div><b>ボードの行番号</b>Freenove のもの (<a href="setup.html#freenove">挿し方</a>)。</div>
+</div>
+
+<h2><span class="no">1</span>しくみ</h2>
+<h3>点灯 = 1、消灯 = 0 (OOK)</h3>
+<p>光を点けたら 1、消したら 0。いちばん単純な変調 (OOK) です。ただし 0 が続くと「何も送っていない」のと区別がつかないので、1 文字ごとに<b>スタートビット (点灯)</b> で始まりを知らせ、<b>ストップビット (消灯)</b> で終わりを確かめます。1 文字は スタート 1 + データ 8 + ストップ 2 = 11 ビットです。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/light-frame.svg" alt="'H' を送る例。LED は消灯で待ち、点灯 1 ビットがスタート、データ 8 ビット (下位から 0,0,0,1,0,0,1,0)、消灯 2 ビットがストップ。CdS の電圧は遅れてなまる。スタートでしきい値を超えた時刻から 1.5 ビット後、2.5 ビット後… のまん中で読む。" loading="lazy"></div>
+  <figcaption>1 文字の形と、受け取る側が読む位置。<a href="img/light-frame.svg">図だけを開く</a></figcaption>
+</figure>
+<h3>CdS は遅れて、なまる</h3>
+<p>CdS は光が変わってから抵抗が落ち着くまでに数十 ms かかり、暗くなるときの方がさらに遅いのがふつうです。そこで受け取る側は、スタートビットで明るくなった時刻を基準に、<b>各ビットのまん中</b> (1.5 ビット後、2.5 ビット後…) で明るさを読みます。端で読むと、1 つ前のビットの「なまり」を拾ってしまいます。</p>
+<h3>明るい・暗いの境目は自動で決める</h3>
+<p>部屋の明るさや LED との距離で、CdS の電圧は変わります。受け取る側は直近 3 秒間の<b>いちばん明るい値と暗い値のまん中</b>を境目 (しきい値) にします。送る側は 1 行の頭に、画面には出さない 1 文字 (0x01) を付けて、境目合わせの材料にしています。</p>
+
+<h2><span class="no">2</span>配線</h2>
+<p>受け取る側 (Freenove B) だけ配線します。首振りガジェットの CdS と同じ分圧の形です。CdS はオス-メス線で延長し、送る側の LED に 1cm くらいまで近づけて向け、紙の筒でつなぎます。</p>
+<figure class="fig">
+  <div class="scroll"><img src="img/light-breadboard.svg" alt="受け取る側の配線図。Freenove を 1〜20 行。a7 (GND) から上の − ライン、a20 (3V3) → a24、CdS を c24–c25、10kΩ を b25 と上の − ライン、a16 (IO34) → a25。CdS はオス-メス線で延長し、送る側の Freenove の RGB LED に向けて紙の筒でつなぐ。" loading="lazy"></div>
+  <figcaption>受け取る側の配線と、送る側との置き方 (横にスクロールできます)。<a href="img/light-breadboard.svg">図だけを開く</a></figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>#</th><th>どこから</th><th>どこへ</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><span class="w" style="background:#1F2937"></span><b>a7</b> (GND)</td><td>上の <b>−</b> ライン</td><td>GND を配る</td></tr>
+<tr><td class="n">2</td><td><span class="w" style="background:#EA8A00"></span><b>a20</b> (3V3)</td><td><b>a24</b></td><td>CdS の上側に 3.3V</td></tr>
+<tr><td class="n">3</td><td>CdS セル (オス-メス線 2 本で延長)</td><td><b>c24</b> と <b>c25</b></td><td>向きはない</td></tr>
+<tr><td class="n">4</td><td>10kΩ</td><td><b>b25</b> と 上の <b>−</b> ライン</td><td>分圧の下側</td></tr>
+<tr><td class="n">5</td><td><span class="w" style="background:#0F766E"></span><b>a16</b> (IO34)</td><td><b>a25</b></td><td>明るさを読む</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">3</span>段階 1: 1 台で、光の遅れを見る</h2>
+<p>まず受け取る側 (B) だけで試します。CdS を <b>B 自身の</b>フルカラー LED に向け、紙の筒をかぶせます。LED が 0.1 秒ごとに点いたり消えたりし、CdS の電圧がどう遅れるかが見えます。</p>
+<div class="sketch" data-src="sketches/light_loopback/light_loopback.ino"></div>
+<ol class="steps">
+  <li>書き込んでシリアルプロッタ (115200 baud) を開く。<code>led</code> の四角い波に対して、<code>mV</code> が遅れて丸くなった波になる。</li>
+  <li><code>PLOT</code> を <code>false</code> にして書き込み、シリアルモニタを開く。「点いてから ○ ms / 消えてから ○ ms で半分まで変化」と出る。</li>
+  <li>2 つのうち長い方の 3 倍くらいが、1 ビットの長さ <code>BIT_MS</code> の目安。100ms より長ければ、段階 2 の <code>BIT_MS</code> をその値にする。</li>
+</ol>
+<ul class="check">
+  <li>明るいときと暗いときの電圧の差が 250mV 以上ある (小さければ CdS を LED に近づけ、筒で囲う)</li>
+  <li>「消えてから」の方が「点いてから」より長いことが多い</li>
+</ul>
+
+<h2><span class="no">4</span>段階 2: 2 台で文字を送る</h2>
+<p>送る側 (A) には配線はありません。<code>light_tx</code> を A に、<code>light_rx</code> を B に書き込みます。<code>BIT_MS</code> は両方同じ値にします。</p>
+<div class="sketch" data-src="sketches/light_tx/light_tx.ino"></div>
+<div class="sketch" data-src="sketches/light_rx/light_rx.ino"></div>
+<ol class="steps">
+  <li>B の CdS を、紙の筒ごと A のフルカラー LED にかぶせる。</li>
+  <li>B のシリアルモニタを開く。A は <code>HELLO ESP32</code> を送り、終わると 5 秒休んでまた送る。1 文字 約 1.1 秒なので、頭の印と改行を入れた 13 文字で 1 行に約 14 秒かかる。</li>
+  <li>A も PC につないで別のウィンドウでシリアルモニタを開き、文字を打って Enter を押すと、その行が送られる (シリアルモニタの改行の設定は「改行なし」以外にする)。</li>
+</ol>
+<ul class="check">
+  <li>B に <code>HELLO ESP32</code> が出る。A の LED が点滅している間、1 文字ずつ増えていく</li>
+  <li>日本語も送れる (UTF-8 で 1 文字 3 バイトなので、3 倍時間がかかる)</li>
+  <li>途中で筒をずらすと、その文字が化けたり <code>?</code> になったりする (<code>?</code> はストップビットが暗くなかった印)</li>
+</ul>
+<div class="kp"><b class="h">Arduino IDE でシリアルモニタを 2 つ開くには</b>
+<p>「ファイル → 新規スケッチ」で 2 つ目のウィンドウを開き、そちらで A のポートを選んでシリアルモニタを開きます。ウィンドウごとに別のポートを見られます。</p>
+</div>
+
+<h2><span class="no">5</span>段階 3: どこまで速くできるか</h2>
+<p>A と B の両方で <code>TEST_MODE</code> を <code>true</code> にすると、A は <code>0123456789</code> を休みなく送り続け、B は 1 行ごとに誤った文字の数と、これまでの誤りの割合を出します。<code>BIT_MS</code> を両方とも同じだけ小さくしながら、どこで化け始めるかを調べます。</p>
+<div class="tbl"><table>
+<thead><tr><th>BIT_MS</th><th>ビット/秒</th><th>1 文字 (11 ビット)</th><th>誤りの割合 (記入用)</th></tr></thead>
+<tbody>
+<tr><td class="mono">150</td><td>約 6.7</td><td>1.65 秒</td><td></td></tr>
+<tr><td class="mono">100</td><td>10</td><td>1.1 秒</td><td></td></tr>
+<tr><td class="mono">70</td><td>約 14</td><td>0.77 秒</td><td></td></tr>
+<tr><td class="mono">50</td><td>20</td><td>0.55 秒</td><td></td></tr>
+<tr><td class="mono">35</td><td>約 29</td><td>0.39 秒</td><td></td></tr>
+</tbody></table></div>
+<p>限界を決めているのは ESP32 ではなく CdS の遅さです。段階 1 で測った時間に近づくと、1 つ前のビットの光が残って、0 を 1 と読み違えるようになります。光の変化に速く反応する受光素子 (フォトトランジスタやフォトダイオード) に替えると、同じ仕組みで何百倍も速くできます。</p>
+
+<h2><span class="no">6</span>うまくいかないとき</h2>
+<div class="tbl"><table>
+<thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+<tbody>
+<tr><td>B に何も出ない</td><td>A の LED が点滅しているか。CdS が LED を向いているか。両方の <code>BIT_MS</code> が同じか</td></tr>
+<tr><td>文字が全部化ける</td><td>段階 1 で明るい・暗いの差を見る。差が小さければ近づける・筒で囲う。<code>BIT_MS</code> を大きくする</td></tr>
+<tr><td>最初の 1〜2 文字だけ化ける</td><td>しきい値を合わせている途中。頭の 0x01 で合わせているが、離れていると足りないことがある</td></tr>
+<tr><td>部屋の照明を点けたら化けた</td><td>照明のちらつきを拾っている。筒で囲う</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">7</span>改造のアイデア</h2>
+<ul>
+  <li><b>両方向に話す</b>: CdS をもう 1 組 (手元に 2 個ある) A 側にも付け、交互に送る半二重のチャットにする。</li>
+  <li><b>LED を替える</b>: 基板の LED の代わりに、5mm の緑や青の LED と 1kΩ を A のブレッドボードに付ける。色で CdS の反応が変わるかを比べる。</li>
+  <li><b>誤りを見つける</b>: 1 行の最後に、文字コードを全部足した値 (チェックサム) を付けて、B で合わなければ「もう一度送って」と返す。</li>
+</ul>
+
+<nav id="pn"></nav>
+</main>
+<footer><a href="https://github.com/ishichan0819/ishichan0819.github.io">GitHub</a></footer>
+<script src="common.js"></script>
+<script>elecNav('light-message')</script>
+</body>
+</html>

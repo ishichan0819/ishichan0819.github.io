@@ -6,7 +6,10 @@ window.ELEC_PAGES=[
   {id:'parts',        t:'部品と道具',           d:'買った部品の一覧、はんだ付けが要るもの、買い足すと楽になるもの'},
   {id:'light-seeker', t:'首振りガジェット',     d:'CdS で明るさを測り、サーボで首を振っていちばん明るい方向を向く'},
   {id:'obstacle-car', t:'障害物回避カー',       d:'超音波で前を見て、DRV8835 で左右のモーターを回し、ぶつかる前によける'},
-  {id:'wireless-rc',  t:'ワイヤレス操縦',       d:'2 台目の ESP32 とジョイスティックでコントローラーを作り、ESP-NOW で車を操縦する'}
+  {id:'wireless-rc',  t:'ワイヤレス操縦',       d:'2 台目の ESP32 とジョイスティックでコントローラーを作り、ESP-NOW で車を操縦する'},
+  {id:'needle-meter', t:'針で指す温度計',       d:'サーミスターで温度を測り、ステッピングモーターの針で目盛りを指す'},
+  {id:'ir-remote',    t:'赤外線リモコン',       d:'リモコンの信号を自分で読み解き、色と音を出し、車を操縦する'},
+  {id:'light-message',t:'光で文字を送る',       d:'2 台の ESP32 で、LED の点滅と CdS で文字をやりとりする可視光通信'}
 ];
 var $=function(s,r){return (r||document).querySelector(s)};
 

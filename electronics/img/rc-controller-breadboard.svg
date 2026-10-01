@@ -30,19 +30,21 @@
 <text x="787.0" y="330.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">h</text>
 <text x="787.0" y="350.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">i</text>
 <text x="787.0" y="370.0" font-size="9" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" font-family="'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">j</text>
-<rect x="159.0" y="253.0" width="20.0" height="34.0" rx="6" fill="#B8BDC7" stroke="#8B919C"/>
-<rect x="170.0" y="160.0" width="418.0" height="220.0" rx="4" fill="#15171C" opacity=".95"/>
-<rect x="430" y="192.0" width="170.0" height="156.0" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>
-<rect x="440.0" y="204.0" width="116.0" height="132.0" rx="2" fill="#C7CBD4"/>
-<rect x="564.0" y="192.0" width="36.0" height="156.0" fill="#E9EBF0" stroke="#9BA1AD"/>
-<text x="497.0" y="254.0" font-size="10" fill="#3A3F4B" text-anchor="middle" dominant-baseline="central" font-weight="700">ESP32-WROOM-32E</text>
-<text x="582.0" y="270.0" font-size="8" fill="#6B7280" text-anchor="middle" dominant-baseline="central" font-weight="400" transform="rotate(-90 582.0 270.0)">アンテナ</text>
+<rect x="167.0" y="253.0" width="20.0" height="34.0" rx="6" fill="#B8BDC7" stroke="#8B919C"/>
+<rect x="178.0" y="160.0" width="402.0" height="220.0" rx="4" fill="#15171C" opacity=".95"/>
+<rect x="430" y="198.0" width="138.0" height="144.0" rx="3" fill="#D9DCE3" stroke="#9BA1AD"/>
+<rect x="440.0" y="210.0" width="118.0" height="120.0" rx="2" fill="#C7CBD4"/>
+<rect x="568.0" y="198.0" width="60.0" height="144.0" rx="2" fill="#2A2D35" opacity=".82" stroke="#6B7280" stroke-dasharray="3 2"/>
+<path d="M574.0 210.0 h42.0 v8 h-34.0 v8 h34.0 v8" fill="none" stroke="#C9A227" stroke-width="1.5" opacity=".8"/>
+<text x="499.0" y="254.0" font-size="10" fill="#3A3F4B" text-anchor="middle" dominant-baseline="central" font-weight="700">ESP32-WROOM-32E</text>
+<text x="598.0" y="298.0" font-size="8.5" fill="#E5E7EB" text-anchor="middle" dominant-baseline="central" font-weight="700">アンテナ</text>
+<text x="598.0" y="316.0" font-size="7.5" fill="#C9CDD6" text-anchor="middle" dominant-baseline="central" font-weight="400">(浮いている)</text>
 <text x="310.0" y="236.0" font-size="11" fill="#F3F4F6" text-anchor="middle" dominant-baseline="central" font-weight="700">Freenove ESP32 WROOM</text>
 <text x="310.0" y="268.0" font-size="9" fill="#C9CDD6" text-anchor="middle" dominant-baseline="central" font-weight="400">USB-C を左・3V3/5V の列を上に挿す</text>
-<rect x="177.0" y="207.0" width="14" height="14" rx="2" fill="#E5E7EB"/>
-<text x="201.0" y="214.0" font-size="8" fill="#C9CDD6" text-anchor="start" dominant-baseline="central" font-weight="400">EN</text>
-<rect x="177.0" y="319.0" width="14" height="14" rx="2" fill="#E5E7EB"/>
-<text x="201.0" y="326.0" font-size="8" fill="#C9CDD6" text-anchor="start" dominant-baseline="central" font-weight="400">BOOT</text>
+<rect x="185.0" y="207.0" width="14" height="14" rx="2" fill="#E5E7EB"/>
+<text x="209.0" y="214.0" font-size="8" fill="#C9CDD6" text-anchor="start" dominant-baseline="central" font-weight="400">EN</text>
+<rect x="185.0" y="319.0" width="14" height="14" rx="2" fill="#E5E7EB"/>
+<text x="209.0" y="326.0" font-size="8" fill="#C9CDD6" text-anchor="start" dominant-baseline="central" font-weight="400">BOOT</text>
 <rect x="343" y="291.0" width="14" height="14" rx="2" fill="#F8FAFC" stroke="#9CA3AF"/>
 <circle cx="350" cy="298.0" r="3.5" fill="url(#rgb)"/>
 <defs><linearGradient id="rgb"><stop offset="0" stop-color="#EF4444"/><stop offset=".5" stop-color="#22C55E"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs>

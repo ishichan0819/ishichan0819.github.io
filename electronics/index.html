@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>電子工作ノート</title>
-<meta name="description" content="ESP32 と秋月電子の部品で動くものを作る。首振りガジェット、障害物回避カー、ESP-NOW のワイヤレス操縦。ブレッドボードの配線図と Arduino スケッチをまとめた記録。">
+<meta name="description" content="ESP32 と秋月電子の部品で動くものを作る。首振りガジェット、障害物回避カー、ワイヤレス操縦、針の温度計、赤外線リモコン、光通信。ブレッドボードの配線図と Arduino スケッチをまとめた記録。">
 <meta name="theme-color" content="#0F3B26">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -36,13 +36,12 @@
 </div>
 
 <h2>この先に作れそうなもの</h2>
-<p class="lede">手元の部品で次に作れるもの。まだページはありません。ESP32 が 3 台あるので、2 台で話す作品が作れるようになりました。</p>
+<p class="lede">手元の部品で次に作れるもの。まだページはありません。</p>
 <ul>
-  <li><b>光で文字を送る (2 台で)</b>: 1 台が LED を点滅させて文字を送り、もう 1 台が CdS で読む。CdS は応答が 20〜30ms と遅いので 1 秒に数文字だが、点滅が目で見える。<a href="../visible-light/">可視光通信のページ</a>の内容を実物でやる。</li>
   <li><b>部屋の温湿度を Wi-Fi で見る</b>: DHT11 を Freenove に付けて家の Wi-Fi につなぎ、ブラウザや Prometheus 形式の <code>/metrics</code> で温湿度を返す小さなサーバーにする。</li>
-  <li><b>ジョイスティックでステッピングモーター</b>: 28BYJ-48 + ULN2003 を、倒した量に合わせた速さで回す。</li>
-  <li><b>赤外線リモコンで操縦</b>: 付属リモコンの NEC 信号を受信モジュールで読み、障害物回避カーを十字キーで走らせる。</li>
   <li><b>温湿度を 7 セグで表示</b>: DHT11 の値を 4 桁 7 セグメント LED に出す。74HC595 でピン数を節約する練習にもなる。</li>
+  <li><b>ジョイスティックで針を動かす</b>: 針で指す温度計のモーターを、ジョイスティックを倒した量に合わせた速さで回す。</li>
+  <li><b>傾けると鳴るアラーム</b>: 傾斜スイッチが倒れたら圧電スピーカーを鳴らし、ESP-NOW でもう 1 台に知らせる。</li>
 </ul>
 
 <p class="lede">配線図は <a href="https://github.com/ishichan0819/ishichan0819.github.io/tree/main/electronics/tools">tools/gen_diagrams.py</a> で穴の座標から生成しています。スケッチは <a href="https://github.com/ishichan0819/ishichan0819.github.io/tree/main/electronics/sketches">sketches/</a> にまとめてあります。</p>
